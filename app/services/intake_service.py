@@ -11,9 +11,11 @@ Responsibilities:
   5. Generate a document_id.
   6. Build and validate an IntakeRecord.
   7. Serialize the record as JSON to outputs/intake/.
-  8. Return the document_id.
+  8. If an S3Service is provided, upload the source document and artifact.
+  9. Return the document_id.
 
-No AWS calls are made here. S3 upload is A-2.
+S3 upload is optional: pass an S3Service instance to enable it.
+If not provided, the function behaves exactly as in A-1 (local only).
 """
 
 import json
@@ -21,6 +23,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from app.schemas.intake_models import IntakeMetadata, IntakeRecord
+from app.services.s3_service import S3Service, StorageError
 from app.utils.id_utils import generate_document_id
 
 # ── intake policy constants ────────────────────────────────────────────────────
@@ -35,19 +38,23 @@ DEFAULT_OUTPUT_DIR = _PROJECT_ROOT / "outputs" / "intake"
 
 
 class IntakeError(Exception):
-    """Raised for any recoverable intake validation failure."""
+    """Raised for any recoverable intake validation or storage failure."""
 
 
 def run_intake(
     file_path: str,
     metadata: IntakeMetadata,
     output_dir: Path | None = None,
+    s3_service: S3Service | None = None,
 ) -> str:
     """
     Run the local intake pipeline for a single document.
 
     Returns the assigned document_id on success.
     Raises IntakeError with a descriptive message on failure.
+
+    If s3_service is provided, the source document and intake artifact are
+    uploaded to S3 after the local artifact is written.
     """
     path = Path(file_path).resolve()
     _validate_file_exists(path)
@@ -58,7 +65,10 @@ def run_intake(
     record = _build_record(path, document_id, metadata)
 
     destination = output_dir or DEFAULT_OUTPUT_DIR
-    _write_artifact(record, destination)
+    artifact_path = _write_artifact(record, destination)
+
+    if s3_service is not None:
+        _upload_to_s3(s3_service, path, artifact_path, record)
 
     return document_id
 
@@ -109,10 +119,39 @@ def _build_record(
     )
 
 
-def _write_artifact(record: IntakeRecord, output_dir: Path) -> None:
+def _write_artifact(record: IntakeRecord, output_dir: Path) -> Path:
+    """Write the intake record as JSON and return the file path."""
     output_dir.mkdir(parents=True, exist_ok=True)
     artifact_path = output_dir / f"{record.document_id}.json"
     artifact_path.write_text(
         json.dumps(record.model_dump(), indent=2),
         encoding="utf-8",
     )
+    return artifact_path
+
+
+def _upload_to_s3(
+    s3_service: S3Service,
+    source_path: Path,
+    artifact_path: Path,
+    record: IntakeRecord,
+) -> None:
+    """
+    Upload the source document and intake artifact to S3.
+
+    Both uploads are attempted; any StorageError is re-raised as IntakeError
+    so the failure propagates through the single public interface.
+    """
+    try:
+        s3_service.upload_source_document(
+            local_path=source_path,
+            document_id=record.document_id,
+            source_type=record.source_type,
+        )
+        s3_service.upload_intake_artifact(
+            local_path=artifact_path,
+            document_id=record.document_id,
+            source_type=record.source_type,
+        )
+    except StorageError as exc:
+        raise IntakeError(f"S3 upload failed: {exc}") from exc

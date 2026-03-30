@@ -1,25 +1,32 @@
 """
 Unit tests for the document intake pipeline.
 
-Covers:
+A-1 coverage (local-only, no AWS):
   - Happy path: valid file + valid metadata → document_id returned + artifact written
   - Missing file: non-existent path → IntakeError raised
   - Unsupported extension: .csv → IntakeError raised
   - Oversized file → IntakeError raised
   - Invalid document_date format → Pydantic ValidationError raised
 
-No AWS calls. No mocking of external services. All I/O uses tmp_path (pytest fixture).
+A-2 coverage (S3 upload via moto — no real AWS calls):
+  - run_intake with s3_service uploads source document to expected S3 key
+  - run_intake with s3_service uploads intake artifact to expected S3 key
+  - S3 upload failure propagates as IntakeError
 """
 
 import json
 from pathlib import Path
+from unittest.mock import MagicMock
 
+import boto3
 import pytest
+from moto import mock_aws
 from pydantic import ValidationError
 
 import app.services.intake_service as intake_service_module
 from app.schemas.intake_models import IntakeMetadata
 from app.services.intake_service import IntakeError, run_intake
+from app.services.s3_service import S3Service, StorageError
 
 
 # ── fixtures ──────────────────────────────────────────────────────────────────
@@ -169,4 +176,106 @@ def test_invalid_source_type_raises_validation_error() -> None:
         IntakeMetadata(
             source_type="UnknownOrg",      # not in the Literal set
             document_date="2026-03-30",
+        )
+
+
+# ── A-2: S3 upload tests ──────────────────────────────────────────────────────
+#
+# These tests pass an S3Service (backed by moto) into run_intake() to verify
+# that the pipeline uploads the source document and intake artifact to the
+# correct S3 keys.  No real AWS credentials or network calls are made.
+
+_BUCKET = "test-caseops-documents"
+_REGION = "us-east-1"
+
+
+@pytest.fixture()
+def fake_aws_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ensure boto3 never contacts real AWS during these tests."""
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "testing")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "testing")
+    monkeypatch.setenv("AWS_SECURITY_TOKEN", "testing")
+    monkeypatch.setenv("AWS_SESSION_TOKEN", "testing")
+    monkeypatch.setenv("AWS_DEFAULT_REGION", _REGION)
+
+
+@pytest.fixture()
+def s3_mock(fake_aws_credentials: None):
+    """Active moto S3 mock with the test bucket pre-created."""
+    with mock_aws():
+        client = boto3.client("s3", region_name=_REGION)
+        client.create_bucket(Bucket=_BUCKET)
+        yield client
+
+
+@pytest.fixture()
+def s3_service(s3_mock) -> S3Service:
+    """S3Service pointing at the moto-backed bucket."""
+    return S3Service(bucket_name=_BUCKET, region=_REGION)
+
+
+def test_intake_uploads_source_document_to_s3(
+    txt_file: Path,
+    valid_metadata: IntakeMetadata,
+    tmp_path: Path,
+    s3_service: S3Service,
+    s3_mock,
+) -> None:
+    """After run_intake, the source document should appear at the expected S3 key."""
+    document_id = run_intake(
+        file_path=str(txt_file),
+        metadata=valid_metadata,
+        output_dir=tmp_path / "intake",
+        s3_service=s3_service,
+    )
+
+    expected_key = f"documents/{document_id}/raw/sample_advisory.txt"
+    response = s3_mock.get_object(Bucket=_BUCKET, Key=expected_key)
+    body = response["Body"].read().decode("utf-8")
+    assert "FDA advisory" in body
+
+
+def test_intake_uploads_artifact_to_s3(
+    txt_file: Path,
+    valid_metadata: IntakeMetadata,
+    tmp_path: Path,
+    s3_service: S3Service,
+    s3_mock,
+) -> None:
+    """After run_intake, the intake artifact JSON should appear at the expected S3 key."""
+    document_id = run_intake(
+        file_path=str(txt_file),
+        metadata=valid_metadata,
+        output_dir=tmp_path / "intake",
+        s3_service=s3_service,
+    )
+
+    expected_key = f"artifacts/intake/{document_id}.json"
+    response = s3_mock.get_object(Bucket=_BUCKET, Key=expected_key)
+    artifact = json.loads(response["Body"].read().decode("utf-8"))
+    assert artifact["document_id"] == document_id
+    assert artifact["source_type"] == "FDA"
+
+
+def test_intake_s3_failure_raises_intake_error(
+    txt_file: Path,
+    valid_metadata: IntakeMetadata,
+    tmp_path: Path,
+    s3_service: S3Service,
+) -> None:
+    """
+    If S3 upload fails, run_intake must raise IntakeError rather than
+    propagating a raw StorageError or boto3 exception.
+    """
+    # Replace the upload method with one that always raises StorageError.
+    s3_service.upload_source_document = MagicMock(
+        side_effect=StorageError("simulated S3 failure")
+    )
+
+    with pytest.raises(IntakeError, match="S3 upload failed"):
+        run_intake(
+            file_path=str(txt_file),
+            metadata=valid_metadata,
+            output_dir=tmp_path / "intake",
+            s3_service=s3_service,
         )

@@ -7,8 +7,14 @@ Usage:
       --submitter-note "Flagged for immediate review"
 
 Run `python -m app.cli --help` for full usage.
+
+S3 upload behaviour:
+  If S3_DOCUMENT_BUCKET is set in the environment, the source document and
+  intake artifact are uploaded to S3 automatically after local intake.
+  If the variable is absent, intake runs in local-only mode (no S3 calls).
 """
 
+import os
 import sys
 
 import click
@@ -16,6 +22,7 @@ from pydantic import ValidationError
 
 from app.schemas.intake_models import IntakeMetadata
 from app.services.intake_service import IntakeError, run_intake
+from app.services.s3_service import S3Service, StorageError
 
 
 @click.group()
@@ -59,8 +66,23 @@ def intake(
         click.echo(f"[error] Invalid metadata: {exc}", err=True)
         sys.exit(1)
 
+    s3_service: S3Service | None = None
+    bucket = os.getenv("S3_DOCUMENT_BUCKET")
+    if bucket:
+        try:
+            s3_service = S3Service(bucket_name=bucket)
+        except StorageError as exc:
+            click.echo(f"[error] Could not initialise S3 client: {exc}", err=True)
+            sys.exit(1)
+    else:
+        click.echo("[info] S3_DOCUMENT_BUCKET not set — running in local-only mode.")
+
     try:
-        document_id = run_intake(file_path=file_path, metadata=metadata)
+        document_id = run_intake(
+            file_path=file_path,
+            metadata=metadata,
+            s3_service=s3_service,
+        )
     except IntakeError as exc:
         click.echo(f"[error] Intake failed: {exc}", err=True)
         sys.exit(1)
