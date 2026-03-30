@@ -43,6 +43,11 @@ class S3Service:
             region_name=region or os.getenv("AWS_REGION", "us-east-1"),
         )
 
+    @property
+    def bucket_name(self) -> str:
+        """The S3 bucket this service is configured to write to."""
+        return self._bucket
+
     # ── public interface ──────────────────────────────────────────────────────
 
     def upload_source_document(

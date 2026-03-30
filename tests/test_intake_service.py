@@ -1,16 +1,19 @@
 """
 Unit tests for the document intake pipeline.
 
-A-1 coverage (local-only, no AWS):
-  - Happy path: valid file + valid metadata → document_id returned + artifact written
+A-1 / A-2 coverage (preserved, now verified against IntakeResult):
+  - Happy path: valid file + valid metadata → IntakeResult returned + artifact written
   - Missing file: non-existent path → IntakeError raised
   - Unsupported extension: .csv → IntakeError raised
   - Oversized file → IntakeError raised
   - Invalid document_date format → Pydantic ValidationError raised
 
-A-2 coverage (S3 upload via moto — no real AWS calls):
-  - run_intake with s3_service uploads source document to expected S3 key
-  - run_intake with s3_service uploads intake artifact to expected S3 key
+A-3 coverage (typed IntakeResult handoff contract):
+  - run_intake returns IntakeResult, not a bare string
+  - local-only mode: storage is None
+  - S3-enabled mode: storage populated with bucket name and both S3 keys
+  - IntakeResult.record matches the written artifact content
+  - IntakeResult.artifact_path points to the written local file
   - S3 upload failure propagates as IntakeError
 """
 
@@ -24,7 +27,7 @@ from moto import mock_aws
 from pydantic import ValidationError
 
 import app.services.intake_service as intake_service_module
-from app.schemas.intake_models import IntakeMetadata
+from app.schemas.intake_models import IntakeMetadata, IntakeResult
 from app.services.intake_service import IntakeError, run_intake
 from app.services.s3_service import S3Service, StorageError
 
@@ -48,43 +51,103 @@ def txt_file(tmp_path: Path) -> Path:
     return f
 
 
-# ── success case ──────────────────────────────────────────────────────────────
+# ── A-3: IntakeResult return type ─────────────────────────────────────────────
 
-def test_intake_success_returns_document_id(
+def test_intake_returns_intake_result(
     txt_file: Path, valid_metadata: IntakeMetadata, tmp_path: Path
 ) -> None:
-    output_dir = tmp_path / "intake"
-
-    document_id = run_intake(
+    """run_intake must return a typed IntakeResult, not a bare string."""
+    result = run_intake(
         file_path=str(txt_file),
         metadata=valid_metadata,
-        output_dir=output_dir,
+        output_dir=tmp_path / "intake",
     )
 
-    assert document_id.startswith("doc-")
-    # format: doc-YYYYMMDD-xxxxxxxx
-    parts = document_id.split("-")
+    assert isinstance(result, IntakeResult)
+
+
+def test_intake_result_document_id_format(
+    txt_file: Path, valid_metadata: IntakeMetadata, tmp_path: Path
+) -> None:
+    """document_id on the result must follow the doc-YYYYMMDD-xxxxxxxx format."""
+    result = run_intake(
+        file_path=str(txt_file),
+        metadata=valid_metadata,
+        output_dir=tmp_path / "intake",
+    )
+
+    assert result.document_id.startswith("doc-")
+    parts = result.document_id.split("-")
     assert len(parts) == 3
     assert len(parts[1]) == 8      # YYYYMMDD
     assert len(parts[2]) == 8      # uuid4 prefix
 
 
-def test_intake_success_writes_artifact(
+def test_intake_result_artifact_path_exists(
     txt_file: Path, valid_metadata: IntakeMetadata, tmp_path: Path
 ) -> None:
+    """artifact_path on the result must point to the written local file."""
     output_dir = tmp_path / "intake"
 
-    document_id = run_intake(
+    result = run_intake(
         file_path=str(txt_file),
         metadata=valid_metadata,
         output_dir=output_dir,
     )
 
-    artifact = output_dir / f"{document_id}.json"
+    assert Path(result.artifact_path).exists()
+    assert result.artifact_path.endswith(f"{result.document_id}.json")
+
+
+def test_intake_result_record_matches_artifact(
+    txt_file: Path, valid_metadata: IntakeMetadata, tmp_path: Path
+) -> None:
+    """IntakeResult.record must be consistent with the written artifact JSON."""
+    output_dir = tmp_path / "intake"
+
+    result = run_intake(
+        file_path=str(txt_file),
+        metadata=valid_metadata,
+        output_dir=output_dir,
+    )
+
+    artifact = json.loads(Path(result.artifact_path).read_text(encoding="utf-8"))
+    assert artifact["document_id"] == result.record.document_id
+    assert artifact["source_type"] == result.record.source_type
+    assert artifact["document_date"] == result.record.document_date
+
+
+def test_intake_local_only_has_no_storage(
+    txt_file: Path, valid_metadata: IntakeMetadata, tmp_path: Path
+) -> None:
+    """In local-only mode (no S3Service), storage must be None."""
+    result = run_intake(
+        file_path=str(txt_file),
+        metadata=valid_metadata,
+        output_dir=tmp_path / "intake",
+    )
+
+    assert result.storage is None
+
+
+# ── artifact content (A-1 assertions preserved) ───────────────────────────────
+
+def test_intake_writes_artifact(
+    txt_file: Path, valid_metadata: IntakeMetadata, tmp_path: Path
+) -> None:
+    output_dir = tmp_path / "intake"
+
+    result = run_intake(
+        file_path=str(txt_file),
+        metadata=valid_metadata,
+        output_dir=output_dir,
+    )
+
+    artifact = output_dir / f"{result.document_id}.json"
     assert artifact.exists(), "Intake artifact file should be created"
 
     data = json.loads(artifact.read_text(encoding="utf-8"))
-    assert data["document_id"] == document_id
+    assert data["document_id"] == result.document_id
     assert data["original_filename"] == "sample_advisory.txt"
     assert data["extension"] == ".txt"
     assert data["source_type"] == "FDA"
@@ -102,13 +165,13 @@ def test_intake_md_file_is_accepted(
     md_file.write_text("# Incident Report\n\nDetails here.", encoding="utf-8")
     output_dir = tmp_path / "intake"
 
-    document_id = run_intake(
+    result = run_intake(
         file_path=str(md_file),
         metadata=valid_metadata,
         output_dir=output_dir,
     )
 
-    assert document_id.startswith("doc-")
+    assert result.document_id.startswith("doc-")
 
 
 # ── missing file ──────────────────────────────────────────────────────────────
@@ -179,11 +242,12 @@ def test_invalid_source_type_raises_validation_error() -> None:
         )
 
 
-# ── A-2: S3 upload tests ──────────────────────────────────────────────────────
+# ── A-2 / A-3: S3 upload tests ───────────────────────────────────────────────
 #
 # These tests pass an S3Service (backed by moto) into run_intake() to verify
-# that the pipeline uploads the source document and intake artifact to the
-# correct S3 keys.  No real AWS credentials or network calls are made.
+# that the pipeline uploads files to the correct S3 keys and that IntakeResult
+# captures the bucket and key information accurately.
+# No real AWS credentials or network calls are made.
 
 _BUCKET = "test-caseops-documents"
 _REGION = "us-east-1"
@@ -214,46 +278,71 @@ def s3_service(s3_mock) -> S3Service:
     return S3Service(bucket_name=_BUCKET, region=_REGION)
 
 
-def test_intake_uploads_source_document_to_s3(
+def test_intake_s3_result_has_storage(
     txt_file: Path,
     valid_metadata: IntakeMetadata,
     tmp_path: Path,
     s3_service: S3Service,
     s3_mock,
 ) -> None:
-    """After run_intake, the source document should appear at the expected S3 key."""
-    document_id = run_intake(
+    """With S3 enabled, IntakeResult.storage must be populated."""
+    result = run_intake(
         file_path=str(txt_file),
         metadata=valid_metadata,
         output_dir=tmp_path / "intake",
         s3_service=s3_service,
     )
 
-    expected_key = f"documents/{document_id}/raw/sample_advisory.txt"
+    assert result.storage is not None
+    assert result.storage.bucket_name == _BUCKET
+
+
+def test_intake_s3_result_source_document_key(
+    txt_file: Path,
+    valid_metadata: IntakeMetadata,
+    tmp_path: Path,
+    s3_service: S3Service,
+    s3_mock,
+) -> None:
+    """storage.source_document_key must match the expected S3 key pattern."""
+    result = run_intake(
+        file_path=str(txt_file),
+        metadata=valid_metadata,
+        output_dir=tmp_path / "intake",
+        s3_service=s3_service,
+    )
+
+    expected_key = f"documents/{result.document_id}/raw/sample_advisory.txt"
+    assert result.storage.source_document_key == expected_key
+
+    # Verify the object actually landed there.
     response = s3_mock.get_object(Bucket=_BUCKET, Key=expected_key)
     body = response["Body"].read().decode("utf-8")
     assert "FDA advisory" in body
 
 
-def test_intake_uploads_artifact_to_s3(
+def test_intake_s3_result_artifact_key(
     txt_file: Path,
     valid_metadata: IntakeMetadata,
     tmp_path: Path,
     s3_service: S3Service,
     s3_mock,
 ) -> None:
-    """After run_intake, the intake artifact JSON should appear at the expected S3 key."""
-    document_id = run_intake(
+    """storage.intake_artifact_key must match the expected S3 key pattern."""
+    result = run_intake(
         file_path=str(txt_file),
         metadata=valid_metadata,
         output_dir=tmp_path / "intake",
         s3_service=s3_service,
     )
 
-    expected_key = f"artifacts/intake/{document_id}.json"
+    expected_key = f"artifacts/intake/{result.document_id}.json"
+    assert result.storage.intake_artifact_key == expected_key
+
+    # Verify the artifact JSON is present in S3 and coherent.
     response = s3_mock.get_object(Bucket=_BUCKET, Key=expected_key)
     artifact = json.loads(response["Body"].read().decode("utf-8"))
-    assert artifact["document_id"] == document_id
+    assert artifact["document_id"] == result.document_id
     assert artifact["source_type"] == "FDA"
 
 
@@ -267,7 +356,6 @@ def test_intake_s3_failure_raises_intake_error(
     If S3 upload fails, run_intake must raise IntakeError rather than
     propagating a raw StorageError or boto3 exception.
     """
-    # Replace the upload method with one that always raises StorageError.
     s3_service.upload_source_document = MagicMock(
         side_effect=StorageError("simulated S3 failure")
     )

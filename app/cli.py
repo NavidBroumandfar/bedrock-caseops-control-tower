@@ -78,7 +78,7 @@ def intake(
         click.echo("[info] S3_DOCUMENT_BUCKET not set — running in local-only mode.")
 
     try:
-        document_id = run_intake(
+        result = run_intake(
             file_path=file_path,
             metadata=metadata,
             s3_service=s3_service,
@@ -87,7 +87,20 @@ def intake(
         click.echo(f"[error] Intake failed: {exc}", err=True)
         sys.exit(1)
 
-    click.echo(f"[ok] Intake complete. document_id={document_id}")
+    _print_registration_summary(result)
+
+
+def _print_registration_summary(result) -> None:
+    """Print a concise registration summary to stdout."""
+    click.echo("[ok] Registration complete.")
+    click.echo(f"     document_id  : {result.document_id}")
+    click.echo(f"     artifact     : {result.artifact_path}")
+    if result.storage:
+        click.echo(f"     s3 bucket    : {result.storage.bucket_name}")
+        click.echo(f"     source key   : {result.storage.source_document_key}")
+        click.echo(f"     artifact key : {result.storage.intake_artifact_key}")
+    else:
+        click.echo("     storage      : local only")
 
 
 if __name__ == "__main__":
