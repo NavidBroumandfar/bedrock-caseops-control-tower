@@ -1,6 +1,25 @@
 # Cursor Context — Bedrock CaseOps Multi-Agent Control Tower
 
-Use this file to orient a new Cursor chat session quickly.
+> **Orientation file only.**
+> This is a quick-start reference for new Cursor sessions.
+> It is NOT the source of truth. For authoritative decisions:
+> - Scope and roadmap → `PROJECT_SPEC.md`
+> - Technical design → `ARCHITECTURE.md`
+> - Public project summary → `README.md`
+> - This file → quick orientation, current phase, repo map
+
+---
+
+## How to Start a Session
+
+At the beginning of any major implementation session, read these four files in order before making changes:
+
+1. `README.md` — understand the public-facing purpose and constraints
+2. `PROJECT_SPEC.md` — confirm scope, requirements, and what phase you are in
+3. `ARCHITECTURE.md` — confirm the technical design before touching any code
+4. `docs/CURSOR_CONTEXT.md` (this file) — orient quickly on current state
+
+If there is any conflict between files, `PROJECT_SPEC.md` and `ARCHITECTURE.md` take precedence over this file.
 
 ---
 
@@ -40,19 +59,21 @@ Do not add other AWS services without explicit discussion.
 ## Repo Structure
 
 ```
-app/
-  agents/        ← agent classes (Retrieval, Analysis, Validation, ToolExecutor, Supervisor)
-  services/      ← AWS service wrappers (s3, bedrock, kb, cloudwatch)
-  workflows/     ← pipeline orchestration and supervisor routing
-  schemas/       ← Pydantic models (IntakeMetadata, EvidenceChunk, AnalysisOutput, CaseOutput, etc.)
-  utils/         ← id generation, logging, config, file helpers
-notebooks/       ← exploration and prototyping only
-tests/           ← unit tests; mock AWS, no live calls required
-data/
-  sample_documents/   ← public-domain test docs (FDA, CISA, synthetic)
-  expected_outputs/   ← reference JSON for test assertions
-outputs/         ← runtime output (gitignored)
-docs/            ← this file + future architectural notes
+bedrock-caseops-control-tower/
+├── app/
+│   ├── agents/        ← agent classes (Supervisor, Retrieval, Analysis, Validation, ToolExecutor)
+│   ├── services/      ← AWS service wrappers (s3, bedrock, kb, cloudwatch)
+│   ├── workflows/     ← pipeline orchestration and supervisor routing
+│   ├── schemas/       ← Pydantic models (IntakeMetadata, EvidenceChunk, AnalysisOutput, CaseOutput, etc.)
+│   └── utils/         ← id generation, logging, config, file helpers
+├── notebooks/         ← exploration and prototyping only
+├── tests/             ← unit tests; mock AWS, no live calls required
+├── data/
+│   ├── sample_documents/   ← public-domain test docs (FDA, CISA, synthetic)
+│   └── expected_outputs/   ← reference JSON for test assertions
+├── outputs/           ← runtime output (gitignored)
+└── docs/
+    └── CURSOR_CONTEXT.md   ← this file
 ```
 
 ---
@@ -73,50 +94,57 @@ docs/            ← this file + future architectural notes
 - Frontend or API server
 - Authentication / multi-user
 - CI/CD pipeline
-- Bedrock Guardrails
-- Bedrock Evaluations
-- Prompt caching / routing
-- Bedrock Flows
-- Model customization
+- Bedrock Guardrails (planned v2)
+- Bedrock Evaluations (planned v2)
+- Prompt caching / routing (planned v2)
+- Bedrock Flows (planned v3)
+- Model customization (planned v3)
 - Multi-region support
 
 ---
 
-## Implementation Rules
+## Architecture Constraints
+
+These are design contracts to follow during all implementation work. They are not yet implemented — they are the rules to build against.
 
 - Agents are Python classes with a `run()` method that accepts and returns typed Pydantic models
 - Agents do not call AWS clients directly — they call service methods from `app/services/`
 - Service modules are thin wrappers; they do not contain business logic
-- All outputs conform to the `CaseOutput` Pydantic schema defined in `app/schemas/`
+- All structured outputs conform to the `CaseOutput` schema defined in `app/schemas/`
 - Citations are first-class: never dropped, never fabricated
-- Escalation is config-driven (threshold in `.env`)
-- Logs are structured JSON with session_id, document_id, agent, event fields
-- No inline code comments that just describe what the code does
+- Escalation threshold is config-driven (set in `.env`, read from config)
+- All logs are structured JSON with `session_id`, `document_id`, `agent`, `event` fields
+- No inline code comments that only describe what the code does; comments explain intent
 
 ---
 
 ## Current Implementation Phase
 
-**Phase 1 — v1 MVP:** Core agentic RAG pipeline
+**Phase 1 — v1 MVP (active)**
 
-Next immediate step: build the document intake pipeline stub
-- Accept local file path
-- Assign document_id (doc-{YYYYMMDD}-{uuid4[:8]})
-- Validate required metadata (source_type, document_date, filename)
-- Build IntakeMetadata Pydantic model
-- Stub the S3 upload call (implement service method, leave boto3 call for when credentials are confirmed)
-- Return document_id to caller
+Repository scaffold complete. Ready to begin A-1.
 
-See ARCHITECTURE.md §5 for the intake flow spec.
-See PROJECT_SPEC.md §8 F1–F2 for the functional requirements.
+**Next step — A-1: Document Intake Pipeline (local only)**
+- Accept local file path via CLI
+- Assign `document_id`: `doc-{YYYYMMDD}-{uuid4[:8]}`
+- Validate file existence and allowed file type
+- Validate required metadata (`source_type`, `document_date`, `filename`)
+- Build `IntakeMetadata` Pydantic model in `app/schemas/`
+- Write a local intake artifact to `outputs/`
+- Return `document_id`
+- Write unit tests with no AWS dependency
+
+Reference: `ARCHITECTURE.md §5` for the full intake flow. `PROJECT_SPEC.md §8 F1–F2` for functional requirements.
 
 ---
 
 ## Key Files
 
-- `README.md` — public-facing project summary
-- `PROJECT_SPEC.md` — scope, requirements, roadmap (source of truth)
-- `ARCHITECTURE.md` — technical design (source of truth)
-- `docs/CURSOR_CONTEXT.md` — this file
-- `app/schemas/` — Pydantic models are the contracts between all components
-- `.env.example` — environment variable reference
+| File | Purpose |
+|---|---|
+| `README.md` | Public-facing project summary |
+| `PROJECT_SPEC.md` | Scope, requirements, roadmap — **source of truth** |
+| `ARCHITECTURE.md` | Technical design — **source of truth** |
+| `docs/CURSOR_CONTEXT.md` | This file — quick orientation only |
+| `app/schemas/` | Pydantic models — contracts between all components |
+| `.env.example` | Environment variable reference |
