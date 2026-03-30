@@ -1,0 +1,26 @@
+# Bedrock CaseOps Control Tower — Python dependencies
+# Pinned to reasonable stable versions for a CLI-first MVP.
+# Update versions intentionally; use `pip install -r requirements.txt`.
+
+# ── AWS SDK ───────────────────────────────────────────────────────────────────
+boto3>=1.34.0,<2.0.0
+
+# ── Data validation and schemas ───────────────────────────────────────────────
+pydantic>=2.6.0,<3.0.0
+
+# ── CLI ───────────────────────────────────────────────────────────────────────
+click>=8.1.0,<9.0.0
+
+# ── Environment config ────────────────────────────────────────────────────────
+python-dotenv>=1.0.0,<2.0.0
+
+# ── Logging (structured JSON) ─────────────────────────────────────────────────
+structlog>=24.1.0,<25.0.0
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+python-dateutil>=2.8.2,<3.0.0
+
+# ── Dev / Testing ─────────────────────────────────────────────────────────────
+pytest>=8.0.0,<9.0.0
+pytest-mock>=3.12.0,<4.0.0
+moto[s3,bedrock]>=5.0.0,<6.0.0      # AWS mock library for unit tests

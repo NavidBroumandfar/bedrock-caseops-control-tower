@@ -1,0 +1,242 @@
+# Project Specification — Bedrock CaseOps Multi-Agent Control Tower
+
+**Version:** 0.1 (MVP)
+**Last Updated:** 2026-03-30
+**Status:** In Development
+
+---
+
+## 1. Project Overview
+
+Bedrock CaseOps Multi-Agent Control Tower is an AWS-native agentic AI system designed to process technical and operational documents — such as FDA warning letters, CISA advisories, and incident reports — and produce structured, citation-backed outputs including severity classification, category assignment, recommended actions, and escalation flags.
+
+The system uses a multi-agent pipeline orchestrated by a Supervisor Agent, with specialized sub-agents responsible for retrieval, analysis, validation, and tool execution. All outputs are grounded in a Bedrock Knowledge Base and traceable to specific source documents.
+
+---
+
+## 2. Problem Statement
+
+Operational teams processing regulatory, security, or incident documents face three recurring problems:
+
+1. **Volume and speed:** The volume of incoming documents exceeds what manual review can handle at acceptable speed.
+2. **Inconsistency:** Different reviewers classify and prioritize the same content differently.
+3. **Lack of grounding:** Existing AI-assisted tools summarize without verification — outputs cannot be audited or traced back to sources.
+
+This project addresses all three by automating the review pipeline with a grounded, validated, and auditable multi-agent system.
+
+---
+
+## 3. Goals
+
+**Primary Goals**
+- Build a reliable document review pipeline that produces grounded, structured outputs
+- Demonstrate a production-quality agentic AI system on AWS Bedrock
+- Create a clean, readable, portfolio-grade codebase that reflects real applied AI engineering
+
+**Secondary Goals**
+- Establish an extensible foundation for adding evaluation, guardrails, and optimization in later phases
+- Document the architecture and design decisions clearly enough to be understood without the author present
+
+---
+
+## 4. Primary Use Case
+
+An operator submits a technical or regulatory document (PDF, text, or markdown) through the CLI. The system:
+
+1. Validates and stores the document
+2. Retrieves grounded evidence from the Knowledge Base
+3. Classifies the document by severity and category
+4. Generates recommendations based only on retrieved evidence
+5. Validates the output for unsupported claims and confidence
+6. Returns a structured JSON result with citations, severity, recommendations, and an escalation flag
+
+---
+
+## 5. Target Users
+
+- Engineers and architects evaluating AWS Bedrock agentic capabilities
+- Applied AI practitioners building document-review or case-ops systems
+- Hiring reviewers evaluating applied AI engineering portfolios
+
+The system is not targeting end-user consumers or enterprise deployment in the MVP.
+
+---
+
+## 6. In-Scope MVP Features
+
+| Feature | Description |
+|---|---|
+| Document intake | Accept local file, assign document ID, validate metadata |
+| S3 storage | Upload raw documents to S3 with metadata tagging |
+| Knowledge Base retrieval | Query Bedrock KB and return grounded evidence chunks with source citations |
+| Multi-agent orchestration | Supervisor coordinates retrieval, analysis, validation, and tool execution |
+| Severity classification | Assign Critical / High / Medium / Low based on retrieved evidence |
+| Category assignment | Assign document category (Regulatory, Security, Operational, etc.) |
+| Recommendations | Generate concrete next-action recommendations from evidence |
+| Output validation | Validate analysis for unsupported claims and assign confidence score |
+| Escalation logic | Flag cases meeting escalation criteria |
+| Structured JSON output | Output conforms to defined Pydantic schema |
+| Citation tracking | Every claim references a specific KB source chunk |
+| CloudWatch logging | All agent steps logged with session and document IDs |
+| CLI interface | Operator can run the full pipeline from the command line |
+
+---
+
+## 7. Out-of-Scope Items
+
+The following are explicitly excluded from the MVP to keep scope manageable:
+
+- Full CI/CD pipeline (GitHub Actions, CodePipeline)
+- Web frontend or API server
+- Authentication and multi-user management
+- Bedrock Guardrails (planned v2)
+- Bedrock Evaluations (planned v2)
+- Prompt caching and prompt routing (planned v2)
+- Bedrock Flows (planned v3)
+- Model customization / fine-tuning (planned v3)
+- Bedrock Data Automation (planned v3)
+- Enterprise deployment infrastructure (VPC, IAM policies, service quotas)
+- Multi-region support
+- Document format conversion (assumes clean text input for MVP)
+
+---
+
+## 8. Functional Requirements
+
+### F1 — Document Intake
+- System must accept a local file path as input
+- System must assign a unique document ID (UUID-based)
+- System must validate that required metadata fields are present (filename, source type, date)
+- System must reject malformed or oversized inputs with a descriptive error
+
+### F2 — Storage
+- System must upload validated documents to a designated S3 bucket
+- S3 objects must include metadata tags (document_id, source_type, intake_timestamp)
+
+### F3 — Retrieval
+- System must query the Bedrock Knowledge Base with the document content or a derived query
+- Retrieval must return source chunks with their KB source identifiers
+- Retrieved chunks must be preserved in the output as citations
+
+### F4 — Analysis
+- Analysis Agent must work only from retrieved evidence chunks
+- Output must include severity level, category, summary, and recommendations
+- Agent must not introduce claims unsupported by the retrieved context
+
+### F5 — Validation
+- Validation Agent must audit the Analysis Agent output
+- Validation must produce a confidence score (0.0–1.0)
+- Validation must flag specific unsupported claims if detected
+- Cases with confidence below threshold must be marked for escalation
+
+### F6 — Output
+- Final output must conform to the CaseOutput Pydantic schema
+- Output must be written to the local outputs/ directory
+- Output must also be archived to S3
+- Output must include all required fields: document_id, severity, category, summary, recommendations, citations, confidence_score, escalation_required, timestamp
+
+### F7 — Logging
+- All agent steps must be logged with level, agent name, document ID, and session ID
+- Logs must be structured (JSON) and written to CloudWatch
+- Local log file must also be written under outputs/logs/
+
+---
+
+## 9. Non-Functional Requirements
+
+| Requirement | Target |
+|---|---|
+| **Correctness** | Outputs grounded in retrieved evidence; no fabricated citations |
+| **Traceability** | Every output traceable to source document and KB chunk |
+| **Modularity** | Each agent independently testable; services decoupled from orchestration |
+| **Readability** | Code readable without inline explanation; consistent naming and structure |
+| **Testability** | Core logic testable without live AWS calls (mock-friendly) |
+| **Fail-safe** | Errors at any agent step must not silently corrupt outputs |
+| **Latency** | Single document processed end-to-end in under 60 seconds (MVP target) |
+
+---
+
+## 10. Assumptions
+
+- Input documents are provided as clean text (plain text, markdown, or pre-extracted PDF text) for the MVP
+- The operator has valid AWS credentials configured in the environment
+- The Bedrock Knowledge Base has already been provisioned and populated with relevant source documents
+- A suitable foundation model is available in the target AWS region (e.g., Claude 3 Sonnet or Haiku)
+- Sample documents are sourced from publicly available, legally safe data only
+- The system runs in a single AWS region in the MVP
+
+---
+
+## 11. Risks
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| KB returns no relevant results for a document | Medium | High | Return empty evidence with low confidence; escalate automatically |
+| Bedrock model availability in target region | Low | High | Parameterize model ID; test region availability early |
+| Analysis Agent drifts from retrieved evidence | Medium | High | Validation Agent explicitly checks grounding |
+| Unstructured model output breaks schema parsing | Medium | Medium | Enforce structured output prompts; add retry with correction |
+| S3 permissions not configured | Low | Medium | Fail early with clear error at intake |
+| Sample documents have unexpected format | Medium | Low | Add format validation at intake; log and skip |
+
+---
+
+## 12. Success Criteria
+
+The MVP is considered successful when:
+
+- [ ] A document can be submitted via CLI and produce a valid JSON output end-to-end
+- [ ] The output includes at least one citation referencing an actual KB source chunk
+- [ ] The Validation Agent detects at least one unsupported claim in a synthetic adversarial test case
+- [ ] Escalation is triggered correctly for a document meeting the escalation criteria
+- [ ] All agent steps are logged with document and session IDs
+- [ ] The codebase passes unit tests for intake, schema validation, and escalation logic without live AWS calls
+
+---
+
+## 13. Phased Roadmap
+
+### Phase 1 — v1: Core Agentic RAG Product (MVP)
+
+**Goal:** End-to-end pipeline working with real AWS services
+
+- Document intake pipeline (local file → S3)
+- Bedrock Knowledge Base ingestion
+- Supervisor + 4 sub-agents (Retrieval, Analysis, Validation, Tool Executor)
+- Structured JSON output with citations
+- Escalation logic
+- CLI interface
+- CloudWatch logging
+- Unit tests for core logic
+
+**Exit Criteria:** An operator can run `python -m app.cli intake <file>` and get a valid, grounded output.
+
+---
+
+### Phase 2 — v2: Evaluation and Optimization
+
+**Goal:** Make the system measurably better and observable
+
+- Bedrock Evaluations integration for output quality scoring
+- Bedrock Guardrails for input/output safety controls
+- Prompt caching for repeated context patterns
+- Prompt routing for model selection by task type
+- Structured evaluation harness with expected outputs
+- Retrieval quality metrics (precision, recall against expected citations)
+- Expanded test suite with adversarial and edge cases
+- CloudWatch dashboard
+
+**Exit Criteria:** The system can evaluate its own outputs against a reference set and report quality metrics.
+
+---
+
+### Phase 3 — v3: Optional Customization Experiments
+
+**Goal:** Explore advanced Bedrock capabilities as optional enhancements
+
+- Bedrock Flows for declarative pipeline orchestration
+- Bedrock Data Automation for document preprocessing
+- Model customization experiments (continued pre-training or fine-tuning on domain data)
+- Prompt versioning and experiment tracking
+- Optional multi-region support
+
+**Exit Criteria:** At least one customization experiment produces a measurable improvement over the baseline v1 pipeline.
