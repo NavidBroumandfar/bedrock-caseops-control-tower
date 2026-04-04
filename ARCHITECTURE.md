@@ -3,7 +3,7 @@
 **Version:** 0.1 (MVP)
 **Last Updated:** 2026-04-04
 
-> **Implementation Status:** Document intake pipeline (Phase A) and retrieval foundation (Phase B) are implemented. Analysis, validation, supervisor orchestration, and CloudWatch logging remain upcoming (Phases C–E).
+> **Implementation Status:** Document intake pipeline (Phase A), retrieval foundation (Phase B), and analysis and validation foundations (Phase C) are implemented. Supervisor orchestration, tool execution, end-to-end pipeline completion, and CloudWatch logging remain upcoming (Phases D–E).
 
 ---
 
@@ -58,7 +58,7 @@ All inference runs through Amazon Bedrock's Converse API. Retrieval is handled b
 
 ## 2. End-to-End Workflow
 
-Steps 1–5 are implemented. Steps 6–13 reflect the designed target flow; analysis, validation, orchestration, and CloudWatch logging are upcoming (Phases C–E).
+Steps 1–9 are implemented. Steps 10–13 reflect the designed target flow; supervisor orchestration, tool execution, and CloudWatch logging are upcoming (Phases D–E).
 
 ```
 1. Operator invokes CLI with document path
@@ -67,13 +67,13 @@ Steps 1–5 are implemented. Steps 6–13 reflect the designed target flow; anal
 4. Supervisor invokes Retrieval Agent with document context
 5. Retrieval Agent queries Bedrock Knowledge Base, returns typed RetrievalResult with EvidenceChunk objects and citations  [implemented]
 6. Supervisor invokes Analysis Agent with retrieved chunks
-7. Analysis Agent produces severity, category, summary, recommendations
+7. Analysis Agent produces severity, category, summary, recommendations via Bedrock Converse API  [implemented]
 8. Supervisor invokes Validation Agent with analysis output + source chunks
-9. Validation Agent returns confidence score, flags, any unsupported claims
-10. Supervisor invokes Tool Executor Agent with validated analysis
-11. Tool Executor formats final CaseOutput schema, applies escalation rule
-12. Output written to outputs/ directory and archived to S3
-13. All steps logged to CloudWatch with session_id, document_id, agent_name, level
+9. Validation Agent audits claims, returns confidence score and unsupported claim flags via Bedrock Converse API  [implemented]
+10. Supervisor invokes Tool Executor Agent with validated analysis  [upcoming — Phase D]
+11. Tool Executor formats final CaseOutput schema, applies escalation rule  [upcoming — Phase D]
+12. Output written to outputs/ directory and archived to S3  [upcoming — Phase D–E]
+13. All steps logged to CloudWatch with session_id, document_id, agent_name, level  [upcoming — Phase E]
 ```
 
 ---
@@ -215,6 +215,8 @@ Return EvidenceChunks to Supervisor
 
 ## 7. Analysis Flow
 
+Analysis agent and Bedrock Converse service are implemented. The agent accepts a typed `AnalysisRequest`, calls the Converse API, and returns a typed `AnalysisOutput`.
+
 ```
 Input: list of EvidenceChunk objects
      │
@@ -239,6 +241,8 @@ Return AnalysisOutput to Supervisor
 ---
 
 ## 8. Validation Flow
+
+Validation / critic agent and Bedrock Converse validation path are implemented. The agent accepts a typed input containing the `AnalysisOutput` and original `EvidenceChunk` list, calls the Converse API, and returns a typed `ValidationOutput`.
 
 ```
 Input: AnalysisOutput + list of EvidenceChunks
