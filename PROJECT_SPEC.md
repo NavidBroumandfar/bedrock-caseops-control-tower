@@ -1,7 +1,7 @@
 # Project Specification — Bedrock CaseOps Multi-Agent Control Tower
 
 **Version:** 0.1 (MVP)
-**Last Updated:** 2026-03-30
+**Last Updated:** 2026-04-04
 **Status:** In Development
 
 ---
@@ -209,6 +209,34 @@ The MVP is considered successful when:
 - Unit tests for core logic
 
 **Exit Criteria:** An operator can run `python -m app.cli intake <file>` and get a valid, grounded output.
+
+#### Phase 1 Subphase Roadmap
+
+- **Phase A — Foundation & Intake** ✅
+  - A-0 repo foundation + source-of-truth docs
+  - A-1 local intake pipeline
+  - A-2 S3 storage adapter
+  - A-3 intake registration handoff contract
+
+- **Phase B — Retrieval**
+  - B-0 retrieval contracts + evidence schemas
+  - B-1 Bedrock Knowledge Base service wrapper
+  - B-2 retrieval workflow returning grounded evidence + citations
+
+- **Phase C — Analysis**
+  - C-0 analysis output schemas
+  - C-1 analysis agent / analysis service
+  - C-2 validation / critic agent
+
+- **Phase D — Orchestration & Escalation**
+  - D-0 supervisor / planner workflow
+  - D-1 tool executor + escalation logic
+  - D-2 end-to-end multi-agent orchestration
+
+- **Phase E — Operational MVP Finish**
+  - E-0 structured logging + CloudWatch integration
+  - E-1 CLI end-to-end flow and final JSON output packaging
+  - E-2 tests, hardening, sample cases, demo readiness
 
 ---
 

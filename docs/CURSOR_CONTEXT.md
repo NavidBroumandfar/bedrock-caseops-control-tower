@@ -105,7 +105,7 @@ bedrock-caseops-control-tower/
 
 ## Architecture Constraints
 
-These are design contracts to follow during all implementation work. They are not yet implemented — they are the rules to build against.
+These are design contracts followed across all implementation work. Foundational intake contracts are already implemented. Retrieval, analysis, validation, and orchestration contracts are targets for upcoming phases.
 
 - Agents are Python classes with a `run()` method that accepts and returns typed Pydantic models
 - Agents do not call AWS clients directly — they call service methods from `app/services/`
@@ -120,21 +120,25 @@ These are design contracts to follow during all implementation work. They are no
 
 ## Current Implementation Phase
 
-**Phase 1 — v1 MVP (active)**
+**Phase 1 — v1 MVP (active) | Phase A complete**
 
-Repository scaffold complete. Ready to begin A-1.
+### Completed
+- **A-0** — repo foundation, source-of-truth docs, project scaffold
+- **A-1** — local document intake pipeline (file validation, metadata validation, `document_id` generation, local intake artifact)
+- **A-2** — S3 storage adapter; raw document and intake artifact uploads to S3
+- **A-3** — typed intake registration handoff contract (`IntakeRegistration` result returned after intake)
+- Real AWS S3 verification completed successfully
 
-**Next step — A-1: Document Intake Pipeline (local only)**
-- Accept local file path via CLI
-- Assign `document_id`: `doc-{YYYYMMDD}-{uuid4[:8]}`
-- Validate file existence and allowed file type
-- Validate required metadata (`source_type`, `document_date`, `filename`)
-- Build `IntakeMetadata` Pydantic model in `app/schemas/`
-- Write a local intake artifact to `outputs/`
-- Return `document_id`
-- Write unit tests with no AWS dependency
+### Next step
+- **B-0** — retrieval contracts + evidence schemas
 
-Reference: `ARCHITECTURE.md §5` for the full intake flow. `PROJECT_SPEC.md §8 F1–F2` for functional requirements.
+### Not yet implemented
+- Retrieval (Phase B)
+- Bedrock Knowledge Base integration (Phase B)
+- Bedrock model inference (Phase C)
+- Agent orchestration (Phase D)
+
+Reference: `ARCHITECTURE.md §5` for the intake flow. `PROJECT_SPEC.md §13` for the full subphase roadmap.
 
 ---
 

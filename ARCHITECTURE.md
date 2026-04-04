@@ -1,7 +1,7 @@
 # Architecture — Bedrock CaseOps Multi-Agent Control Tower
 
 **Version:** 0.1 (MVP)
-**Last Updated:** 2026-03-30
+**Last Updated:** 2026-04-04
 
 ---
 
@@ -19,7 +19,8 @@ All inference runs through Amazon Bedrock's Converse API. Retrieval is handled b
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    Document Intake Pipeline                   │
-│  validate metadata → assign document_id → store to S3        │
+│  validate → assign document_id → local artifact → S3 upload  │
+│  → typed registration handoff                                 │
 └──────────────────────────┬──────────────────────────────────┘
                            │
                            ▼
@@ -57,8 +58,8 @@ All inference runs through Amazon Bedrock's Converse API. Retrieval is handled b
 
 ```
 1. Operator invokes CLI with document path
-2. Intake pipeline validates metadata, assigns document_id, uploads to S3
-3. Supervisor Agent receives document reference (S3 key + document_id)
+2. Intake pipeline validates file and metadata, assigns document_id, writes local intake artifact, uploads raw document and intake artifact to S3 (optional), returns typed IntakeRegistration result
+3. Supervisor Agent receives the IntakeRegistration (S3 key + document_id + metadata) and initiates the pipeline
 4. Supervisor invokes Retrieval Agent with document context
 5. Retrieval Agent queries Bedrock Knowledge Base, returns evidence chunks + citations
 6. Supervisor invokes Analysis Agent with retrieved chunks
@@ -147,10 +148,10 @@ Unit tests for each module. Tests for agents and workflows use mock services —
 CLI input: file path + optional metadata overrides
      │
      ▼
-Validate file exists and is within size limit
+Validate file exists, is readable, and is within size limit
      │
      ▼
-Extract or prompt for required metadata:
+Validate required metadata fields:
   - source_type (FDA / CISA / Incident / Other)
   - document_date (YYYY-MM-DD)
   - submitter_note (optional)
@@ -162,12 +163,20 @@ Assign document_id: doc-{YYYYMMDD}-{uuid4[:8]}
 Build IntakeMetadata Pydantic model → validate
      │
      ▼
-Upload raw file to S3:
+Write local intake artifact to outputs/{document_id}/intake.json
+     │
+     ▼
+[Optional] Upload raw source document to S3:
   s3://{bucket}/documents/{document_id}/raw/{filename}
   Metadata tags: document_id, source_type, intake_timestamp
      │
      ▼
-Return document_id to Supervisor for pipeline invocation
+[Optional] Upload intake artifact to S3:
+  s3://{bucket}/documents/{document_id}/intake.json
+     │
+     ▼
+Return typed IntakeRegistration result to caller:
+  - document_id, s3_key, intake_artifact_path, metadata snapshot
 ```
 
 ---
