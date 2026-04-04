@@ -105,7 +105,7 @@ bedrock-caseops-control-tower/
 
 ## Architecture Constraints
 
-These are design contracts followed across all implementation work. Foundational intake contracts are already implemented. Retrieval, analysis, validation, and orchestration contracts are targets for upcoming phases.
+These are design contracts followed across all implementation work. Intake and retrieval foundations are now implemented. Analysis, validation, orchestration, and CloudWatch logging contracts remain upcoming (Phases C–E).
 
 - Agents are Python classes with a `run()` method that accepts and returns typed Pydantic models
 - Agents do not call AWS clients directly — they call service methods from `app/services/`
@@ -120,7 +120,7 @@ These are design contracts followed across all implementation work. Foundational
 
 ## Current Implementation Phase
 
-**Phase 1 — v1 MVP (active) | Phase A complete**
+**Phase 1 — v1 MVP (active) | Phases A and B complete**
 
 ### Completed
 - **A-0** — repo foundation, source-of-truth docs, project scaffold
@@ -128,17 +128,21 @@ These are design contracts followed across all implementation work. Foundational
 - **A-2** — S3 storage adapter; raw document and intake artifact uploads to S3
 - **A-3** — typed intake registration handoff contract (`IntakeRegistration` result returned after intake)
 - Real AWS S3 verification completed successfully
+- **B-0** — retrieval contracts + evidence schemas (`EvidenceChunk`, `RetrievalRequest`, `RetrievalResult`)
+- **B-1** — Bedrock Knowledge Base service wrapper (`kb_service.py`)
+- **B-2** — retrieval workflow returning typed `RetrievalResult` with `EvidenceChunk` objects and citations
 
 ### Next step
-- **B-0** — retrieval contracts + evidence schemas
+- **C-0** — analysis output schemas
 
 ### Not yet implemented
-- Retrieval (Phase B)
-- Bedrock Knowledge Base integration (Phase B)
-- Bedrock model inference (Phase C)
-- Agent orchestration (Phase D)
+- Analysis generation (Phase C)
+- Validation / critic logic (Phase C)
+- Supervisor orchestration (Phase D)
+- Tool executor / escalation workflow (Phase D)
+- CloudWatch logging (Phase E)
 
-Reference: `ARCHITECTURE.md §5` for the intake flow. `PROJECT_SPEC.md §13` for the full subphase roadmap.
+Reference: `ARCHITECTURE.md §5–6` for intake and retrieval flows. `PROJECT_SPEC.md §13` for the full subphase roadmap.
 
 ---
 

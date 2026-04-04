@@ -212,18 +212,20 @@ The MVP is considered successful when:
 
 #### Phase 1 Subphase Roadmap
 
+> **Current status:** Phase A and Phase B complete; next step is C-0.
+
 - **Phase A — Foundation & Intake** ✅
   - A-0 repo foundation + source-of-truth docs
   - A-1 local intake pipeline
   - A-2 S3 storage adapter
   - A-3 intake registration handoff contract
 
-- **Phase B — Retrieval**
+- **Phase B — Retrieval** ✅
   - B-0 retrieval contracts + evidence schemas
   - B-1 Bedrock Knowledge Base service wrapper
   - B-2 retrieval workflow returning grounded evidence + citations
 
-- **Phase C — Analysis**
+- **Phase C — Analysis** ← next
   - C-0 analysis output schemas
   - C-1 analysis agent / analysis service
   - C-2 validation / critic agent

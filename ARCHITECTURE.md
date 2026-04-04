@@ -3,6 +3,8 @@
 **Version:** 0.1 (MVP)
 **Last Updated:** 2026-04-04
 
+> **Implementation Status:** Document intake pipeline (Phase A) and retrieval foundation (Phase B) are implemented. Analysis, validation, supervisor orchestration, and CloudWatch logging remain upcoming (Phases C–E).
+
 ---
 
 ## 1. Architecture Overview
@@ -56,12 +58,14 @@ All inference runs through Amazon Bedrock's Converse API. Retrieval is handled b
 
 ## 2. End-to-End Workflow
 
+Steps 1–5 are implemented. Steps 6–13 reflect the designed target flow; analysis, validation, orchestration, and CloudWatch logging are upcoming (Phases C–E).
+
 ```
 1. Operator invokes CLI with document path
-2. Intake pipeline validates file and metadata, assigns document_id, writes local intake artifact, uploads raw document and intake artifact to S3 (optional), returns typed IntakeRegistration result
+2. Intake pipeline validates file and metadata, assigns document_id, writes local intake artifact, uploads raw document and intake artifact to S3 (optional), returns typed IntakeRegistration result  [implemented]
 3. Supervisor Agent receives the IntakeRegistration (S3 key + document_id + metadata) and initiates the pipeline
 4. Supervisor invokes Retrieval Agent with document context
-5. Retrieval Agent queries Bedrock Knowledge Base, returns evidence chunks + citations
+5. Retrieval Agent queries Bedrock Knowledge Base, returns typed RetrievalResult with EvidenceChunk objects and citations  [implemented]
 6. Supervisor invokes Analysis Agent with retrieved chunks
 7. Analysis Agent produces severity, category, summary, recommendations
 8. Supervisor invokes Validation Agent with analysis output + source chunks
@@ -182,6 +186,8 @@ Return typed IntakeRegistration result to caller:
 ---
 
 ## 6. Retrieval Flow
+
+Retrieval foundation is implemented. The workflow returns a typed `RetrievalResult` containing a list of `EvidenceChunk` objects with source identifiers, excerpts, and relevance scores.
 
 ```
 Input: document content or derived query string
