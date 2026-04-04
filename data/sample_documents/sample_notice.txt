@@ -1,0 +1,1 @@
+This is a sample FDA-style technical notice for testing the intake pipeline.
