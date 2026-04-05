@@ -1,9 +1,9 @@
 # Architecture — Bedrock CaseOps Multi-Agent Control Tower
 
 **Version:** 0.1 (MVP)
-**Last Updated:** 2026-04-04
+**Last Updated:** 2026-04-05
 
-> **Implementation Status:** Document intake pipeline (Phase A), retrieval foundation (Phase B), and analysis and validation foundations (Phase C) are implemented. Supervisor orchestration, tool execution, end-to-end pipeline completion, and CloudWatch logging remain upcoming (Phases D–E).
+> **Implementation Status:** Document intake pipeline (Phase A), retrieval foundation (Phase B), analysis and validation foundations (Phase C), and supervisor orchestration with tool execution and end-to-end multi-agent pipeline (Phase D) are implemented. Structured logging, CloudWatch integration, and operational MVP finish remain upcoming (Phase E).
 
 ---
 
@@ -58,21 +58,21 @@ All inference runs through Amazon Bedrock's Converse API. Retrieval is handled b
 
 ## 2. End-to-End Workflow
 
-Steps 1–9 are implemented. Steps 10–13 reflect the designed target flow; supervisor orchestration, tool execution, and CloudWatch logging are upcoming (Phases D–E).
+Steps 1–11 are implemented. Steps 12–13 reflect the designed target flow; output persistence and CloudWatch logging are upcoming (Phase E).
 
 ```
 1. Operator invokes CLI with document path
 2. Intake pipeline validates file and metadata, assigns document_id, writes local intake artifact, uploads raw document and intake artifact to S3 (optional), returns typed IntakeRegistration result  [implemented]
-3. Supervisor Agent receives the IntakeRegistration (S3 key + document_id + metadata) and initiates the pipeline
-4. Supervisor invokes Retrieval Agent with document context
+3. Supervisor Agent receives the IntakeRegistration (S3 key + document_id + metadata) and initiates the pipeline  [implemented]
+4. Supervisor invokes Retrieval Agent with document context  [implemented]
 5. Retrieval Agent queries Bedrock Knowledge Base, returns typed RetrievalResult with EvidenceChunk objects and citations  [implemented]
-6. Supervisor invokes Analysis Agent with retrieved chunks
+6. Supervisor invokes Analysis Agent with retrieved chunks  [implemented]
 7. Analysis Agent produces severity, category, summary, recommendations via Bedrock Converse API  [implemented]
-8. Supervisor invokes Validation Agent with analysis output + source chunks
+8. Supervisor invokes Validation Agent with analysis output + source chunks  [implemented]
 9. Validation Agent audits claims, returns confidence score and unsupported claim flags via Bedrock Converse API  [implemented]
-10. Supervisor invokes Tool Executor Agent with validated analysis  [upcoming — Phase D]
-11. Tool Executor formats final CaseOutput schema, applies escalation rule  [upcoming — Phase D]
-12. Output written to outputs/ directory and archived to S3  [upcoming — Phase D–E]
+10. Supervisor invokes Tool Executor Agent with validated analysis  [implemented]
+11. Tool Executor formats final CaseOutput schema, applies escalation rule, returns structured output  [implemented]
+12. Output written to outputs/ directory and archived to S3  [upcoming — Phase E]
 13. All steps logged to CloudWatch with session_id, document_id, agent_name, level  [upcoming — Phase E]
 ```
 

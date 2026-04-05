@@ -105,7 +105,7 @@ bedrock-caseops-control-tower/
 
 ## Architecture Constraints
 
-These are design contracts followed across all implementation work. Intake, retrieval, analysis, and validation foundations are now implemented. Orchestration, escalation, and CloudWatch logging contracts remain upcoming (Phases D–E).
+These are design contracts followed across all implementation work. Intake, retrieval, analysis, validation, and orchestration foundations are now implemented. Observability and operational finish work (structured logging, CloudWatch, CLI packaging) remain upcoming (Phase E).
 
 - Agents are Python classes with a `run()` method that accepts and returns typed Pydantic models
 - Agents do not call AWS clients directly — they call service methods from `app/services/`
@@ -120,7 +120,7 @@ These are design contracts followed across all implementation work. Intake, retr
 
 ## Current Implementation Phase
 
-**Phase 1 — v1 MVP (active) | Phases A, B, and C complete**
+**Phase 1 — v1 MVP (active) | Phases A, B, C, and D complete**
 
 ### Completed
 - **A-0** — repo foundation, source-of-truth docs, project scaffold
@@ -134,17 +134,19 @@ These are design contracts followed across all implementation work. Intake, retr
 - **C-0** — analysis output schemas (`AnalysisOutput`, `AnalysisRequest`)
 - **C-1** — analysis agent + Bedrock Converse service (`bedrock_service.py`, `analysis_agent.py`)
 - **C-2** — validation / critic agent + Bedrock Converse validation path (`validation_agent.py`)
+- **D-0** — supervisor / planner workflow
+- **D-1** — tool executor + escalation logic
+- **D-2** — end-to-end multi-agent orchestration (intake handoff → retrieval → analysis → validation → `CaseOutput`)
 
 ### Next step
-- **D-0** — supervisor / planner workflow
+- **E-0** — structured logging + CloudWatch integration
 
 ### Not yet implemented
-- Supervisor orchestration (Phase D)
-- Tool executor / escalation workflow (Phase D)
-- End-to-end pipeline packaging (Phase D–E)
-- CloudWatch logging (Phase E)
+- Structured logging / CloudWatch integration (Phase E)
+- Final CLI packaging and output persistence flow (Phase E)
+- Final hardening, sample-case polish, demo readiness (Phase E)
 
-Reference: `ARCHITECTURE.md §5–8` for intake, retrieval, analysis, and validation flows. `PROJECT_SPEC.md §13` for the full subphase roadmap.
+Reference: `ARCHITECTURE.md §5–9` for component flows. `PROJECT_SPEC.md §13` for the full subphase roadmap.
 
 ---
 

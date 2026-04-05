@@ -1,7 +1,7 @@
 # Project Specification — Bedrock CaseOps Multi-Agent Control Tower
 
 **Version:** 0.1 (MVP)
-**Last Updated:** 2026-04-04
+**Last Updated:** 2026-04-05
 **Status:** In Development
 
 ---
@@ -212,7 +212,7 @@ The MVP is considered successful when:
 
 #### Phase 1 Subphase Roadmap
 
-> **Current status:** Phases A, B, and C complete; next step is D-0.
+> **Current status:** Phases A, B, C, and D complete; next step is E-0.
 
 - **Phase A — Foundation & Intake** ✅
   - A-0 repo foundation + source-of-truth docs
@@ -230,12 +230,12 @@ The MVP is considered successful when:
   - C-1 analysis agent / Bedrock Converse service
   - C-2 validation / critic agent
 
-- **Phase D — Orchestration & Escalation** ← next
+- **Phase D — Orchestration & Escalation** ✅
   - D-0 supervisor / planner workflow
   - D-1 tool executor + escalation logic
   - D-2 end-to-end multi-agent orchestration
 
-- **Phase E — Operational MVP Finish**
+- **Phase E — Operational MVP Finish** ← next
   - E-0 structured logging + CloudWatch integration
   - E-1 CLI end-to-end flow and final JSON output packaging
   - E-2 tests, hardening, sample cases, demo readiness
