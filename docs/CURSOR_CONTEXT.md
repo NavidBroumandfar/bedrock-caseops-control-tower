@@ -105,7 +105,7 @@ bedrock-caseops-control-tower/
 
 ## Architecture Constraints
 
-These are design contracts followed across all implementation work. All MVP phases (A through E-2) are implemented. The full pipeline is test-complete and demo-ready. Live Bedrock runtime validation remains pending external AWS-side resolution.
+These are design contracts followed across all implementation work. They apply to all phases and must not be violated when extending the system.
 
 - Agents are Python classes with a `run()` method that accepts and returns typed Pydantic models
 - Agents do not call AWS clients directly — they call service methods from `app/services/`

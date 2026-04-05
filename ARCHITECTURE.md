@@ -3,9 +3,11 @@
 **Version:** 0.1 (MVP)
 **Last Updated:** 2026-04-05
 
-> **Implementation Status:** All MVP engineering phases are complete: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). The repository is portfolio-ready and test-complete for the MVP scope.
+> **Phase 1 (v1 MVP) complete — Phase 2 not started.**
 >
-> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. The repo architecture and implementation are complete and correct. All 678 unit and integration-style tests pass without live AWS calls. Live validation will be completed when the AWS-side blocker is resolved.
+> **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Local output writing, S3 output archiving, structured logging, CloudWatch integration, CLI flow, and test coverage are all complete. The repository is portfolio-ready and test-complete for the MVP scope.
+>
+> **Live Bedrock runtime validation is pending:** Live AWS Knowledge Base end-to-end validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. The architecture and all implementation are complete and correct — this is not a code issue. All 678 unit and integration-style tests pass without live AWS calls. Live validation will be completed when the AWS-side blocker is resolved.
 
 ---
 
