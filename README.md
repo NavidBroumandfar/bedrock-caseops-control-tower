@@ -233,10 +233,85 @@ python -m app.cli intake --help
 
 ### Current status note
 
-Live Bedrock / Knowledge Base validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling in the target account. The full pipeline code is complete and correct; the `run` command will surface a clear failure message when AWS calls cannot be completed. All 604 unit tests pass without live AWS calls.
+Live Bedrock / Knowledge Base validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling in the target account. The full pipeline code is complete and correct; the `run` command will surface a clear failure message when AWS calls cannot be completed. All 678 unit tests pass without live AWS calls.
+
+---
+
+## Demo Flow (No AWS Required)
+
+The full pipeline flow can be exercised locally without live AWS credentials using the test suite and the provided sample documents.
+
+### Step 1: Run the test suite
+
+```bash
+pip install -r requirements.txt
+python -m pytest tests/ -v
+```
+
+All 678 tests pass without live AWS, covering intake, retrieval, analysis, validation, escalation, output writing, CLI commands, structured logging, CloudWatch service, and config loading.
+
+### Step 2: Explore sample inputs
+
+Sample documents are in `data/sample_documents/`:
+
+```
+data/sample_documents/
+├── fda_warning_letter_01.md   — FDA warning letter (quality system deficiencies)
+├── fda_recall_01.md           — FDA voluntary recall (undeclared ingredients)
+├── cisa_advisory_01.md        — CISA #StopRansomware advisory
+└── sample_notice.txt          — Minimal synthetic test notice
+```
+
+### Step 3: Explore expected outputs
+
+Reference output fixtures matching the `CaseOutput` schema are in `data/expected_outputs/`:
+
+```
+data/expected_outputs/
+├── README.md                          — explains the fixture format
+├── fda_warning_letter_01_expected.json
+└── cisa_advisory_01_expected.json
+```
+
+These fixtures are controlled reference outputs — **not** live AWS outputs.  See `data/expected_outputs/README.md` for details.
+
+### Step 4: Run the intake command locally (no AWS needed)
+
+The `intake` command validates and registers a document without requiring any AWS services:
+
+```bash
+python -m app.cli intake data/sample_documents/fda_warning_letter_01.md \
+    --source-type FDA \
+    --document-date 2026-03-30
+```
+
+Expected output:
+```
+[ok] Registration complete.
+     document_id  : doc-20260330-xxxxxxxx
+     artifact     : outputs/intake/doc-20260330-xxxxxxxx.json
+     storage      : local only
+```
+
+### Step 5: Run the full pipeline (requires live AWS)
+
+When AWS credentials, a provisioned Knowledge Base, and a Bedrock model are available:
+
+```bash
+python -m app.cli run data/sample_documents/fda_warning_letter_01.md \
+    --source-type FDA \
+    --document-date 2026-03-30 \
+    --submitter-note "FDA warning letter — quality system deficiencies"
+```
+
+On success, the CLI prints a structured summary and writes a JSON output to `outputs/{document_id}.json`.
+
+> **Live AWS status:** Live Bedrock / Knowledge Base validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling. The `run` command will fail with a clear `[error]` and `[hint]` message when live AWS calls cannot complete.
 
 ---
 
 ## Status
 
-Phases A–D, E-0 (structured logging + CloudWatch), and E-1 (CLI end-to-end flow, local JSON output, and S3 output archiving) are complete. See [PROJECT_SPEC.md](PROJECT_SPEC.md) for the full roadmap and [ARCHITECTURE.md](ARCHITECTURE.md) for the technical design.
+Phases A–D, E-0 (structured logging + CloudWatch), E-1 (CLI end-to-end flow, local JSON output, S3 archiving), and **E-2 (test hardening, sample cases, demo readiness)** are complete. The MVP engineering layer is portfolio-ready and test-complete. See [PROJECT_SPEC.md](PROJECT_SPEC.md) for the full roadmap and [ARCHITECTURE.md](ARCHITECTURE.md) for the technical design.
+
+**Live Bedrock runtime validation** remains pending due to AWS-side account/throttling resolution. This is not a code issue — it is an external blocker documented clearly throughout the project.

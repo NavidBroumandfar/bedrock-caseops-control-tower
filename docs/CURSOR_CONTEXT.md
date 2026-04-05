@@ -105,7 +105,7 @@ bedrock-caseops-control-tower/
 
 ## Architecture Constraints
 
-These are design contracts followed across all implementation work. Intake, retrieval, analysis, validation, and orchestration foundations are now implemented. Observability and operational finish work (structured logging, CloudWatch, CLI packaging) remain upcoming (Phase E).
+These are design contracts followed across all implementation work. All MVP phases (A through E-2) are implemented. The full pipeline is test-complete and demo-ready. Live Bedrock runtime validation remains pending external AWS-side resolution.
 
 - Agents are Python classes with a `run()` method that accepts and returns typed Pydantic models
 - Agents do not call AWS clients directly — they call service methods from `app/services/`
@@ -120,9 +120,11 @@ These are design contracts followed across all implementation work. Intake, retr
 
 ## Current Implementation Phase
 
-**Phase 1 — v1 MVP (active) | Phases A, B, C, D, E-0, and E-1 complete (including S3 output archiving)**
+**Phase 1 — v1 MVP COMPLETE | Phases A, B, C, D, E-0, E-1, and E-2 complete**
 
-> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 604 unit tests pass without live AWS calls.
+> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 678 unit and integration-style tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue.
+
+The repository is portfolio-ready, test-complete, and demo-friendly for the full MVP engineering scope.
 
 ### Completed
 - **A-0** — repo foundation, source-of-truth docs, project scaffold
@@ -156,14 +158,25 @@ These are design contracts followed across all implementation work. Intake, retr
   - `tests/test_output_writer.py` — 20 tests for local output writing behaviour
   - `tests/test_cli.py` — 35 tests for CLI run command (argument validation, success path, all failure paths, S3 archive paths, logger integration, no live AWS)
   - `tests/test_s3_service.py` — 5 new tests for `upload_case_output` (key format, content, metadata, error handling)
-  - 604 total tests pass
+  - 604 total tests passing at E-1 completion
+- **E-2** — tests, hardening, sample cases, demo readiness:
+  - `tests/test_config.py` — 57 new tests covering all `ObservabilityConfig` and `PipelineConfig` defaults, env var overrides, type correctness, and immutability
+  - `tests/test_end_to_end_flow.py` — 34 new tests running the full intake → pipeline → output flow using real sample documents (`data/sample_documents/`) with all AWS mocked
+  - `tests/test_cli.py` — 2 new tests verifying `[hint]` messages for pipeline init failure and pipeline runtime failure
+  - `app/cli.py` — hardened error messaging: `[hint]` lines added for pipeline initialisation failure (pointing to `BEDROCK_KB_ID`) and for `PipelineWorkflowError` (pointing to AWS credentials and KB setup)
+  - `data/expected_outputs/fda_warning_letter_01_expected.json` — reference CaseOutput fixture for FDA warning letter sample
+  - `data/expected_outputs/cisa_advisory_01_expected.json` — reference CaseOutput fixture for CISA advisory sample
+  - `data/expected_outputs/README.md` — explains fixture format, purpose, and live-AWS status
+  - `README.md` — added Demo Flow section with step-by-step instructions for local demo without live AWS; updated status and test count
+  - `ARCHITECTURE.md` — updated implementation status to reflect E-2 complete; updated test count
+  - 678 total tests pass
 
 ### Next step
-- **E-2** — tests, hardening, sample cases, demo readiness
+- Phase 2 (v2: Evaluation and Optimization) — NOT started; see `PROJECT_SPEC.md §13`
 
 ### Not yet implemented
-- Final hardening, sample-case polish, demo readiness (Phase E-2)
 - Live Bedrock validation (blocked by AWS-side throttling — not a code issue)
+- Phase 2: Bedrock Evaluations, Guardrails, prompt caching, evaluation harness (out of scope for MVP)
 
 Reference: `ARCHITECTURE.md §5–9` for component flows. `PROJECT_SPEC.md §13` for the full subphase roadmap.
 

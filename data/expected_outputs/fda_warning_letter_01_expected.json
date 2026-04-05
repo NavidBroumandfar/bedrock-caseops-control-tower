@@ -1,0 +1,37 @@
+{
+  "_note": "Controlled reference fixture — NOT a live AWS output. Matches the CaseOutput schema. Citations reference the fake KB chunks from tests/fakes/fake_retrieval.py.",
+  "document_id": "doc-20260330-fda00001",
+  "source_filename": "fda_warning_letter_01.md",
+  "source_type": "FDA",
+  "severity": "High",
+  "category": "Regulatory / Quality System Deficiency",
+  "summary": "FDA inspection of Uscom Kft identified multiple quality system deficiencies including inadequate corrective and preventive action handling, cleaning and disinfection validation gaps, and insufficient nonconforming product controls. The firm's SpiroSonic AIR device was found adulterated and misbranded due to the absence of a required approved application or appropriate notification. The FDA found the company's responses to the inspection observations to be inadequate in several cited areas.",
+  "recommendations": [
+    "Initiate CAPA for each cited quality system deficiency within 30 days.",
+    "Submit written response to FDA addressing each inspection observation within 15 business days.",
+    "Conduct an internal audit of cleaning and disinfection validation procedures.",
+    "Review complaint handling and servicing procedures against applicable 21 CFR Part 820 requirements.",
+    "Escalate to regulatory affairs team for assessment of the SpiroSonic AIR adulteration and misbranding findings."
+  ],
+  "citations": [
+    {
+      "source_id": "s3://caseops-kb/fda/warning-letter-2024-wl-0032.txt::chunk-001",
+      "source_label": "FDA Warning Letter 2024-WL-0032",
+      "excerpt": "...no written procedures for equipment cleaning...",
+      "relevance_score": 0.91
+    },
+    {
+      "source_id": "s3://caseops-kb/fda/warning-letter-2024-wl-0032.txt::chunk-002",
+      "source_label": "FDA Warning Letter 2024-WL-0032",
+      "excerpt": "...batch records were incomplete...",
+      "relevance_score": 0.78
+    }
+  ],
+  "confidence_score": 0.85,
+  "unsupported_claims": [],
+  "escalation_required": true,
+  "escalation_reason": "recommendation explicitly indicates escalation",
+  "validated_by": "tool-executor-agent-v1",
+  "session_id": "sess-fda00001",
+  "timestamp": "2026-03-30T12:00:00+00:00"
+}

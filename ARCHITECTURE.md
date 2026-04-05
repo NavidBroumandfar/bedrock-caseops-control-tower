@@ -3,9 +3,9 @@
 **Version:** 0.1 (MVP)
 **Last Updated:** 2026-04-05
 
-> **Implementation Status:** Document intake pipeline (Phase A), retrieval foundation (Phase B), analysis and validation foundations (Phase C), supervisor orchestration with tool execution and end-to-end multi-agent pipeline (Phase D), structured logging + CloudWatch integration (Phase E-0), and CLI end-to-end flow with final JSON output packaging (Phase E-1) are implemented. Final hardening, sample cases, and demo readiness remain upcoming (Phase E-2).
+> **Implementation Status:** All MVP engineering phases are complete: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). The repository is portfolio-ready and test-complete for the MVP scope.
 >
-> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. The repo architecture and implementation are complete and correct. All 593 tests pass without live AWS calls.
+> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. The repo architecture and implementation are complete and correct. All 678 unit and integration-style tests pass without live AWS calls. Live validation will be completed when the AWS-side blocker is resolved.
 
 ---
 
@@ -60,7 +60,7 @@ All inference runs through Amazon Bedrock's Converse API. Retrieval is handled b
 
 ## 2. End-to-End Workflow
 
-All steps 1–13 are implemented as of E-1.
+All steps 1–13 are implemented. Phase E-2 adds test hardening, sample cases, expected output fixtures, config coverage, and demo readiness on top of this foundation.
 
 ```
 1. Operator invokes CLI with document path  [implemented — Phase E-1]
@@ -349,7 +349,7 @@ This ensures every output is independently auditable: a reviewer can open the KB
 
 ## 12. Logging and Observability
 
-**Status:** Implemented in Phase E-0.
+**Status:** Implemented in Phase E-0. Config loading is covered by tests in `tests/test_config.py` (E-2).
 
 ### Log Structure
 

@@ -837,3 +837,57 @@ def test_run_submitter_note_is_forwarded_to_intake(tmp_path: Path) -> None:
     metadata = call_kwargs.get("metadata")
     assert metadata is not None
     assert metadata.submitter_note == "High priority review needed"
+
+
+# ── run command — E-2 hardening: hint messages on failures ────────────────────
+
+
+def test_run_pipeline_init_failure_prints_hint_about_bedrock_kb_id() -> None:
+    """Pipeline init failure must print a [hint] pointing to BEDROCK_KB_ID."""
+    runner = _make_runner()
+    mock_logger = MagicMock()
+    mock_logger.log_file_path = None
+
+    with runner.isolated_filesystem():
+        Path("advisory.txt").write_text("content", encoding="utf-8")
+        with (
+            patch(_PATCH_RUN_INTAKE, return_value=_make_intake_result()),
+            patch(_PATCH_BUILD_DEPS, side_effect=RuntimeError("BEDROCK_KB_ID not set")),
+            patch(_PATCH_BUILD_LOGGER, return_value=mock_logger),
+            patch(_PATCH_BUILD_S3, return_value=None),
+        ):
+            result = runner.invoke(
+                cli,
+                ["run", "advisory.txt", "--source-type", "FDA", "--document-date", "2026-03-30"],
+            )
+
+    combined = result.output + (result.stderr or "")
+    assert "hint" in combined.lower()
+    assert "BEDROCK_KB_ID" in combined
+
+
+def test_run_pipeline_error_prints_hint_about_aws_credentials() -> None:
+    """PipelineWorkflowError must print a [hint] about AWS credentials and KB setup."""
+    from app.workflows.pipeline_workflow import PipelineWorkflowError
+
+    runner = _make_runner()
+    mock_logger = MagicMock()
+    mock_logger.log_file_path = None
+
+    with runner.isolated_filesystem():
+        Path("advisory.txt").write_text("content", encoding="utf-8")
+        with (
+            patch(_PATCH_RUN_INTAKE, return_value=_make_intake_result()),
+            patch(_PATCH_BUILD_DEPS, return_value=(MagicMock(), MagicMock(), MagicMock(), MagicMock())),
+            patch(_PATCH_BUILD_LOGGER, return_value=mock_logger),
+            patch(_PATCH_RUN_PIPELINE, side_effect=PipelineWorkflowError("Bedrock timed out")),
+            patch(_PATCH_BUILD_S3, return_value=None),
+        ):
+            result = runner.invoke(
+                cli,
+                ["run", "advisory.txt", "--source-type", "FDA", "--document-date", "2026-03-30"],
+            )
+
+    combined = result.output + (result.stderr or "")
+    assert "hint" in combined.lower()
+    assert result.exit_code != 0

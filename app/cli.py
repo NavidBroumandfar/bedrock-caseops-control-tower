@@ -186,6 +186,10 @@ def run(
         )
     except Exception as exc:
         click.echo(f"[error] Pipeline initialisation failed: {exc}", err=True)
+        click.echo(
+            "[hint]  Check that BEDROCK_KB_ID is set in your environment or .env file.",
+            err=True,
+        )
         sys.exit(1)
 
     # ── step 5: run pipeline ───────────────────────────────────────────────────
@@ -201,6 +205,11 @@ def run(
         )
     except PipelineWorkflowError as exc:
         click.echo(f"[error] Pipeline failed: {exc}", err=True)
+        click.echo(
+            "[hint]  Live Bedrock / KB calls require valid AWS credentials and a "
+            "provisioned Knowledge Base.  See README.md for setup instructions.",
+            err=True,
+        )
         sys.exit(1)
     except Exception as exc:
         click.echo(f"[error] Unexpected pipeline error: {exc}", err=True)
