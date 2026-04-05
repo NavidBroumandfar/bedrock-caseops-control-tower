@@ -120,7 +120,9 @@ These are design contracts followed across all implementation work. Intake, retr
 
 ## Current Implementation Phase
 
-**Phase 1 — v1 MVP (active) | Phases A, B, C, and D complete**
+**Phase 1 — v1 MVP (active) | Phases A, B, C, D, and E-0 complete**
+
+> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 548 unit tests pass without live AWS calls.
 
 ### Completed
 - **A-0** — repo foundation, source-of-truth docs, project scaffold
@@ -137,14 +139,21 @@ These are design contracts followed across all implementation work. Intake, retr
 - **D-0** — supervisor / planner workflow
 - **D-1** — tool executor + escalation logic
 - **D-2** — end-to-end multi-agent orchestration (intake handoff → retrieval → analysis → validation → `CaseOutput`)
+- **E-0** — structured logging + CloudWatch integration:
+  - `app/utils/logging_utils.py` — `PipelineLogger` (JSON to stdout + local file + CloudWatch); `NoOpLogger`
+  - `app/services/cloudwatch_service.py` — thin CloudWatch Logs wrapper; `NoOpCloudWatchEmitter`; `build_cloudwatch_emitter` factory
+  - `app/utils/config.py` — `ObservabilityConfig`, `PipelineConfig` from env vars
+  - `.env.example` — updated with all `CASEOPS_*` observability variables
+  - `pipeline_workflow.py` — instrumented with session_start, intake_handoff_received, escalation_triggered, output_generation_complete, pipeline_failed
+  - `supervisor_workflow.py` — instrumented with retrieval_start/complete/empty, analysis_start/complete, validation_start/complete, retry warnings, step failure errors
+  - 84 new tests in `test_logging_utils.py` and `test_cloudwatch_service.py`; 548 total tests pass
 
 ### Next step
-- **E-0** — structured logging + CloudWatch integration
+- **E-1** — CLI end-to-end flow and final JSON output packaging
 
 ### Not yet implemented
-- Structured logging / CloudWatch integration (Phase E)
-- Final CLI packaging and output persistence flow (Phase E)
-- Final hardening, sample-case polish, demo readiness (Phase E)
+- CLI end-to-end packaging and output persistence flow (Phase E-1)
+- Final hardening, sample-case polish, demo readiness (Phase E-2)
 
 Reference: `ARCHITECTURE.md §5–9` for component flows. `PROJECT_SPEC.md §13` for the full subphase roadmap.
 

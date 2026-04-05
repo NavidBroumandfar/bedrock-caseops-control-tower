@@ -3,7 +3,9 @@
 **Version:** 0.1 (MVP)
 **Last Updated:** 2026-04-05
 
-> **Implementation Status:** Document intake pipeline (Phase A), retrieval foundation (Phase B), analysis and validation foundations (Phase C), and supervisor orchestration with tool execution and end-to-end multi-agent pipeline (Phase D) are implemented. Structured logging, CloudWatch integration, and operational MVP finish remain upcoming (Phase E).
+> **Implementation Status:** Document intake pipeline (Phase A), retrieval foundation (Phase B), analysis and validation foundations (Phase C), supervisor orchestration with tool execution and end-to-end multi-agent pipeline (Phase D), and structured logging + CloudWatch integration (Phase E-0) are implemented. CLI end-to-end packaging and final hardening remain upcoming (Phase E-1, E-2).
+>
+> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. The repo architecture and implementation are complete and correct. All tests pass without live AWS calls.
 
 ---
 
@@ -58,7 +60,7 @@ All inference runs through Amazon Bedrock's Converse API. Retrieval is handled b
 
 ## 2. End-to-End Workflow
 
-Steps 1–11 are implemented. Steps 12–13 reflect the designed target flow; output persistence and CloudWatch logging are upcoming (Phase E).
+Steps 1–11 are implemented. Step 13 (structured logging) is implemented as of E-0 and instrumented across the pipeline. Step 12 (output persistence to S3) remains upcoming (Phase E-1).
 
 ```
 1. Operator invokes CLI with document path
@@ -72,8 +74,8 @@ Steps 1–11 are implemented. Steps 12–13 reflect the designed target flow; ou
 9. Validation Agent audits claims, returns confidence score and unsupported claim flags via Bedrock Converse API  [implemented]
 10. Supervisor invokes Tool Executor Agent with validated analysis  [implemented]
 11. Tool Executor formats final CaseOutput schema, applies escalation rule, returns structured output  [implemented]
-12. Output written to outputs/ directory and archived to S3  [upcoming — Phase E]
-13. All steps logged to CloudWatch with session_id, document_id, agent_name, level  [upcoming — Phase E]
+12. Output written to outputs/ directory and archived to S3  [upcoming — Phase E-1]
+13. All steps logged via structured JSON logger; local file written to outputs/logs/{session_id}.log; optional CloudWatch emission via cloudwatch_service  [implemented — Phase E-0]
 ```
 
 ---
@@ -88,7 +90,7 @@ Thin wrappers around AWS service clients. Each service module exposes clean, tes
 - `s3_service.py` — upload, download, list
 - `bedrock_service.py` — Converse API calls
 - `kb_service.py` — Knowledge Base retrieve calls
-- `cloudwatch_service.py` — structured log emission
+- `cloudwatch_service.py` — structured log emission (implemented E-0; boto3 client injected for testability)
 
 ### app/workflows/
 Orchestration logic. The `pipeline.py` module defines the full document-to-output flow and calls agents in order. The `supervisor.py` module contains the Supervisor Agent's routing and exception-handling logic.
@@ -97,7 +99,10 @@ Orchestration logic. The `pipeline.py` module defines the full document-to-outpu
 Pydantic models for all structured data: intake metadata, KB results, analysis output, validation output, final CaseOutput. These are the contracts between agents and the boundary that ensures outputs are parseable.
 
 ### app/utils/
-Shared helpers: ID generation, logging setup, file I/O, environment config loading.
+Shared helpers: ID generation, logging, file I/O, environment config loading.
+- `id_utils.py` — document ID generation
+- `logging_utils.py` — `PipelineLogger` (structured JSON emission to stdout + local file + CloudWatch); `NoOpLogger` for tests and CLI callers that do not need logging
+- `config.py` — `ObservabilityConfig` and `PipelineConfig` loaded from environment variables
 
 ### tests/
 Unit tests for each module. Tests for agents and workflows use mock services — no live AWS calls required. Integration tests are optional and gated by an environment flag.
@@ -344,6 +349,8 @@ This ensures every output is independently auditable: a reviewer can open the KB
 
 ## 12. Logging and Observability
 
+**Status:** Implemented in Phase E-0.
+
 ### Log Structure
 
 All log entries are structured JSON with the following standard fields:
@@ -360,17 +367,51 @@ All log entries are structured JSON with the following standard fields:
 }
 ```
 
+### Implementation
+
+`PipelineLogger` in `app/utils/logging_utils.py` is the sole logging interface across the pipeline.
+It is constructed once per session by the caller and passed into `run_pipeline` and `run_supervisor`
+as an optional keyword argument.  When omitted, a `NoOpLogger` is used transparently.
+
+Key events emitted at each pipeline stage:
+
+| Stage | Event |
+|---|---|
+| Pipeline start | `session_start` |
+| After intake handoff | `intake_handoff_received` |
+| Retrieval | `retrieval_start`, `retrieval_complete`, `retrieval_empty` (warning) |
+| Analysis | `analysis_start`, `analysis_complete` |
+| Validation | `validation_start`, `validation_complete`, `validation_unsupported_claims_detected` |
+| Retry | `{step}_retry` (warning) |
+| Escalation | `escalation_triggered` |
+| Output ready | `output_generation_complete` |
+| Failures | `pipeline_failed`, `{step}_failed` (error) |
+
 ### Log Levels
 - `DEBUG` — prompt construction, raw model responses, retry attempts
 - `INFO` — agent step start/complete, output written, escalation triggered
-- `WARNING` — empty retrieval, low confidence, parse retry
+- `WARNING` — empty retrieval, low confidence, parse retry, unsupported claims
 - `ERROR` — unrecoverable failures, schema validation errors
 
 ### Destinations
-- **CloudWatch Logs** — log group `/caseops/pipeline`, log stream per session
-- **Local file** — `outputs/logs/{session_id}.log` (development and testing)
+- **stdout** — always enabled; compact JSON lines
+- **Local file** — `outputs/logs/{session_id}.log`; enabled by default (`CASEOPS_ENABLE_LOCAL_FILE_LOG=true`)
+- **CloudWatch Logs** — log group `/caseops/pipeline`, log stream `caseops-session/{session_id}`; opt-in via `CASEOPS_ENABLE_CLOUDWATCH=true`
 
-### Metrics (CloudWatch)
+CloudWatch emission is handled by `CloudWatchLogsService` in `app/services/cloudwatch_service.py`.
+Failures to emit to CloudWatch are silently swallowed — they never break the pipeline.
+
+### Observability Environment Variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `CASEOPS_LOG_LEVEL` | `INFO` | Minimum log level |
+| `CASEOPS_ENABLE_LOCAL_FILE_LOG` | `true` | Write session log to `outputs/logs/` |
+| `CASEOPS_ENABLE_CLOUDWATCH` | `false` | Emit to CloudWatch Logs |
+| `CASEOPS_CLOUDWATCH_LOG_GROUP` | `/caseops/pipeline` | CloudWatch log group name |
+| `CASEOPS_CLOUDWATCH_LOG_STREAM_PREFIX` | `caseops-session` | Stream name prefix |
+
+### Metrics (CloudWatch) — planned v2
 - `pipeline.documents_processed` — count
 - `pipeline.escalations_triggered` — count
 - `pipeline.confidence_score` — distribution

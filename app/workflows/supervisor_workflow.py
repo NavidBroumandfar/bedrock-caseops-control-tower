@@ -32,9 +32,14 @@ Retry policy:
   non-recoverable errors are not retried; they surface immediately.
   No backoff or sleep is applied — parse failures are local and immediate.
   Retrieval is not retried here; that is a service-level concern.
+
+Structured logging:
+  A logger is accepted as an optional keyword argument.  When omitted, a
+  NoOpLogger is used so call sites that do not pass one are unaffected.
+  Logging never influences control flow.
 """
 
-from typing import Any, Callable
+from typing import Any, Callable, Union
 
 from app.agents.analysis_agent import AnalysisAgent
 from app.agents.validation_agent import ValidationAgent
@@ -42,7 +47,10 @@ from app.schemas.intake_models import IntakeResult
 from app.schemas.retrieval_contract import RetrievalProvider
 from app.schemas.supervisor_models import SupervisorResult
 from app.services.bedrock_service import BedrockServiceError
+from app.utils.logging_utils import NoOpLogger, PipelineLogger
 from app.workflows.retrieval_workflow import run_retrieval
+
+AnyLogger = Union[PipelineLogger, NoOpLogger]
 
 # Total attempts per step (1 initial + 1 retry = 2 attempts, matching the
 # architecture's "up to 2 retries for structured output parse failures" intent
@@ -66,6 +74,7 @@ def run_supervisor(
     retrieval_provider: RetrievalProvider,
     analysis_agent: AnalysisAgent,
     validation_agent: ValidationAgent,
+    logger: AnyLogger | None = None,
 ) -> SupervisorResult:
     """
     Orchestrate retrieval → analysis → validation and return a typed SupervisorResult.
@@ -74,19 +83,45 @@ def run_supervisor(
     constructed here.  The caller is responsible for building and wiring concrete
     providers and agents before invoking the supervisor.
 
+    `logger` is optional.  When omitted a NoOpLogger is used.
+
     Returns a SupervisorResult on both the success path and the empty-retrieval
     path.  Raises SupervisorWorkflowError if any pipeline step fails.
     """
+    _logger: AnyLogger = logger or NoOpLogger()
     document_id = intake.document_id
 
     # ── step 1: retrieval ─────────────────────────────────────────────────────
+    _logger.info(
+        agent="supervisor",
+        event="retrieval_start",
+        document_id=document_id,
+    )
+
     try:
         retrieval = run_retrieval(intake, retrieval_provider)
     except Exception as exc:
+        _logger.error(
+            agent="supervisor",
+            event="retrieval_failed",
+            document_id=document_id,
+            data={"error": str(exc)},
+        )
         raise SupervisorWorkflowError(
             f"[retrieval] Pipeline step failed "
             f"(document_id={document_id!r}): {exc}"
         ) from exc
+
+    chunk_count = len(retrieval.evidence_chunks)
+    _logger.info(
+        agent="supervisor",
+        event="retrieval_complete",
+        document_id=document_id,
+        data={
+            "retrieval_status": retrieval.retrieval_status,
+            "chunk_count": chunk_count,
+        },
+    )
 
     # ── empty retrieval: return early without calling analysis or validation ──
     #
@@ -95,6 +130,12 @@ def run_supervisor(
     # SupervisorResult here (rather than raising) lets D-1 apply escalation
     # logic through the same typed-result interface as the success path.
     if retrieval.retrieval_status == "empty":
+        _logger.warning(
+            agent="supervisor",
+            event="retrieval_empty",
+            document_id=document_id,
+            data={"note": "No evidence chunks returned; routing to empty-retrieval escalation path."},
+        )
         return SupervisorResult(
             document_id=document_id,
             intake=intake,
@@ -104,6 +145,13 @@ def run_supervisor(
         )
 
     # ── step 2: analysis (with retry) ─────────────────────────────────────────
+    _logger.info(
+        agent="supervisor",
+        event="analysis_start",
+        document_id=document_id,
+        data={"chunk_count": chunk_count},
+    )
+
     analysis = _run_with_retry(
         lambda: analysis_agent.run(
             document_id=document_id,
@@ -111,9 +159,27 @@ def run_supervisor(
         ),
         step="analysis",
         document_id=document_id,
+        logger=_logger,
+    )
+
+    _logger.info(
+        agent="supervisor",
+        event="analysis_complete",
+        document_id=document_id,
+        data={
+            "severity": analysis.severity,
+            "category": analysis.category,
+            "recommendation_count": len(analysis.recommendations),
+        },
     )
 
     # ── step 3: validation (with retry) ───────────────────────────────────────
+    _logger.info(
+        agent="supervisor",
+        event="validation_start",
+        document_id=document_id,
+    )
+
     validation = _run_with_retry(
         lambda: validation_agent.run(
             document_id=document_id,
@@ -122,7 +188,30 @@ def run_supervisor(
         ),
         step="validation",
         document_id=document_id,
+        logger=_logger,
     )
+
+    _logger.info(
+        agent="supervisor",
+        event="validation_complete",
+        document_id=document_id,
+        data={
+            "validation_status": validation.validation_status,
+            "confidence_score": validation.confidence_score,
+            "unsupported_claim_count": len(validation.unsupported_claims),
+        },
+    )
+
+    if validation.unsupported_claims:
+        _logger.warning(
+            agent="supervisor",
+            event="validation_unsupported_claims_detected",
+            document_id=document_id,
+            data={
+                "count": len(validation.unsupported_claims),
+                "claims": validation.unsupported_claims,
+            },
+        )
 
     return SupervisorResult(
         document_id=document_id,
@@ -141,6 +230,7 @@ def _run_with_retry(
     *,
     step: str,
     document_id: str,
+    logger: AnyLogger,
 ) -> Any:
     """
     Invoke `call()` up to _MAX_ATTEMPTS times, retrying on BedrockServiceError.
@@ -158,7 +248,28 @@ def _run_with_retry(
         try:
             return call()
         except BedrockServiceError as exc:
+            if attempt < _MAX_ATTEMPTS:
+                logger.warning(
+                    agent="supervisor",
+                    event=f"{step}_retry",
+                    document_id=document_id,
+                    data={
+                        "attempt": attempt,
+                        "max_attempts": _MAX_ATTEMPTS,
+                        "error": str(exc),
+                    },
+                )
             if attempt == _MAX_ATTEMPTS:
+                logger.error(
+                    agent="supervisor",
+                    event=f"{step}_failed",
+                    document_id=document_id,
+                    data={
+                        "attempt": attempt,
+                        "error": str(exc),
+                        "note": "Max retries exhausted.",
+                    },
+                )
                 raise SupervisorWorkflowError(
                     f"[{step}] Pipeline step failed after {_MAX_ATTEMPTS} attempts "
                     f"(document_id={document_id!r}): {exc}"
@@ -166,6 +277,12 @@ def _run_with_retry(
             # attempt < _MAX_ATTEMPTS: continue to retry
         except Exception as exc:
             # Non-retryable: wrap and surface immediately without retry.
+            logger.error(
+                agent="supervisor",
+                event=f"{step}_failed",
+                document_id=document_id,
+                data={"error": str(exc), "note": "Non-retryable failure."},
+            )
             raise SupervisorWorkflowError(
                 f"[{step}] Pipeline step failed "
                 f"(document_id={document_id!r}): {exc}"
