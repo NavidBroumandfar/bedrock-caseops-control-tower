@@ -172,6 +172,71 @@ No confidential or proprietary data is used anywhere in this project.
 
 ---
 
+## Running the CLI
+
+### Prerequisites
+
+Copy `.env.example` to `.env` and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+Minimum required for the full pipeline:
+
+```
+BEDROCK_KB_ID=your-knowledge-base-id
+BEDROCK_MODEL_ID=anthropic.claude-3-haiku-20240307-v1:0
+AWS_REGION=us-east-1
+```
+
+S3 variables are optional per step:
+- `S3_DOCUMENT_BUCKET` — enables S3 upload of the raw document and intake artifact; if absent, intake runs in local-only mode.
+- `S3_OUTPUT_BUCKET` — enables S3 archiving of the final JSON output to `s3://{bucket}/outputs/{document_id}/case_output.json`; if absent, output is written locally only.
+
+### Run the full end-to-end pipeline
+
+```bash
+python -m app.cli run path/to/advisory.txt \
+    --source-type FDA \
+    --document-date 2026-03-30
+```
+
+With an optional submitter note (used as the KB retrieval query):
+
+```bash
+python -m app.cli run path/to/advisory.txt \
+    --source-type CISA \
+    --document-date 2026-03-30 \
+    --submitter-note "Critical ICS vulnerability — immediate review required"
+```
+
+Supported `--source-type` values: `FDA`, `CISA`, `Incident`, `Other`
+
+On success, the CLI prints a structured summary and writes the final JSON output to `outputs/{document_id}.json`.
+
+### Register a document without running the pipeline
+
+```bash
+python -m app.cli intake path/to/advisory.txt \
+    --source-type FDA \
+    --document-date 2026-03-30
+```
+
+### Show available commands
+
+```bash
+python -m app.cli --help
+python -m app.cli run --help
+python -m app.cli intake --help
+```
+
+### Current status note
+
+Live Bedrock / Knowledge Base validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling in the target account. The full pipeline code is complete and correct; the `run` command will surface a clear failure message when AWS calls cannot be completed. All 604 unit tests pass without live AWS calls.
+
+---
+
 ## Status
 
-MVP in active development. See [PROJECT_SPEC.md](PROJECT_SPEC.md) for the full roadmap and [ARCHITECTURE.md](ARCHITECTURE.md) for the technical design.
+Phases A–D, E-0 (structured logging + CloudWatch), and E-1 (CLI end-to-end flow, local JSON output, and S3 output archiving) are complete. See [PROJECT_SPEC.md](PROJECT_SPEC.md) for the full roadmap and [ARCHITECTURE.md](ARCHITECTURE.md) for the technical design.

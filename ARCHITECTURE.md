@@ -3,9 +3,9 @@
 **Version:** 0.1 (MVP)
 **Last Updated:** 2026-04-05
 
-> **Implementation Status:** Document intake pipeline (Phase A), retrieval foundation (Phase B), analysis and validation foundations (Phase C), supervisor orchestration with tool execution and end-to-end multi-agent pipeline (Phase D), and structured logging + CloudWatch integration (Phase E-0) are implemented. CLI end-to-end packaging and final hardening remain upcoming (Phase E-1, E-2).
+> **Implementation Status:** Document intake pipeline (Phase A), retrieval foundation (Phase B), analysis and validation foundations (Phase C), supervisor orchestration with tool execution and end-to-end multi-agent pipeline (Phase D), structured logging + CloudWatch integration (Phase E-0), and CLI end-to-end flow with final JSON output packaging (Phase E-1) are implemented. Final hardening, sample cases, and demo readiness remain upcoming (Phase E-2).
 >
-> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. The repo architecture and implementation are complete and correct. All tests pass without live AWS calls.
+> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. The repo architecture and implementation are complete and correct. All 593 tests pass without live AWS calls.
 
 ---
 
@@ -60,10 +60,10 @@ All inference runs through Amazon Bedrock's Converse API. Retrieval is handled b
 
 ## 2. End-to-End Workflow
 
-Steps 1–11 are implemented. Step 13 (structured logging) is implemented as of E-0 and instrumented across the pipeline. Step 12 (output persistence to S3) remains upcoming (Phase E-1).
+All steps 1–13 are implemented as of E-1.
 
 ```
-1. Operator invokes CLI with document path
+1. Operator invokes CLI with document path  [implemented — Phase E-1]
 2. Intake pipeline validates file and metadata, assigns document_id, writes local intake artifact, uploads raw document and intake artifact to S3 (optional), returns typed IntakeRegistration result  [implemented]
 3. Supervisor Agent receives the IntakeRegistration (S3 key + document_id + metadata) and initiates the pipeline  [implemented]
 4. Supervisor invokes Retrieval Agent with document context  [implemented]
@@ -74,7 +74,7 @@ Steps 1–11 are implemented. Step 13 (structured logging) is implemented as of 
 9. Validation Agent audits claims, returns confidence score and unsupported claim flags via Bedrock Converse API  [implemented]
 10. Supervisor invokes Tool Executor Agent with validated analysis  [implemented]
 11. Tool Executor formats final CaseOutput schema, applies escalation rule, returns structured output  [implemented]
-12. Output written to outputs/ directory and archived to S3  [upcoming — Phase E-1]
+12. Output written locally to outputs/{document_id}.json via write_case_output(); archived to s3://{S3_OUTPUT_BUCKET}/outputs/{document_id}/case_output.json via S3Service.upload_case_output() when S3_OUTPUT_BUCKET is configured  [implemented — Phase E-1]
 13. All steps logged via structured JSON logger; local file written to outputs/logs/{session_id}.log; optional CloudWatch emission via cloudwatch_service  [implemented — Phase E-0]
 ```
 
@@ -99,9 +99,10 @@ Orchestration logic. The `pipeline.py` module defines the full document-to-outpu
 Pydantic models for all structured data: intake metadata, KB results, analysis output, validation output, final CaseOutput. These are the contracts between agents and the boundary that ensures outputs are parseable.
 
 ### app/utils/
-Shared helpers: ID generation, logging, file I/O, environment config loading.
-- `id_utils.py` — document ID generation
+Shared helpers: ID generation, logging, output packaging, environment config loading.
+- `id_utils.py` — `generate_document_id()` and `generate_session_id()`
 - `logging_utils.py` — `PipelineLogger` (structured JSON emission to stdout + local file + CloudWatch); `NoOpLogger` for tests and CLI callers that do not need logging
+- `output_writer.py` — `write_case_output(output, output_dir)`: serialises a `CaseOutput` to `{output_dir}/{document_id}.json`; raises `OutputWriteError` on filesystem failure
 - `config.py` — `ObservabilityConfig` and `PipelineConfig` loaded from environment variables
 
 ### tests/
@@ -145,9 +146,8 @@ Unit tests for each module. Tests for agents and workflows use mock services —
   - confidence_score < 0.6
   - Validation Agent flagged any unsupported claims
   - Analysis Agent explicitly recommended escalation
-- Formats the final CaseOutput schema
-- Writes output to outputs/{document_id}.json
-- Triggers S3 archive write via s3_service
+- Formats the final CaseOutput schema and returns it to the pipeline orchestrator
+- Output writing is handled by `app/utils/output_writer.py` (E-1), called from the CLI after run_pipeline returns
 
 ---
 

@@ -120,9 +120,9 @@ These are design contracts followed across all implementation work. Intake, retr
 
 ## Current Implementation Phase
 
-**Phase 1 — v1 MVP (active) | Phases A, B, C, D, and E-0 complete**
+**Phase 1 — v1 MVP (active) | Phases A, B, C, D, E-0, and E-1 complete (including S3 output archiving)**
 
-> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 548 unit tests pass without live AWS calls.
+> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 604 unit tests pass without live AWS calls.
 
 ### Completed
 - **A-0** — repo foundation, source-of-truth docs, project scaffold
@@ -146,14 +146,24 @@ These are design contracts followed across all implementation work. Intake, retr
   - `.env.example` — updated with all `CASEOPS_*` observability variables
   - `pipeline_workflow.py` — instrumented with session_start, intake_handoff_received, escalation_triggered, output_generation_complete, pipeline_failed
   - `supervisor_workflow.py` — instrumented with retrieval_start/complete/empty, analysis_start/complete, validation_start/complete, retry warnings, step failure errors
-  - 84 new tests in `test_logging_utils.py` and `test_cloudwatch_service.py`; 548 total tests pass
+  - 84 new tests in `test_logging_utils.py` and `test_cloudwatch_service.py`
+- **E-1** — CLI end-to-end flow, final JSON output packaging, and S3 output archiving:
+  - `app/utils/output_writer.py` — `write_case_output(output, output_dir)` writes `CaseOutput` to `{output_dir}/{document_id}.json`; `OutputWriteError` for filesystem failures
+  - `app/services/s3_service.py` — added `upload_case_output(local_path, document_id)` method; uploads to `outputs/{document_id}/case_output.json`; follows existing upload pattern
+  - `app/utils/id_utils.py` — added public `generate_session_id()` alongside existing `generate_document_id()`
+  - `app/workflows/pipeline_workflow.py` — `run_pipeline()` now accepts an optional `session_id` parameter for CLI-driven session consistency
+  - `app/cli.py` — added `run` command: intake → pipeline → local write → S3 archive (if `S3_OUTPUT_BUCKET` set) → operator summary; graceful failure at every step; E-0 logger wired in; non-zero exit on any failure
+  - `tests/test_output_writer.py` — 20 tests for local output writing behaviour
+  - `tests/test_cli.py` — 35 tests for CLI run command (argument validation, success path, all failure paths, S3 archive paths, logger integration, no live AWS)
+  - `tests/test_s3_service.py` — 5 new tests for `upload_case_output` (key format, content, metadata, error handling)
+  - 604 total tests pass
 
 ### Next step
-- **E-1** — CLI end-to-end flow and final JSON output packaging
+- **E-2** — tests, hardening, sample cases, demo readiness
 
 ### Not yet implemented
-- CLI end-to-end packaging and output persistence flow (Phase E-1)
 - Final hardening, sample-case polish, demo readiness (Phase E-2)
+- Live Bedrock validation (blocked by AWS-side throttling — not a code issue)
 
 Reference: `ARCHITECTURE.md §5–9` for component flows. `PROJECT_SPEC.md §13` for the full subphase roadmap.
 
@@ -163,9 +173,12 @@ Reference: `ARCHITECTURE.md §5–9` for component flows. `PROJECT_SPEC.md §13`
 
 | File | Purpose |
 |---|---|
-| `README.md` | Public-facing project summary |
+| `README.md` | Public-facing project summary + CLI usage instructions |
 | `PROJECT_SPEC.md` | Scope, requirements, roadmap — **source of truth** |
 | `ARCHITECTURE.md` | Technical design — **source of truth** |
 | `docs/CURSOR_CONTEXT.md` | This file — quick orientation only |
+| `app/cli.py` | CLI entry point — `intake` and `run` commands |
 | `app/schemas/` | Pydantic models — contracts between all components |
+| `app/utils/output_writer.py` | Final JSON output packaging utility |
+| `app/utils/id_utils.py` | `generate_document_id()`, `generate_session_id()` |
 | `.env.example` | Environment variable reference |

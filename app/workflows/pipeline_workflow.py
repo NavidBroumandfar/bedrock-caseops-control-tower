@@ -36,7 +36,6 @@ Layering preserved:
   persistence/logging → E-phase (logging instrumented here in E-0)
 """
 
-import uuid
 from typing import Union
 
 from app.agents.analysis_agent import AnalysisAgent
@@ -45,6 +44,7 @@ from app.agents.validation_agent import ValidationAgent
 from app.schemas.intake_models import IntakeResult
 from app.schemas.output_models import CaseOutput
 from app.schemas.retrieval_contract import RetrievalProvider
+from app.utils.id_utils import generate_session_id
 from app.utils.logging_utils import NoOpLogger, PipelineLogger
 from app.workflows.supervisor_workflow import SupervisorWorkflowError, run_supervisor
 
@@ -71,12 +71,13 @@ def run_pipeline(
     validation_agent: ValidationAgent,
     tool_executor: ToolExecutorAgent,
     logger: AnyLogger | None = None,
+    session_id: str | None = None,
 ) -> CaseOutput:
     """
     Orchestrate the full pipeline from intake handoff to final CaseOutput.
 
     Steps:
-      1. Generate a session_id for this pipeline run.
+      1. Resolve or generate a session_id for this pipeline run.
       2. Emit session_start log event.
       3. Run the supervisor workflow (retrieval → analysis → validation).
       4. Run the tool executor to assemble the typed CaseOutput.
@@ -89,6 +90,11 @@ def run_pipeline(
     `logger` is optional.  When omitted a NoOpLogger is used, so existing
     call sites that do not pass a logger continue to work without modification.
 
+    `session_id` is optional.  When provided (e.g. by the CLI after creating
+    a PipelineLogger with a known session_id), it is used as-is so that the
+    logger session_id and the output session_id are consistent.  When omitted
+    a new session_id is generated internally.
+
     Returns a typed CaseOutput on both the success path and the empty-retrieval
     path.  Raises PipelineWorkflowError if any pipeline step fails, always
     chaining the original exception via __cause__.
@@ -96,7 +102,7 @@ def run_pipeline(
     _logger: AnyLogger = logger or NoOpLogger()
 
     document_id = intake.document_id
-    session_id = _generate_session_id()
+    session_id = session_id or _generate_session_id()
 
     _logger.info(
         agent="pipeline",
@@ -198,4 +204,4 @@ def run_pipeline(
 
 def _generate_session_id() -> str:
     """Return a short, human-readable session identifier: 'sess-{8 hex chars}'."""
-    return f"sess-{uuid.uuid4().hex[:8]}"
+    return generate_session_id()

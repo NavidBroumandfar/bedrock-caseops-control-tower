@@ -1,5 +1,5 @@
 """
-S3 storage adapter for the CaseOps intake pipeline.
+S3 storage adapter for the CaseOps pipeline.
 
 Thin wrapper around boto3.  All S3 key structure decisions live here;
 callers pass local paths and document IDs, not raw keys.
@@ -8,10 +8,11 @@ S3 key layout (matches ARCHITECTURE.md §5 and §10)
 ───────────────────────────────────────────────────
   documents/{document_id}/raw/{filename}    ← original source document
   artifacts/intake/{document_id}.json       ← intake artifact JSON
+  outputs/{document_id}/case_output.json   ← final CaseOutput archive
 
 Metadata tags attached to every upload:
   document_id   — the assigned document ID
-  source_type   — FDA | CISA | Incident | Other
+  source_type   — FDA | CISA | Incident | Other  (where applicable)
 """
 
 import os
@@ -87,6 +88,29 @@ class S3Service:
             local_path=local_path,
             s3_key=s3_key,
             metadata={"document_id": document_id, "source_type": source_type},
+        )
+        return s3_key
+
+    def upload_case_output(
+        self,
+        local_path: Path,
+        document_id: str,
+    ) -> str:
+        """
+        Archive the final CaseOutput JSON to S3.
+
+        Key format: outputs/{document_id}/case_output.json
+        Returns the S3 key that was written.
+
+        Callers pass the local path already written by write_case_output() so
+        S3 always receives the same bytes that were persisted locally — no
+        double serialisation.
+        """
+        s3_key = f"outputs/{document_id}/case_output.json"
+        self._upload_file(
+            local_path=local_path,
+            s3_key=s3_key,
+            metadata={"document_id": document_id},
         )
         return s3_key
 
