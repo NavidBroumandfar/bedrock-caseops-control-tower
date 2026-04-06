@@ -257,18 +257,36 @@ The MVP engineering scope is complete. Success criteria are tracked in two categ
 
 **Status:** Not started — next implementation phase after Phase 1 live validation is confirmed.
 
-**Goal:** Make the system measurably better and observable
+**Goal:** Make the system measurably better and observable — through structured evaluation, safety controls, optimization, and production-grade reporting.
 
-- Bedrock Evaluations integration for output quality scoring
-- Bedrock Guardrails for input/output safety controls
-- Prompt caching for repeated context patterns
-- Prompt routing for model selection by task type
-- Structured evaluation harness with expected outputs
-- Retrieval quality metrics (precision, recall against expected citations)
-- Expanded test suite with adversarial and edge cases
-- CloudWatch dashboard
+**Exit Criteria:** The system can evaluate its own outputs against a reference set, enforce safety policies, apply prompt optimizations, and report quality metrics to a CloudWatch dashboard.
 
-**Exit Criteria:** The system can evaluate its own outputs against a reference set and report quality metrics.
+#### Phase 2 Subphase Roadmap
+
+- **Phase F — Evaluation Foundation**
+  - F-0 Evaluation contracts + scoring schemas
+  - F-1 Reference dataset + expected outputs
+  - F-2 Evaluation harness / automated scoring runner
+
+- **Phase G — Retrieval & Output Quality**
+  - G-0 Retrieval quality metrics
+  - G-1 Citation quality checks
+  - G-2 Output quality scoring
+
+- **Phase H — Safety & Guardrails**
+  - H-0 Safety contracts + failure policies
+  - H-1 Bedrock Guardrails integration
+  - H-2 Adversarial and edge-case evaluation suite
+
+- **Phase I — Optimization**
+  - I-0 Prompt caching integration
+  - I-1 Prompt routing strategy
+  - I-2 Baseline vs optimized comparison workflow
+
+- **Phase J — Observability & Reporting**
+  - J-0 CloudWatch evaluation dashboard
+  - J-1 Evaluation result artifacts + reporting
+  - J-2 v2 hardening + optimization checkpoint
 
 ---
 

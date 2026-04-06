@@ -434,3 +434,5 @@ The following design decisions preserve extensibility without overengineering:
 | Pipeline is sequential in MVP | Parallel agent invocation is a drop-in optimization for v2 |
 | No framework lock-in for orchestration | Supervisor logic is plain Python; can be migrated to Bedrock Flows in v3 |
 | CloudWatch log structure is consistent | Dashboards and alarms can be added in v2 without changing log emission |
+
+> **v2 implementation roadmap:** The next planned implementation phase (Phase 2) follows subphases F through J — covering evaluation foundation, retrieval and output quality, safety and guardrails, optimization, and observability/reporting. See `PROJECT_SPEC.md §13` for the full breakdown. Phase 2 has not started.

@@ -174,6 +174,20 @@ The repository is portfolio-ready, test-complete, and demo-friendly for the full
 ### Next step
 - Phase 2 (v2: Evaluation and Optimization) — NOT started; see `PROJECT_SPEC.md §13`
 
+### Phase 2 roadmap (not started)
+
+Phase 2 follows the same lettered-subphase naming convention as Phase 1 (A–E):
+
+| Phase | Theme | Subphases |
+|---|---|---|
+| **F** | Evaluation Foundation | F-0 evaluation contracts + schemas, F-1 reference dataset, F-2 scoring runner |
+| **G** | Retrieval & Output Quality | G-0 retrieval metrics, G-1 citation quality, G-2 output scoring |
+| **H** | Safety & Guardrails | H-0 safety contracts, H-1 Bedrock Guardrails integration, H-2 adversarial suite |
+| **I** | Optimization | I-0 prompt caching, I-1 prompt routing, I-2 baseline vs optimized comparison |
+| **J** | Observability & Reporting | J-0 CloudWatch dashboard, J-1 result artifacts, J-2 v2 hardening checkpoint |
+
+See `PROJECT_SPEC.md §13` for the full Phase 2 subphase breakdown.
+
 ### Not yet implemented
 - Live Bedrock validation (blocked by AWS-side throttling — not a code issue)
 - Phase 2: Bedrock Evaluations, Guardrails, prompt caching, evaluation harness (out of scope for MVP)
