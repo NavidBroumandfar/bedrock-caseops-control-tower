@@ -1,0 +1,38 @@
+{
+  "_description": "Output has escalation_required=True set by the pipeline. Default policy reflects this as an ESCALATION_POLICY_TRIGGERED issue. No blocking issues present. Must escalate.",
+  "_case_id": "escalation_required_escalate",
+  "_expected_status": "escalate",
+  "_expected_issue_codes": ["escalation_policy_triggered"],
+  "_evaluation_path": "typed",
+  "_retrieval_chunk_count": null,
+  "_guardrail_result": null,
+  "_document_id": null,
+  "input": {
+    "document_id": "doc-h2-esc-req-001",
+    "source_filename": "fda_warning_letter.txt",
+    "source_type": "FDA",
+    "severity": "Critical",
+    "category": "Regulatory",
+    "summary": "Critical GMP violations identified. Immediate corrective action required.",
+    "recommendations": [
+      "Initiate immediate voluntary recall of affected batches.",
+      "Notify FDA within 24 hours.",
+      "Escalate to executive compliance team."
+    ],
+    "citations": [
+      {
+        "source_id": "kb-src-h2-gmp-001",
+        "source_label": "FDA Warning Letter 2026-WL-0042",
+        "excerpt": "Critical deviations in sterile manufacturing area identified during inspection.",
+        "relevance_score": 0.94
+      }
+    ],
+    "confidence_score": 0.88,
+    "unsupported_claims": [],
+    "escalation_required": true,
+    "escalation_reason": "Critical severity and explicit escalation recommendation present.",
+    "validated_by": "validation-agent-v1",
+    "session_id": "sess-h2-esc-req-001",
+    "timestamp": "2026-04-10T10:20:00+00:00"
+  }
+}

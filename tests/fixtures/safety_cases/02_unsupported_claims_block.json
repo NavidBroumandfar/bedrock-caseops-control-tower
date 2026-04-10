@@ -1,0 +1,37 @@
+{
+  "_description": "Output contains one unsupported claim. Default policy has max_unsupported_claims_before_block=0, so any claim is blocking. Must block.",
+  "_case_id": "unsupported_claims_block",
+  "_expected_status": "block",
+  "_expected_issue_codes": ["unsupported_claims_present"],
+  "_evaluation_path": "typed",
+  "_retrieval_chunk_count": null,
+  "_guardrail_result": null,
+  "_document_id": null,
+  "input": {
+    "document_id": "doc-h2-unsupported-001",
+    "source_filename": "advisory.txt",
+    "source_type": "FDA",
+    "severity": "High",
+    "category": "Regulatory",
+    "summary": "The facility failed to establish written procedures for CAPA. Device determined to be adulterated.",
+    "recommendations": [
+      "Initiate CAPA review within 30 days.",
+      "Engage FDA regulatory counsel."
+    ],
+    "citations": [
+      {
+        "source_id": "kb-src-h2-001",
+        "source_label": "FDA Warning Letter 2025",
+        "excerpt": "Your quality system is inadequate because you have not established CAPA procedures.",
+        "relevance_score": 0.91
+      }
+    ],
+    "confidence_score": 0.76,
+    "unsupported_claims": ["Device causes irreversible organ damage — not grounded in evidence"],
+    "escalation_required": false,
+    "escalation_reason": null,
+    "validated_by": "validation-agent-v1",
+    "session_id": "sess-h2-unsupported-001",
+    "timestamp": "2026-04-10T10:00:00+00:00"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "_description": "Bedrock Guardrails assessed the output and intervened, indicating a policy violation. The H-1 adapter must produce a blocking GUARDRAIL_INTERVENTION issue. Must block.",
+  "_case_id": "guardrail_intervention_block",
+  "_expected_status": "block",
+  "_expected_issue_codes": ["guardrail_intervention"],
+  "_evaluation_path": "guardrail",
+  "_retrieval_chunk_count": null,
+  "_guardrail_result": {
+    "guardrail_id": "grd-h2-test-001",
+    "guardrail_version": "1",
+    "source": "output",
+    "intervened": true,
+    "action": "GUARDRAIL_INTERVENED",
+    "output_text": "I'm sorry, I can't help with that.",
+    "blocked": true,
+    "finding_types": ["HATE", "VIOLENCE"],
+    "trace": null
+  },
+  "_document_id": "doc-h2-guardrail-block",
+  "input": null
+}

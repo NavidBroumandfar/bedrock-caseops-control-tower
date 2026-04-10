@@ -3,9 +3,9 @@
 **Version:** 0.2
 **Last Updated:** 2026-04-10
 
-> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G (Retrieval & Output Quality) complete. Phase H-0 (Safety Contracts + Failure Policies) complete. Phase H-1 (Bedrock Guardrails Integration) complete.**
+> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G (Retrieval & Output Quality) complete. Phase H (Safety & Guardrails) complete.**
 >
-> **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Phase F adds a fully local, offline evaluation layer: typed evaluation contracts and schemas (F-0), a curated evaluation dataset with 7 cases and reference expected outputs (F-1), and an offline evaluation harness with dataset loader, deterministic scorer, and scoring runner (F-2). Phase G-0 adds offline retrieval quality metrics: three deterministic metrics scored against F-1 retrieval expectations, with fixture-based candidate input and 55 new tests. Phase G-1 adds offline citation quality metrics: four deterministic metrics scored against CitationExpectation references, with five candidate output fixtures and 64 new tests. Phase G-2 adds a composite output-quality scorer that composes F-2 and G-1 sub-scores plus three final-output-only checks (summary_nonempty, recommendations_present_when_expected, unsupported_claims_clean), with 46 new tests. Phase H-0 adds typed safety contracts (SafetyIssue, SafetyAssessment, FailurePolicy) and a local deterministic safety policy evaluator (evaluate_safety, evaluate_safety_from_raw) with six policy rules and 144 new tests. Phase H-1 adds the Bedrock Guardrails integration foundation: a normalized GuardrailAssessmentResult contract (guardrail_models.py), a thin GuardrailsService wrapper for the ApplyGuardrail API (guardrails_service.py), a Guardrails → H-0 safety adapter (guardrails_adapter.py), GuardrailsConfig config block, and two new safety_models enum extensions (GUARDRAILS source, GUARDRAIL_INTERVENTION code), with 134 new tests. All 1434 unit and evaluation tests pass without live AWS calls.
+> **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Phase F adds a fully local, offline evaluation layer: typed evaluation contracts and schemas (F-0), a curated evaluation dataset with 7 cases and reference expected outputs (F-1), and an offline evaluation harness with dataset loader, deterministic scorer, and scoring runner (F-2). Phase G-0 adds offline retrieval quality metrics: three deterministic metrics scored against F-1 retrieval expectations, with fixture-based candidate input and 55 new tests. Phase G-1 adds offline citation quality metrics: four deterministic metrics scored against CitationExpectation references, with five candidate output fixtures and 64 new tests. Phase G-2 adds a composite output-quality scorer that composes F-2 and G-1 sub-scores plus three final-output-only checks (summary_nonempty, recommendations_present_when_expected, unsupported_claims_clean), with 46 new tests. Phase H-0 adds typed safety contracts (SafetyIssue, SafetyAssessment, FailurePolicy) and a local deterministic safety policy evaluator (evaluate_safety, evaluate_safety_from_raw) with six policy rules and 144 new tests. Phase H-1 adds the Bedrock Guardrails integration foundation: a normalized GuardrailAssessmentResult contract (guardrail_models.py), a thin GuardrailsService wrapper for the ApplyGuardrail API (guardrails_service.py), a Guardrails → H-0 safety adapter (guardrails_adapter.py), GuardrailsConfig config block, and two new safety_models enum extensions (GUARDRAILS source, GUARDRAIL_INTERVENTION code), with 134 new tests. Phase H-2 adds the adversarial and edge-case safety evaluation suite: 10 curated fixtures covering schema failures, unsupported claims, missing citations, low confidence, empty retrieval, escalation-required, Guardrails intervention, combined blocking+escalation priority, and clean passing cases; plus a narrow safety suite runner (safety_suite.py) with SafetyCaseFixture, SafetyCaseResult, SafetySuiteSummary dataclasses and run_safety_suite() batch executor; 91 new tests. All 1525 unit and evaluation tests pass without live AWS calls.
 >
 > **Live Bedrock runtime validation is pending:** Live AWS Knowledge Base end-to-end validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. The architecture and all implementation are complete and correct — this is not a code issue. Live validation will be completed when the AWS-side blocker is resolved. The Phase F evaluation layer is fully independent of this blocker.
 
@@ -658,7 +658,7 @@ SafetyAssessment
 - **H-0 compatible** — adapter output is `SafetyIssue` / `SafetyAssessment`, the same types produced by H-0
 - **Runtime pipeline untouched** — no changes to `pipeline_workflow.py`, `cli.py`, `bedrock_service.py`, or any agent
 
-> **H-2 roadmap:** Phase H-2 (adversarial and edge-case evaluation suite) is next. See `PROJECT_SPEC.md §13`.
+> **H-2 complete:** Phase H-2 (adversarial and edge-case evaluation suite) is implemented. See `PROJECT_SPEC.md §13` and Section 19 below.
 
 ### Safety issue codes
 
@@ -695,4 +695,67 @@ SafetyAssessment
 - **Schema-failure path** — `evaluate_safety_from_raw()` returns a blocking assessment immediately when the raw input cannot be parsed into a valid `CaseOutput`
 - **Decoupled** — does not import retrieval_scorer, citation_scorer, output_quality_scorer, runner, or any AWS service
 - **Policy-configurable** — `FailurePolicy` exposes thresholds and flags so rules can be tightened or relaxed without code changes
-- **Foundation for H-1** — Bedrock Guardrails integration will later plug into the `SafetyAssessment` contract cleanly
+- **Foundation for H-1** — Bedrock Guardrails integration plugs into the `SafetyAssessment` contract via the H-1 adapter (guardrails_adapter.py)
+
+---
+
+## 19. Phase H-2 — Adversarial and Edge-Case Evaluation Suite
+
+Phase H-2 adds a curated adversarial evaluation suite that stress-tests the completed H-phase safety foundation under difficult, unsafe, or tricky conditions.  It is a **local evaluation layer**, not a runtime integration phase.
+
+### Components
+
+| Component | Location | Description |
+|---|---|---|
+| **Adversarial fixtures** | `tests/fixtures/safety_cases/` | 10 curated JSON fixtures: one per adversarial scenario, each declaring its evaluation path, expected status, and expected issue codes |
+| **Safety suite runner** | `app/evaluation/safety_suite.py` | Narrow runner: `load_safety_fixture()`, `load_safety_suite()`, `evaluate_case()`, `run_safety_suite()`; three typed frozen dataclasses: `SafetyCaseFixture`, `SafetyCaseResult`, `SafetySuiteSummary` |
+| **Tests** | `tests/test_safety_suite.py` | 91 tests: fixture loading, one test group per adversarial case, batch runner, result field contracts, structural isolation |
+
+### Adversarial case mix
+
+| File | Case ID | Evaluation path | Expected status | Scenario |
+|---|---|---|---|---|
+| `01_schema_failure_raw.json` | `schema_failure_raw` | raw | block | Malformed dict missing required fields |
+| `02_unsupported_claims_block.json` | `unsupported_claims_block` | typed | block | Unsupported claim above blocking threshold |
+| `03_missing_citations_block.json` | `missing_citations_block` | typed | block | No citations when policy requires them |
+| `04_low_confidence_escalate.json` | `low_confidence_escalate` | typed | escalate | Confidence 0.35, below 0.6 threshold |
+| `05_empty_retrieval_warn.json` | `empty_retrieval_warn` | typed | warn | Clean output, retrieval_chunk_count=0 |
+| `06_escalation_required_escalate.json` | `escalation_required_escalate` | typed | escalate | escalation_required=True on candidate |
+| `07_guardrail_intervention_block.json` | `guardrail_intervention_block` | guardrail | block | Guardrails intervened; GUARDRAIL_INTERVENTION issue |
+| `08_guardrail_non_intervention_allow.json` | `guardrail_non_intervention_allow` | guardrail | allow | Guardrails passed; no issues |
+| `09_combined_block_overrides_escalate.json` | `combined_block_overrides_escalate` | typed | block | Blocking + escalation present; block wins |
+| `10_clean_allow_case.json` | `clean_allow_case` | typed | allow | High confidence, cited, no claims; fully clean |
+
+### Runner flow
+
+```
+load_safety_suite(suite_dir)
+     │
+     ▼  alphabetical order
+For each SafetyCaseFixture:
+  evaluate_case(fixture)
+     │
+     ├── evaluation_path == "raw"       → evaluate_safety_from_raw()         (H-0)
+     ├── evaluation_path == "typed"     → evaluate_safety()                  (H-0)
+     └── evaluation_path == "guardrail" → guardrail_result_to_assessment()   (H-1)
+     │
+     ▼
+  SafetyCaseResult
+    .actual_status vs .expected_status
+    .missing_issue_codes  ← expected codes absent from assessment
+    .passed               ← status match AND no missing codes
+     │
+     ▼
+SafetySuiteSummary
+  .total / .passed / .failed / .failed_case_ids
+```
+
+### Design properties
+
+- **Evaluation only** — no changes to H-0 or H-1; composes existing logic exclusively
+- **No live AWS** — no boto3, no Bedrock client, no Converse inference imports
+- **Data-driven** — cases are JSON fixtures; adding a new adversarial case requires only a new fixture file
+- **Deterministic** — same fixture directory always produces the same results in the same order
+- **Narrow** — `safety_suite.py` is a dedicated H-2 runner, not a replacement for the F-2 batch evaluation runner
+
+> **Phase H complete.** Phase I (Optimization) is next. See `PROJECT_SPEC.md §13`.

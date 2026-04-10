@@ -1,0 +1,14 @@
+{
+  "_description": "Malformed raw dict missing required CaseOutput fields. Schema validation must block immediately without running any other policy rules.",
+  "_case_id": "schema_failure_raw",
+  "_expected_status": "block",
+  "_expected_issue_codes": ["schema_or_contract_failure"],
+  "_evaluation_path": "raw",
+  "_retrieval_chunk_count": null,
+  "_guardrail_result": null,
+  "_document_id": null,
+  "input": {
+    "document_id": "doc-h2-schema-fail",
+    "source_filename": "bad_input.txt"
+  }
+}

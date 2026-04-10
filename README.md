@@ -235,7 +235,7 @@ python -m app.cli intake --help
 
 ### Current status note
 
-Live Bedrock / Knowledge Base validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling in the target account. The full pipeline code is complete and correct; the `run` command will surface a clear failure message when AWS calls cannot be completed. All 1156 tests pass without live AWS calls.
+Live Bedrock / Knowledge Base validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling in the target account. The full pipeline code is complete and correct; the `run` command will surface a clear failure message when AWS calls cannot be completed. All 1525 tests pass without live AWS calls.
 
 ---
 
@@ -250,7 +250,7 @@ pip install -r requirements.txt
 python -m pytest tests/ -v
 ```
 
-All 1156 tests pass without live AWS, covering intake, retrieval, analysis, validation, escalation, output writing, CLI commands, structured logging, CloudWatch service, config loading, the full Phase F evaluation layer (schemas, dataset loader, scorer, runner), Phase G-0 retrieval quality metrics (retrieval scorer, fixture loading, dataset alignment), Phase G-1 citation quality checks (citation scorer, citation expectations, fixture loading, dataset alignment), and Phase G-2 output quality scoring (composite scorer, five-dimension result, fixture integration, architectural separation).
+All 1525 tests pass without live AWS, covering intake, retrieval, analysis, validation, escalation, output writing, CLI commands, structured logging, CloudWatch service, config loading, the full Phase F evaluation layer (schemas, dataset loader, scorer, runner), Phase G-0 retrieval quality metrics (retrieval scorer, fixture loading, dataset alignment), Phase G-1 citation quality checks (citation scorer, citation expectations, fixture loading, dataset alignment), Phase G-2 output quality scoring (composite scorer, five-dimension result, fixture integration, architectural separation), Phase H-0 safety contracts and deterministic policy evaluator (safety_models, safety_policy — six policy rules), Phase H-1 Bedrock Guardrails integration (guardrail_models, guardrails_service, guardrails_adapter — intervention and non-intervention paths), and Phase H-2 adversarial and edge-case safety evaluation suite (safety_suite runner, 10 adversarial fixtures, status-priority and combined-scenario coverage).
 
 ### Step 2: Explore sample inputs
 
@@ -330,7 +330,15 @@ This evaluation layer is fully local and offline — it is independent of live A
 
 **Phase G-2 (Output Quality Scoring) is complete** — offline composite output-quality scorer that composes F-2 core case alignment and G-1 citation quality into a unified `OutputQualityScoringResult`, plus three final-output-only checks (summary_nonempty, recommendations_present_when_expected, unsupported_claims_clean), with 46 new tests. **Phase G is now complete.**
 
-**Phase G (Retrieval & Output Quality) is complete** — G-0 retrieval metrics, G-1 citation checks, and G-2 output quality scoring are all implemented and test-complete. Phase H (Safety & Guardrails) is next.
+**Phase G (Retrieval & Output Quality) is complete** — G-0 retrieval metrics, G-1 citation checks, and G-2 output quality scoring are all implemented and test-complete.
+
+**Phase H (Safety & Guardrails) is complete** — the repository now includes:
+
+- Typed safety contracts and deterministic failure-policy evaluator (`app/schemas/safety_models.py`, `app/evaluation/safety_policy.py`)
+- Normalized Guardrails contract, thin service wrapper, and H-0 adapter (`app/schemas/guardrail_models.py`, `app/services/guardrails_service.py`, `app/evaluation/guardrails_adapter.py`)
+- Adversarial and edge-case safety evaluation suite: 10 curated fixtures covering schema failures, unsupported claims, missing citations, low confidence, empty retrieval, escalation, Guardrails intervention, combined scenarios, and clean passing cases (`tests/fixtures/safety_cases/`, `app/evaluation/safety_suite.py`)
+
+All 1525 unit and evaluation tests pass without live AWS calls. Phase I (Optimization) is next.
 
 **Live Bedrock runtime validation** remains pending due to AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. This is an external blocker, not a code issue.
 

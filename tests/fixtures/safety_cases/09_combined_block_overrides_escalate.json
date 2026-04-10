@@ -1,0 +1,38 @@
+{
+  "_description": "Output has both a blocking issue (unsupported claim) and an escalation issue (escalation_required=True). Status priority rule: blocking always wins. Must block, not escalate.",
+  "_case_id": "combined_block_overrides_escalate",
+  "_expected_status": "block",
+  "_expected_issue_codes": ["unsupported_claims_present", "escalation_policy_triggered"],
+  "_evaluation_path": "typed",
+  "_retrieval_chunk_count": null,
+  "_guardrail_result": null,
+  "_document_id": null,
+  "input": {
+    "document_id": "doc-h2-combined-001",
+    "source_filename": "advisory.txt",
+    "source_type": "CISA",
+    "severity": "Critical",
+    "category": "Security",
+    "summary": "A zero-day exploit in critical infrastructure software allows unauthenticated remote access.",
+    "recommendations": [
+      "Patch immediately.",
+      "Escalate to CISO within 2 hours.",
+      "Implement emergency network segmentation."
+    ],
+    "citations": [
+      {
+        "source_id": "kb-src-h2-cisa-001",
+        "source_label": "CISA Advisory AA26-100A",
+        "excerpt": "Unpatched systems are actively being exploited in the wild.",
+        "relevance_score": 0.96
+      }
+    ],
+    "confidence_score": 0.81,
+    "unsupported_claims": ["Exploit has caused confirmed fatalities — not grounded in evidence"],
+    "escalation_required": true,
+    "escalation_reason": "Critical severity and active exploitation.",
+    "validated_by": "validation-agent-v1",
+    "session_id": "sess-h2-combined-001",
+    "timestamp": "2026-04-10T10:30:00+00:00"
+  }
+}

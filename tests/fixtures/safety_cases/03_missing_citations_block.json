@@ -1,0 +1,30 @@
+{
+  "_description": "Valid output structure but citations list is empty. Default policy requires citations and blocks when absent. Must block.",
+  "_case_id": "missing_citations_block",
+  "_expected_status": "block",
+  "_expected_issue_codes": ["missing_citations_when_required"],
+  "_evaluation_path": "typed",
+  "_retrieval_chunk_count": null,
+  "_guardrail_result": null,
+  "_document_id": null,
+  "input": {
+    "document_id": "doc-h2-no-citations-001",
+    "source_filename": "cisa_advisory.txt",
+    "source_type": "CISA",
+    "severity": "High",
+    "category": "Security",
+    "summary": "A critical remote code execution vulnerability affects ICS components in water treatment facilities.",
+    "recommendations": [
+      "Apply vendor patches immediately.",
+      "Isolate affected components from public networks."
+    ],
+    "citations": [],
+    "confidence_score": 0.78,
+    "unsupported_claims": [],
+    "escalation_required": false,
+    "escalation_reason": null,
+    "validated_by": "validation-agent-v1",
+    "session_id": "sess-h2-no-cit-001",
+    "timestamp": "2026-04-10T10:05:00+00:00"
+  }
+}

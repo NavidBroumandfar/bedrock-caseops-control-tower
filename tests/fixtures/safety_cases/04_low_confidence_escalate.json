@@ -1,0 +1,37 @@
+{
+  "_description": "Valid output with citations present but confidence_score=0.35 is well below the 0.6 threshold. Default policy escalates on low confidence. Must escalate.",
+  "_case_id": "low_confidence_escalate",
+  "_expected_status": "escalate",
+  "_expected_issue_codes": ["low_confidence_output"],
+  "_evaluation_path": "typed",
+  "_retrieval_chunk_count": null,
+  "_guardrail_result": null,
+  "_document_id": null,
+  "input": {
+    "document_id": "doc-h2-low-conf-001",
+    "source_filename": "incident_report.txt",
+    "source_type": "Incident",
+    "severity": "Medium",
+    "category": "Operational",
+    "summary": "A partial service outage was observed in the east region. Root cause analysis is ongoing.",
+    "recommendations": [
+      "Continue root cause investigation.",
+      "Monitor affected services for recurrence."
+    ],
+    "citations": [
+      {
+        "source_id": "kb-src-h2-incident-001",
+        "source_label": "Incident Report IR-2026-0410",
+        "excerpt": "East region services experienced a degradation lasting approximately 45 minutes.",
+        "relevance_score": 0.62
+      }
+    ],
+    "confidence_score": 0.35,
+    "unsupported_claims": [],
+    "escalation_required": false,
+    "escalation_reason": null,
+    "validated_by": "validation-agent-v1",
+    "session_id": "sess-h2-low-conf-001",
+    "timestamp": "2026-04-10T10:10:00+00:00"
+  }
+}

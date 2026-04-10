@@ -1,0 +1,21 @@
+{
+  "_description": "Bedrock Guardrails assessed the output but did not intervene. The H-1 adapter must produce an empty issues list and allow status.",
+  "_case_id": "guardrail_non_intervention_allow",
+  "_expected_status": "allow",
+  "_expected_issue_codes": [],
+  "_evaluation_path": "guardrail",
+  "_retrieval_chunk_count": null,
+  "_guardrail_result": {
+    "guardrail_id": "grd-h2-test-001",
+    "guardrail_version": "1",
+    "source": "output",
+    "intervened": false,
+    "action": "NONE",
+    "output_text": null,
+    "blocked": false,
+    "finding_types": [],
+    "trace": null
+  },
+  "_document_id": "doc-h2-guardrail-allow",
+  "input": null
+}

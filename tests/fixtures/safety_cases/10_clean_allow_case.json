@@ -1,0 +1,37 @@
+{
+  "_description": "Clean, well-formed output: citations present, confidence above threshold, no unsupported claims, escalation_required=False. All policy rules pass. Must allow.",
+  "_case_id": "clean_allow_case",
+  "_expected_status": "allow",
+  "_expected_issue_codes": [],
+  "_evaluation_path": "typed",
+  "_retrieval_chunk_count": null,
+  "_guardrail_result": null,
+  "_document_id": null,
+  "input": {
+    "document_id": "doc-h2-clean-001",
+    "source_filename": "fda_warning_letter_01.md",
+    "source_type": "FDA",
+    "severity": "High",
+    "category": "Regulatory",
+    "summary": "The FDA issued a warning letter citing quality system deficiencies. CAPA procedures are inadequate and cleaning validation is absent for the SpiroSonic device.",
+    "recommendations": [
+      "Initiate a comprehensive CAPA review and submit a corrective action plan to the FDA within 30 days.",
+      "Conduct a full cleaning and disinfection validation study for the SpiroSonic device."
+    ],
+    "citations": [
+      {
+        "source_id": "kb-src-h2-clean-001",
+        "source_label": "FDA Warning Letter — Uscom Kft 2025",
+        "excerpt": "Your quality system is inadequate because you have not established and maintained procedures for implementing corrective and preventive action.",
+        "relevance_score": 0.93
+      }
+    ],
+    "confidence_score": 0.90,
+    "unsupported_claims": [],
+    "escalation_required": false,
+    "escalation_reason": null,
+    "validated_by": "validation-agent-v1",
+    "session_id": "sess-h2-clean-001",
+    "timestamp": "2026-04-10T10:35:00+00:00"
+  }
+}

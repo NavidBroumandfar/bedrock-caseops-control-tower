@@ -122,9 +122,9 @@ These are design contracts followed across all implementation work. They apply t
 
 ## Current Implementation Phase
 
-**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G — Retrieval & Output Quality COMPLETE | Phase H-0 — Safety Contracts + Failure Policies COMPLETE | Phase H-1 — Bedrock Guardrails Integration COMPLETE**
+**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G — Retrieval & Output Quality COMPLETE | Phase H — Safety & Guardrails COMPLETE**
 
-> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 1434 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. The Phase F, G, H-0, and H-1 layers are fully independent of this blocker.
+> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 1525 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. The Phase F, G, and H layers are fully independent of this blocker.
 
 The repository is portfolio-ready, test-complete, and demo-friendly for the full MVP and Phase F evaluation scope.
 
@@ -212,9 +212,14 @@ The repository is portfolio-ready, test-complete, and demo-friendly for the full
   - `.env.example` — Guardrails section added
   - `tests/test_guardrail_models.py`, `tests/test_guardrails_service.py`, `tests/test_guardrails_adapter.py` — 134 new tests; no live AWS calls
   - 1434 total tests pass
+- **H-2** — Adversarial and edge-case safety evaluation suite:
+  - `tests/fixtures/safety_cases/` — 10 curated adversarial fixtures (schema failure, unsupported claims, missing citations, low confidence, empty retrieval, escalation required, Guardrail intervention, Guardrail non-intervention, combined block+escalate, clean allow)
+  - `app/evaluation/safety_suite.py` — narrow H-2 runner: `SafetyCaseFixture`, `SafetyCaseResult`, `SafetySuiteSummary` frozen dataclasses; `load_safety_fixture()`, `load_safety_suite()`, `evaluate_case()`, `run_safety_suite()`; routes through H-0 and H-1 logic, no duplication
+  - `tests/test_safety_suite.py` — 91 tests: fixture loading, one test group per adversarial case, batch runner, result contracts, structural isolation (no AWS, no runtime imports)
+  - 1525 total tests pass
 
 ### Next step
-- **Phase H-2** — Adversarial and edge-case evaluation suite; see `PROJECT_SPEC.md §13`
+- **Phase I** — Optimization (I-0 prompt caching, I-1 prompt routing, I-2 baseline vs optimized comparison); see `PROJECT_SPEC.md §13`
 
 ### Phase 2 roadmap
 
@@ -224,7 +229,7 @@ Phase 2 follows the same lettered-subphase naming convention as Phase 1 (A–E):
 |---|---|---|---|
 | **F** | Evaluation Foundation | ✅ Complete | F-0 evaluation contracts + schemas, F-1 reference dataset, F-2 scoring runner |
 | **G** | Retrieval & Output Quality | ✅ Complete | G-0 retrieval metrics ✅, G-1 citation quality ✅, G-2 output scoring ✅ |
-| **H** | Safety & Guardrails | In progress | H-0 safety contracts ✅, H-1 Bedrock Guardrails integration ✅, H-2 adversarial suite |
+| **H** | Safety & Guardrails | ✅ Complete | H-0 safety contracts ✅, H-1 Bedrock Guardrails integration ✅, H-2 adversarial suite ✅ |
 | **I** | Optimization | Not started | I-0 prompt caching, I-1 prompt routing, I-2 baseline vs optimized comparison |
 | **J** | Observability & Reporting | Not started | J-0 CloudWatch dashboard, J-1 result artifacts, J-2 v2 hardening checkpoint |
 
@@ -232,7 +237,6 @@ See `PROJECT_SPEC.md §13` for the full Phase 2 subphase breakdown.
 
 ### Not yet implemented
 - Live Bedrock validation (blocked by AWS-side throttling — not a code issue)
-- Phase H-2: Adversarial evaluation suite
 - Phase I–J: prompt optimization, CloudWatch reporting
 
 Reference: `ARCHITECTURE.md §5–9` for component flows. `PROJECT_SPEC.md §13` for the full subphase roadmap.

@@ -1,0 +1,37 @@
+{
+  "_description": "Clean, well-formed output (high confidence, citations present, no unsupported claims) but retrieval_chunk_count=0 signals empty upstream context. Default policy warns on empty retrieval. Must warn.",
+  "_case_id": "empty_retrieval_warn",
+  "_expected_status": "warn",
+  "_expected_issue_codes": ["empty_or_weak_retrieval"],
+  "_evaluation_path": "typed",
+  "_retrieval_chunk_count": 0,
+  "_guardrail_result": null,
+  "_document_id": null,
+  "input": {
+    "document_id": "doc-h2-empty-ret-001",
+    "source_filename": "fda_recall.txt",
+    "source_type": "FDA",
+    "severity": "Medium",
+    "category": "Regulatory",
+    "summary": "A voluntary recall was issued for lot 4521-B due to potential contamination.",
+    "recommendations": [
+      "Remove lot 4521-B from circulation immediately.",
+      "Notify downstream distributors."
+    ],
+    "citations": [
+      {
+        "source_id": "kb-src-h2-recall-001",
+        "source_label": "FDA Recall Notice 2026",
+        "excerpt": "Lot 4521-B may contain trace contaminants exceeding permissible limits.",
+        "relevance_score": 0.85
+      }
+    ],
+    "confidence_score": 0.82,
+    "unsupported_claims": [],
+    "escalation_required": false,
+    "escalation_reason": null,
+    "validated_by": "validation-agent-v1",
+    "session_id": "sess-h2-empty-ret-001",
+    "timestamp": "2026-04-10T10:15:00+00:00"
+  }
+}
