@@ -148,9 +148,11 @@ class PromptCachingConfig:
     - min_cacheable_tokens is informational — Bedrock enforces a 1024-token
       minimum on the server side; this field lets operators document that
       constraint explicitly and is validated on load.
-    - max_cache_checkpoints caps how many cachePoint markers are injected
-      per request (Bedrock allows up to 4; I-0 only uses the system block,
-      so 1 is the effective ceiling today).
+    - max_cache_checkpoints declares the intended ceiling for cachePoint
+      markers per request (Bedrock allows up to 4).  In I-0,
+      apply_prompt_caching always injects exactly one checkpoint (the system
+      block) and does not read this field — enforcement is deferred to I-1
+      when message-level caching is introduced.
     """
 
     enable_prompt_caching: bool
