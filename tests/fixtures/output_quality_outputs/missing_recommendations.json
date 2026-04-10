@@ -1,0 +1,25 @@
+{
+  "_note": "G-2 test fixture — output with no recommendations when expected output defines recommendation keywords. recommendations_present_when_expected should fail.",
+  "document_id": "doc-test-oq-no-recs",
+  "source_filename": "fda_warning_letter_01.md",
+  "source_type": "FDA",
+  "severity": "High",
+  "category": "Regulatory",
+  "summary": "The FDA issued a warning letter to Uscom Kft citing significant quality system deficiencies including inadequate CAPA procedures and device adulteration findings under 21 CFR Part 820.",
+  "recommendations": [],
+  "citations": [
+    {
+      "source_id": "kb-src-001",
+      "source_label": "FDA Warning Letter — Uscom Kft 2025",
+      "excerpt": "Quality system procedures for corrective and preventive action were not established.",
+      "relevance_score": 0.88
+    }
+  ],
+  "confidence_score": 0.72,
+  "unsupported_claims": [],
+  "escalation_required": true,
+  "escalation_reason": "Severity is High.",
+  "validated_by": "validation-agent-v1",
+  "session_id": "sess-test-oq-003",
+  "timestamp": "2026-04-10T12:00:00Z"
+}

@@ -1,0 +1,29 @@
+{
+  "_note": "G-2 test fixture — strong final output that should pass all dimensions. Good summary, recommendations present, no unsupported claims, good citations.",
+  "document_id": "doc-test-oq-strong",
+  "source_filename": "fda_warning_letter_01.md",
+  "source_type": "FDA",
+  "severity": "High",
+  "category": "Regulatory",
+  "summary": "The FDA issued a warning letter to Uscom Kft citing significant quality system deficiencies. Key findings include inadequate CAPA procedures, failures in cleaning and disinfection validation for the SpiroSonic device, and a determination that the device is adulterated and misbranded under 21 CFR Part 820.",
+  "recommendations": [
+    "Initiate a comprehensive CAPA review addressing all identified quality system gaps.",
+    "Conduct a full cleaning and disinfection validation study for the SpiroSonic device in compliance with FDA regulatory requirements.",
+    "Escalate this matter to the compliance team and senior regulatory leadership for immediate attention."
+  ],
+  "citations": [
+    {
+      "source_id": "kb-src-001",
+      "source_label": "FDA Warning Letter — Uscom Kft 2025",
+      "excerpt": "Your quality system is inadequate because you have not established and maintained procedures for implementing corrective and preventive action.",
+      "relevance_score": 0.92
+    }
+  ],
+  "confidence_score": 0.91,
+  "unsupported_claims": [],
+  "escalation_required": true,
+  "escalation_reason": "Severity is High and explicit escalation recommendation present.",
+  "validated_by": "validation-agent-v1",
+  "session_id": "sess-test-oq-001",
+  "timestamp": "2026-04-10T12:00:00Z"
+}

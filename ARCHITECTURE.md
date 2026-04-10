@@ -3,9 +3,9 @@
 **Version:** 0.2
 **Last Updated:** 2026-04-10
 
-> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G-0 (Retrieval Quality Metrics) complete. Phase G-1 (Citation Quality Checks) complete.**
+> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G (Retrieval & Output Quality) complete.**
 >
-> **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Phase F adds a fully local, offline evaluation layer: typed evaluation contracts and schemas (F-0), a curated evaluation dataset with 7 cases and reference expected outputs (F-1), and an offline evaluation harness with dataset loader, deterministic scorer, and scoring runner (F-2). Phase G-0 adds offline retrieval quality metrics: three deterministic metrics scored against F-1 retrieval expectations, with fixture-based candidate input and 55 new tests. Phase G-1 adds offline citation quality metrics: four deterministic metrics scored against CitationExpectation references, with five candidate output fixtures and 64 new tests. All 1110 unit and evaluation tests pass without live AWS calls.
+> **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Phase F adds a fully local, offline evaluation layer: typed evaluation contracts and schemas (F-0), a curated evaluation dataset with 7 cases and reference expected outputs (F-1), and an offline evaluation harness with dataset loader, deterministic scorer, and scoring runner (F-2). Phase G-0 adds offline retrieval quality metrics: three deterministic metrics scored against F-1 retrieval expectations, with fixture-based candidate input and 55 new tests. Phase G-1 adds offline citation quality metrics: four deterministic metrics scored against CitationExpectation references, with five candidate output fixtures and 64 new tests. Phase G-2 adds a composite output-quality scorer that composes F-2 and G-1 sub-scores plus three final-output-only checks (summary_nonempty, recommendations_present_when_expected, unsupported_claims_clean), with 46 new tests. All 1156 unit and evaluation tests pass without live AWS calls.
 >
 > **Live Bedrock runtime validation is pending:** Live AWS Knowledge Base end-to-end validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. The architecture and all implementation are complete and correct — this is not a code issue. Live validation will be completed when the AWS-side blocker is resolved. The Phase F evaluation layer is fully independent of this blocker.
 
@@ -549,3 +549,41 @@ Overall score is the mean of the four metric scores.  Pass/fail uses `CITATION_P
 - **Local and deterministic** — scoring is rule-based; same inputs always produce the same scores
 - **Reuses existing contracts** — `CaseOutput`, `Citation`, `DimensionScore` are existing types; `CitationExpectation` is the only new schema (minimal addition)
 - **Backward-compatible fixture extension** — `_citation_expectation` blocks follow the same private-key convention as `_retrieval_expectation`; existing loader and scorer logic is unchanged
+
+---
+
+## 16. Phase G-2 — Output Quality Scoring
+
+Phase G-2 adds a composite output-quality evaluation layer that answers: **"How good is this final `CaseOutput` as an auditable, usable output artifact?"**
+
+It is a composition layer — not a new scoring engine — that reuses F-2 and G-1 work and adds only a small, deterministic set of final-output-only checks.
+
+### Components
+
+| Component | Location | Description |
+|---|---|---|
+| **Output quality scorer** | `app/evaluation/output_quality_scorer.py` | Composite scorer: calls F-2 `score_case()` and G-1 `score_citations()`, then adds three final-output-only checks; returns `OutputQualityScoringResult` |
+| **OutputQualityScoringResult schema** | `app/schemas/evaluation_models.py` (extended) | Typed result model: `core_case_alignment_score`, `citation_quality_score`, `dimension_scores`, `overall_score`, `pass_fail`, `pass_threshold`, `notes` |
+| **Candidate output fixtures** | `tests/fixtures/output_quality_outputs/` | Five targeted G-2 fixtures: strong, blank summary, missing recommendations, unsupported claims, good core + weak citations |
+| **Tests** | `tests/test_output_quality_scorer.py` | 46 tests covering all dimensions, pass/fail logic, sub-score propagation, fixture integration, architectural separation, and candidate typing |
+
+### Scoring dimensions
+
+| Dimension | Source | Behaviour |
+|---|---|---|
+| `core_case_alignment_score` | F-2 reused | `score_case()` overall score: severity, escalation, summary facts, recommendation keywords, forbidden claims |
+| `citation_quality_score` | G-1 reused | `score_citations()` overall score: presence, source labels, excerpt coverage, nonempty excerpts |
+| `summary_nonempty` | G-2 final-output check | 1.0 if `summary.strip()` non-empty; else 0.0 (hard gate) |
+| `recommendations_present_when_expected` | G-2 final-output check | 1.0 if expected output defines recommendation keywords and candidate has at least one non-empty recommendation; 1.0 (N/A) if no keywords defined |
+| `unsupported_claims_clean` | G-2 final-output check | 1.0 if `unsupported_claims` is empty; else 0.0 (hard gate) |
+
+Overall score = mean of all five component scores. Pass/fail: `summary_nonempty` must pass, `unsupported_claims_clean` must pass, and overall score >= `OUTPUT_QUALITY_PASS_THRESHOLD` (default 0.75).
+
+### Design properties
+
+- **Composition over duplication** — calls `score_case()` and `score_citations()` directly; no scoring logic is duplicated
+- **Separate from G-0** — does not import `retrieval_scorer.py`; retrieval quality remains a distinct evaluation layer
+- **Local and deterministic** — scoring is rule-based; same inputs always produce the same scores
+- **Typed result** — `OutputQualityScoringResult` is a Pydantic model in `evaluation_models.py`; reuses `DimensionScore` for the three final-output checks
+
+> **v2 implementation roadmap:** Phase G is complete. Phase H (Safety & Guardrails) is next. See `PROJECT_SPEC.md §13` for the full breakdown.

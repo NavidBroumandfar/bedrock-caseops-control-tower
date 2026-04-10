@@ -2,7 +2,7 @@
 
 **Version:** 0.2
 **Last Updated:** 2026-04-10
-**Status:** Phase 1 Complete — Phase 2 In Progress (Phase F complete, Phase G-0 complete, Phase G-1 complete, Phase G-2 next)
+**Status:** Phase 1 Complete — Phase 2 In Progress (Phase F complete, Phase G complete, Phase H next)
 
 ---
 
@@ -221,7 +221,7 @@ The MVP engineering scope is complete. Success criteria are tracked in two categ
 
 #### Phase 1 Subphase Roadmap
 
-> **Current status:** Phase 1 complete — all subphases (A, B, C, D, E-0, E-1, E-2) implemented in code and test-complete. Phase 2 in progress — Phase F (Evaluation Foundation) complete; Phase G is next.
+> **Current status:** Phase 1 complete — all subphases (A, B, C, D, E-0, E-1, E-2) implemented in code and test-complete. Phase 2 in progress — Phase F (Evaluation Foundation) complete; Phase G (Retrieval & Output Quality) complete; Phase H is next.
 >
 > **Live Bedrock runtime validation is pending:** All code is implemented correctly. Live AWS Knowledge Base end-to-end validation remains blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. This is an external blocker, not a code issue.
 
@@ -255,7 +255,7 @@ The MVP engineering scope is complete. Success criteria are tracked in two categ
 
 ### Phase 2 — v2: Evaluation and Optimization
 
-**Status:** In progress — Phase F complete, Phase G-0 complete, Phase G-1 next.
+**Status:** In progress — Phase F complete, Phase G complete, Phase H next.
 
 **Goal:** Make the system measurably better and observable — through structured evaluation, safety controls, optimization, and production-grade reporting.
 
@@ -270,10 +270,10 @@ The MVP engineering scope is complete. Success criteria are tracked in two categ
   - F-1 Reference dataset + expected outputs (7 curated cases) ✅
   - F-2 Offline evaluation harness / deterministic scoring runner ✅
 
-- **Phase G — Retrieval & Output Quality**
+- **Phase G — Retrieval & Output Quality** ✅
   - G-0 Retrieval quality metrics ✅
   - G-1 Citation quality checks ✅
-  - G-2 Output quality scoring
+  - G-2 Output quality scoring ✅
 
 - **Phase H — Safety & Guardrails**
   - H-0 Safety contracts + failure policies

@@ -1,0 +1,22 @@
+{
+  "_note": "G-2 test fixture — good core content (summary, recommendations, no unsupported claims) but no citations when required. Proves that composition works: citation_quality_score pulls overall down even when final-output checks pass.",
+  "document_id": "doc-test-oq-weak-citations",
+  "source_filename": "fda_warning_letter_01.md",
+  "source_type": "FDA",
+  "severity": "High",
+  "category": "Regulatory",
+  "summary": "The FDA issued a warning letter to Uscom Kft citing significant quality system deficiencies including inadequate CAPA procedures, cleaning validation failures for the SpiroSonic device, and a determination that the device is adulterated and misbranded under 21 CFR Part 820.",
+  "recommendations": [
+    "Initiate a comprehensive CAPA review addressing all identified quality system gaps.",
+    "Conduct a full cleaning validation study for the SpiroSonic device.",
+    "Escalate to compliance team and engage FDA regulatory counsel."
+  ],
+  "citations": [],
+  "confidence_score": 0.65,
+  "unsupported_claims": [],
+  "escalation_required": true,
+  "escalation_reason": "Severity is High and explicit escalation recommendation present.",
+  "validated_by": "validation-agent-v1",
+  "session_id": "sess-test-oq-005",
+  "timestamp": "2026-04-10T12:00:00Z"
+}

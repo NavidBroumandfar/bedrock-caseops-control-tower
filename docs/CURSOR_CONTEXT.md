@@ -122,9 +122,9 @@ These are design contracts followed across all implementation work. They apply t
 
 ## Current Implementation Phase
 
-**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G-0 — Retrieval Quality Metrics COMPLETE | Phase G-1 — Citation Quality Checks COMPLETE**
+**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G — Retrieval & Output Quality COMPLETE**
 
-> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 1110 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. The Phase F, G-0, and G-1 evaluation layers are fully independent of this blocker.
+> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 1156 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. The Phase F, G-0, G-1, and G-2 evaluation layers are fully independent of this blocker.
 
 The repository is portfolio-ready, test-complete, and demo-friendly for the full MVP and Phase F evaluation scope.
 
@@ -191,9 +191,15 @@ The repository is portfolio-ready, test-complete, and demo-friendly for the full
   - `tests/fixtures/citation_outputs/` — 5 candidate CaseOutput fixtures: `strong_citations.json`, `missing_citations.json`, `wrong_source_labels.json`, `empty_excerpts.json`, `no_citations_not_required.json`
   - `tests/test_citation_scorer.py` — 64 tests covering all four metrics, pass/fail logic, fixture loading, dataset alignment, separation from G-0, determinism, and candidate typing
   - 1110 total tests pass
+- **G-2** — Output quality scoring:
+  - `app/schemas/evaluation_models.py` — extended with `OutputQualityScoringResult`: typed Pydantic result combining `core_case_alignment_score`, `citation_quality_score`, `dimension_scores` (three final-output-only checks), `overall_score`, `pass_fail`, `pass_threshold`, `notes`
+  - `app/evaluation/output_quality_scorer.py` — composite scorer: calls F-2 `score_case()` and G-1 `score_citations()`, adds `summary_nonempty`, `recommendations_present_when_expected`, `unsupported_claims_clean` checks; overall score = mean of five components; hard gates on summary_nonempty and unsupported_claims_clean; does NOT import retrieval_scorer (G-0)
+  - `tests/fixtures/output_quality_outputs/` — 5 targeted fixtures: `strong_output.json`, `blank_summary.json`, `missing_recommendations.json`, `unsupported_claims_present.json`, `good_core_weak_citations.json`
+  - `tests/test_output_quality_scorer.py` — 46 tests covering all dimensions, hard gates, sub-score propagation, overall score formula, pass/fail threshold, fixture integration, architectural separation, and candidate typing
+  - 1156 total tests pass
 
 ### Next step
-- **Phase G-2** — Output quality scoring; see `PROJECT_SPEC.md §13`
+- **Phase H** — Safety & Guardrails; see `PROJECT_SPEC.md §13`
 
 ### Phase 2 roadmap
 
@@ -202,7 +208,7 @@ Phase 2 follows the same lettered-subphase naming convention as Phase 1 (A–E):
 | Phase | Theme | Status | Subphases |
 |---|---|---|---|
 | **F** | Evaluation Foundation | ✅ Complete | F-0 evaluation contracts + schemas, F-1 reference dataset, F-2 scoring runner |
-| **G** | Retrieval & Output Quality | In progress | G-0 retrieval metrics ✅, G-1 citation quality ✅, G-2 output scoring |
+| **G** | Retrieval & Output Quality | ✅ Complete | G-0 retrieval metrics ✅, G-1 citation quality ✅, G-2 output scoring ✅ |
 | **H** | Safety & Guardrails | Not started | H-0 safety contracts, H-1 Bedrock Guardrails integration, H-2 adversarial suite |
 | **I** | Optimization | Not started | I-0 prompt caching, I-1 prompt routing, I-2 baseline vs optimized comparison |
 | **J** | Observability & Reporting | Not started | J-0 CloudWatch dashboard, J-1 result artifacts, J-2 v2 hardening checkpoint |

@@ -250,7 +250,7 @@ pip install -r requirements.txt
 python -m pytest tests/ -v
 ```
 
-All 1110 tests pass without live AWS, covering intake, retrieval, analysis, validation, escalation, output writing, CLI commands, structured logging, CloudWatch service, config loading, the full Phase F evaluation layer (schemas, dataset loader, scorer, runner), Phase G-0 retrieval quality metrics (retrieval scorer, fixture loading, dataset alignment), and Phase G-1 citation quality checks (citation scorer, citation expectations, fixture loading, dataset alignment).
+All 1156 tests pass without live AWS, covering intake, retrieval, analysis, validation, escalation, output writing, CLI commands, structured logging, CloudWatch service, config loading, the full Phase F evaluation layer (schemas, dataset loader, scorer, runner), Phase G-0 retrieval quality metrics (retrieval scorer, fixture loading, dataset alignment), Phase G-1 citation quality checks (citation scorer, citation expectations, fixture loading, dataset alignment), and Phase G-2 output quality scoring (composite scorer, five-dimension result, fixture integration, architectural separation).
 
 ### Step 2: Explore sample inputs
 
@@ -326,7 +326,11 @@ This evaluation layer is fully local and offline — it is independent of live A
 
 **Phase G-0 (Retrieval Quality Metrics) is complete** — offline retrieval quality scoring against F-1 retrieval expectations, with three deterministic metrics and 55 new tests.
 
-**Phase G-1 (Citation Quality Checks) is complete** — offline citation quality scoring against new `CitationExpectation` references, with four deterministic metrics and 64 new tests. Phase G-2 (Output Quality Scoring) is next.
+**Phase G-1 (Citation Quality Checks) is complete** — offline citation quality scoring against new `CitationExpectation` references, with four deterministic metrics and 64 new tests.
+
+**Phase G-2 (Output Quality Scoring) is complete** — offline composite output-quality scorer that composes F-2 core case alignment and G-1 citation quality into a unified `OutputQualityScoringResult`, plus three final-output-only checks (summary_nonempty, recommendations_present_when_expected, unsupported_claims_clean), with 46 new tests. **Phase G is now complete.**
+
+**Phase G (Retrieval & Output Quality) is complete** — G-0 retrieval metrics, G-1 citation checks, and G-2 output quality scoring are all implemented and test-complete. Phase H (Safety & Guardrails) is next.
 
 **Live Bedrock runtime validation** remains pending due to AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. This is an external blocker, not a code issue.
 

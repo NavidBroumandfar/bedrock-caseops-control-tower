@@ -5,13 +5,14 @@ These schemas define the typed foundation for automated evaluation of pipeline o
 against reference expectations.  No runner logic, live AWS calls, or dataset population
 belong here — this is the contract layer only.
 
-EvaluationCase        — reference descriptor for one document case used in evaluation.
-ExpectedOutput        — the reference judgment a pipeline run is scored against.
-RetrievalExpectation  — contract for retrieval-quality evaluation of a given case.
-CitationExpectation   — contract for citation-quality evaluation of a given case (G-1).
-DimensionScore        — a single scored metric dimension; reused across all score types.
-EvaluationResult      — the evaluated result of one pipeline run against one reference case.
-EvaluationRunSummary  — aggregated results across all cases in one evaluation run.
+EvaluationCase           — reference descriptor for one document case used in evaluation.
+ExpectedOutput           — the reference judgment a pipeline run is scored against.
+RetrievalExpectation     — contract for retrieval-quality evaluation of a given case.
+CitationExpectation      — contract for citation-quality evaluation of a given case (G-1).
+DimensionScore           — a single scored metric dimension; reused across all score types.
+EvaluationResult         — the evaluated result of one pipeline run against one reference case.
+EvaluationRunSummary     — aggregated results across all cases in one evaluation run.
+OutputQualityScoringResult — G-2 composite output-quality result combining F-2 and G-1 sub-scores.
 """
 
 import math
@@ -401,3 +402,62 @@ class EvaluationRunSummary(BaseModel):
                     f"per_metric_averages[{key!r}] must be in [0.0, 1.0], got: {value!r}"
                 )
         return mapping
+
+
+# ── OutputQualityScoringResult ─────────────────────────────────────────────────
+
+
+class OutputQualityScoringResult(BaseModel):
+    """
+    G-2 composite output-quality scoring result.
+
+    Returned by output_quality_scorer.score_output_quality().  Combines the
+    reused F-2 core case alignment score and G-1 citation quality score with
+    a small set of final-output-only checks.
+
+    core_case_alignment_score      — overall score from the F-2 scorer (0.0–1.0).
+    citation_quality_score         — overall score from the G-1 citation scorer (0.0–1.0).
+    dimension_scores               — per-dimension DimensionScores for final-output checks
+                                     (summary_nonempty, recommendations_present_when_expected,
+                                     unsupported_claims_clean).
+    overall_score                  — mean of all five component scores; in [0.0, 1.0].
+    pass_fail                      — True when hard-gate dims passed AND overall_score
+                                     >= pass_threshold.
+    pass_threshold                 — threshold used for this result (default OUTPUT_QUALITY_PASS_THRESHOLD).
+    notes                          — optional free-text observation.
+    """
+
+    core_case_alignment_score: float
+    citation_quality_score: float
+    dimension_scores: list[DimensionScore]
+    overall_score: float
+    pass_fail: bool
+    pass_threshold: float
+    notes: str | None = None
+
+    @field_validator("core_case_alignment_score", "citation_quality_score", "overall_score")
+    @classmethod
+    def must_be_in_unit_interval(cls, value: float) -> float:
+        if math.isnan(value) or math.isinf(value):
+            raise ValueError(f"score must be a finite float, got: {value!r}")
+        if not (0.0 <= value <= 1.0):
+            raise ValueError(f"score must be in [0.0, 1.0], got: {value!r}")
+        return value
+
+    @field_validator("dimension_scores")
+    @classmethod
+    def dimension_scores_must_not_be_empty(
+        cls, items: list[DimensionScore]
+    ) -> list[DimensionScore]:
+        if not items:
+            raise ValueError(
+                "dimension_scores must contain at least one DimensionScore entry"
+            )
+        return items
+
+    def get(self, metric_name: str) -> DimensionScore | None:
+        """Return the DimensionScore for the given metric_name, or None."""
+        for ds in self.dimension_scores:
+            if ds.metric_name == metric_name:
+                return ds
+        return None

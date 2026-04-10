@@ -1,0 +1,28 @@
+{
+  "_note": "G-2 test fixture — output with blank summary. summary_nonempty should fail (hard gate).",
+  "document_id": "doc-test-oq-blank-summary",
+  "source_filename": "fda_warning_letter_01.md",
+  "source_type": "FDA",
+  "severity": "High",
+  "category": "Regulatory",
+  "summary": "   ",
+  "recommendations": [
+    "Initiate CAPA review.",
+    "Escalate to compliance team."
+  ],
+  "citations": [
+    {
+      "source_id": "kb-src-001",
+      "source_label": "FDA Warning Letter — Uscom Kft 2025",
+      "excerpt": "Quality system procedures were not established for corrective and preventive action.",
+      "relevance_score": 0.85
+    }
+  ],
+  "confidence_score": 0.70,
+  "unsupported_claims": [],
+  "escalation_required": true,
+  "escalation_reason": "Severity is High.",
+  "validated_by": "validation-agent-v1",
+  "session_id": "sess-test-oq-002",
+  "timestamp": "2026-04-10T12:00:00Z"
+}

@@ -1,0 +1,31 @@
+{
+  "_note": "G-2 test fixture — output containing unsupported claims. unsupported_claims_clean should fail (hard gate).",
+  "document_id": "doc-test-oq-unsupported",
+  "source_filename": "fda_warning_letter_01.md",
+  "source_type": "FDA",
+  "severity": "High",
+  "category": "Regulatory",
+  "summary": "The FDA issued a warning letter to Uscom Kft citing significant quality system deficiencies including inadequate CAPA procedures and device adulteration findings under 21 CFR Part 820.",
+  "recommendations": [
+    "Initiate CAPA review and submit corrective action plan to FDA.",
+    "Escalate to compliance team and regulatory leadership."
+  ],
+  "citations": [
+    {
+      "source_id": "kb-src-001",
+      "source_label": "FDA Warning Letter — Uscom Kft 2025",
+      "excerpt": "Quality system procedures for corrective and preventive action were not established.",
+      "relevance_score": 0.87
+    }
+  ],
+  "confidence_score": 0.61,
+  "unsupported_claims": [
+    "The facility has previously violated export regulations.",
+    "Device recalls were issued in three countries."
+  ],
+  "escalation_required": true,
+  "escalation_reason": "Unsupported claims detected by validation agent.",
+  "validated_by": "validation-agent-v1",
+  "session_id": "sess-test-oq-004",
+  "timestamp": "2026-04-10T12:00:00Z"
+}
