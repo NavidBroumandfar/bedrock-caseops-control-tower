@@ -1,8 +1,8 @@
 # Project Specification — Bedrock CaseOps Multi-Agent Control Tower
 
-**Version:** 0.1 (MVP)
-**Last Updated:** 2026-04-05
-**Status:** Phase 1 Complete — Phase 2 Not Started
+**Version:** 0.2
+**Last Updated:** 2026-04-10
+**Status:** Phase 1 Complete — Phase 2 In Progress (Phase F complete, Phase G next)
 
 ---
 
@@ -185,7 +185,7 @@ The following are explicitly excluded from the MVP to keep scope manageable:
 The MVP engineering scope is complete. Success criteria are tracked in two categories:
 
 **Engineering / repo completion (complete):**
-- [x] The codebase passes unit tests for intake, schema validation, and escalation logic without live AWS calls — 678 tests pass
+- [x] The codebase passes unit tests for intake, schema validation, and escalation logic without live AWS calls — 994 tests pass
 - [x] Escalation is triggered correctly for a document meeting the escalation criteria — covered by unit tests
 - [x] The Validation Agent detects at least one unsupported claim in a synthetic adversarial test case — covered by unit tests
 - [x] All agent steps are logged with document and session IDs — structured logging implemented (E-0) and tested
@@ -217,11 +217,11 @@ The MVP engineering scope is complete. Success criteria are tracked in two categ
 
 **Exit Criteria:** An operator can run `python -m app.cli run <file>` and produce a valid, grounded JSON output end-to-end.
 
-**Status:** Engineering scope complete (all subphases A–E-2 implemented and test-complete). Live Bedrock end-to-end validation pending AWS-side Titan Text Embeddings V2 throttling resolution. Repository is portfolio-ready.
+**Status:** Engineering scope complete (all subphases A–E-2 implemented and test-complete). Repository is portfolio-ready. Live Bedrock end-to-end validation remains pending due to AWS-side Titan Text Embeddings V2 throttling/runtime issues — this is an external blocker, not a code issue.
 
 #### Phase 1 Subphase Roadmap
 
-> **Current status:** Phase 1 complete — all subphases (A, B, C, D, E-0, E-1, E-2) implemented in code and test-complete. Phase 2 not started.
+> **Current status:** Phase 1 complete — all subphases (A, B, C, D, E-0, E-1, E-2) implemented in code and test-complete. Phase 2 in progress — Phase F (Evaluation Foundation) complete; Phase G is next.
 >
 > **Live Bedrock runtime validation is pending:** All code is implemented correctly. Live AWS Knowledge Base end-to-end validation remains blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. This is an external blocker, not a code issue.
 
@@ -255,18 +255,20 @@ The MVP engineering scope is complete. Success criteria are tracked in two categ
 
 ### Phase 2 — v2: Evaluation and Optimization
 
-**Status:** Not started — next implementation phase after Phase 1 live validation is confirmed.
+**Status:** In progress — Phase F complete, Phase G next.
 
 **Goal:** Make the system measurably better and observable — through structured evaluation, safety controls, optimization, and production-grade reporting.
 
 **Exit Criteria:** The system can evaluate its own outputs against a reference set, enforce safety policies, apply prompt optimizations, and report quality metrics to a CloudWatch dashboard.
 
+> **Note on Phase F independence:** The Phase F evaluation foundation (F-0 through F-2) is fully local and offline. It evaluates structured outputs against reference expectations without requiring live AWS runtime availability. Progress on Phase 2 is not blocked by the live Bedrock runtime issue that affects Phase 1 live validation.
+
 #### Phase 2 Subphase Roadmap
 
-- **Phase F — Evaluation Foundation**
-  - F-0 Evaluation contracts + scoring schemas
-  - F-1 Reference dataset + expected outputs
-  - F-2 Evaluation harness / automated scoring runner
+- **Phase F — Evaluation Foundation** ✅
+  - F-0 Evaluation contracts + scoring schemas ✅
+  - F-1 Reference dataset + expected outputs (7 curated cases) ✅
+  - F-2 Offline evaluation harness / deterministic scoring runner ✅
 
 - **Phase G — Retrieval & Output Quality**
   - G-0 Retrieval quality metrics

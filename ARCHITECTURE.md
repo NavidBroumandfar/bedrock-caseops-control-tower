@@ -1,13 +1,13 @@
 # Architecture — Bedrock CaseOps Multi-Agent Control Tower
 
-**Version:** 0.1 (MVP)
-**Last Updated:** 2026-04-05
+**Version:** 0.2
+**Last Updated:** 2026-04-10
 
-> **Phase 1 (v1 MVP) complete — Phase 2 not started.**
+> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G not started.**
 >
-> **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Local output writing, S3 output archiving, structured logging, CloudWatch integration, CLI flow, and test coverage are all complete. The repository is portfolio-ready and test-complete for the MVP scope.
+> **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Phase F adds a fully local, offline evaluation layer: typed evaluation contracts and schemas (F-0), a curated evaluation dataset with 7 cases and reference expected outputs (F-1), and an offline evaluation harness with dataset loader, deterministic scorer, and scoring runner (F-2). All 994 unit and evaluation tests pass without live AWS calls.
 >
-> **Live Bedrock runtime validation is pending:** Live AWS Knowledge Base end-to-end validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. The architecture and all implementation are complete and correct — this is not a code issue. All 678 unit and integration-style tests pass without live AWS calls. Live validation will be completed when the AWS-side blocker is resolved.
+> **Live Bedrock runtime validation is pending:** Live AWS Knowledge Base end-to-end validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. The architecture and all implementation are complete and correct — this is not a code issue. Live validation will be completed when the AWS-side blocker is resolved. The Phase F evaluation layer is fully independent of this blocker.
 
 ---
 
@@ -421,7 +421,55 @@ Failures to emit to CloudWatch are silently swallowed — they never break the p
 
 ---
 
-## 13. Future Extensibility
+## 13. Phase F — Evaluation Architecture
+
+Phase F adds a local, offline evaluation layer on top of the v1 runtime pipeline. It is deterministic, fully independent of live AWS runtime availability, and requires no external services to run.
+
+### Components
+
+| Component | Location | Description |
+|---|---|---|
+| **Evaluation schemas** | `app/schemas/evaluation_models.py` | Typed contracts for evaluation cases, expected outputs, dimension scores, and aggregated summaries |
+| **Evaluation dataset** | `data/evaluation/cases/` | 7 curated cases (FDA, CISA, Incident, edge) with structured inputs |
+| **Expected outputs** | `data/evaluation/expected/` | Reference expected outputs matching the evaluation schema per case |
+| **Dataset loader** | `app/evaluation/loader.py` | Loads and validates evaluation cases and expected outputs from disk |
+| **Scorer** | `app/evaluation/scorer.py` | Deterministic scoring of actual vs. expected outputs across dimensions (severity, escalation, confidence, citations) |
+| **Runner** | `app/evaluation/runner.py` | Orchestrates batch evaluation: loads dataset, scores all cases, returns aggregated summary |
+
+### Design properties
+
+- **Local and offline** — no AWS calls required; evaluates structured outputs against reference expectations
+- **Deterministic** — scoring logic is rule-based; same inputs always produce the same scores
+- **Decoupled** — the evaluation layer does not modify the runtime pipeline; it consumes `CaseOutput` objects as read-only inputs
+- **Foundation for Phase G+** — designed to be extended with retrieval quality metrics, citation checks, and safety scoring in subsequent phases
+
+### Evaluation flow
+
+```
+Load evaluation dataset (cases + expected outputs)
+     │
+     ▼
+For each case:
+  Load EvaluationCase + EvaluationExpectedOutput
+     │
+     ▼
+  Score actual output vs. expected:
+    - severity match
+    - escalation flag match
+    - confidence score within threshold
+    - citation presence
+     │
+     ▼
+  Produce per-case EvaluationDimensionScores
+     │
+     ▼
+Aggregate all case scores → EvaluationSummary
+  - pass rate, dimension averages, failing case IDs
+```
+
+---
+
+## 14. Future Extensibility
 
 The following design decisions preserve extensibility without overengineering:
 
@@ -435,4 +483,4 @@ The following design decisions preserve extensibility without overengineering:
 | No framework lock-in for orchestration | Supervisor logic is plain Python; can be migrated to Bedrock Flows in v3 |
 | CloudWatch log structure is consistent | Dashboards and alarms can be added in v2 without changing log emission |
 
-> **v2 implementation roadmap:** The next planned implementation phase (Phase 2) follows subphases F through J — covering evaluation foundation, retrieval and output quality, safety and guardrails, optimization, and observability/reporting. See `PROJECT_SPEC.md §13` for the full breakdown. Phase 2 has not started.
+> **v2 implementation roadmap:** Phase 2 is in progress. Phase F (Evaluation Foundation) is complete — see §13 above. Remaining Phase 2 subphases (G through J) cover retrieval and output quality, safety and guardrails, optimization, and observability/reporting. See `PROJECT_SPEC.md §13` for the full breakdown.

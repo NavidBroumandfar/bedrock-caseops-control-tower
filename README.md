@@ -90,12 +90,14 @@ bedrock-caseops-control-tower/
 │   ├── services/        # AWS service clients (S3, Bedrock, KB)
 │   ├── workflows/       # Orchestration and routing logic
 │   ├── schemas/         # Pydantic models for structured I/O
+│   ├── evaluation/      # Offline evaluation harness (Phase F)
 │   └── utils/           # Logging, ID generation, file helpers
 ├── notebooks/           # Exploratory notebooks and prototypes
 ├── tests/               # Unit and integration tests
 ├── data/
 │   ├── sample_documents/    # Public test documents (FDA, CISA, etc.)
-│   └── expected_outputs/    # Reference outputs for validation
+│   ├── expected_outputs/    # Reference outputs for pipeline validation
+│   └── evaluation/          # Curated eval dataset + expected outputs (Phase F)
 ├── outputs/             # Runtime-generated outputs (gitignored)
 ├── docs/                # Architecture notes and project memory
 ├── .env.example
@@ -233,7 +235,7 @@ python -m app.cli intake --help
 
 ### Current status note
 
-Live Bedrock / Knowledge Base validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling in the target account. The full pipeline code is complete and correct; the `run` command will surface a clear failure message when AWS calls cannot be completed. All 678 unit tests pass without live AWS calls.
+Live Bedrock / Knowledge Base validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling in the target account. The full pipeline code is complete and correct; the `run` command will surface a clear failure message when AWS calls cannot be completed. All 994 tests pass without live AWS calls.
 
 ---
 
@@ -248,7 +250,7 @@ pip install -r requirements.txt
 python -m pytest tests/ -v
 ```
 
-All 678 tests pass without live AWS, covering intake, retrieval, analysis, validation, escalation, output writing, CLI commands, structured logging, CloudWatch service, and config loading.
+All 994 tests pass without live AWS, covering intake, retrieval, analysis, validation, escalation, output writing, CLI commands, structured logging, CloudWatch service, config loading, and the full Phase F evaluation layer (schemas, dataset loader, scorer, runner).
 
 ### Step 2: Explore sample inputs
 
@@ -312,6 +314,18 @@ On success, the CLI prints a structured summary and writes a JSON output to `out
 
 ## Status
 
-Phases A–D, E-0 (structured logging + CloudWatch), E-1 (CLI end-to-end flow, local JSON output, S3 archiving), and **E-2 (test hardening, sample cases, demo readiness)** are complete. The MVP engineering layer is portfolio-ready and test-complete. See [PROJECT_SPEC.md](PROJECT_SPEC.md) for the full roadmap and [ARCHITECTURE.md](ARCHITECTURE.md) for the technical design.
+**Phase 1 (v1 MVP) complete** — all subphases A through E-2 are implemented and test-complete. The MVP engineering layer is portfolio-ready.
 
-**Live Bedrock runtime validation** remains pending due to AWS-side account/throttling resolution. This is not a code issue — it is an external blocker documented clearly throughout the project.
+**Phase F (Evaluation Foundation) complete** — the repository now includes:
+
+- Typed evaluation contracts and scoring schemas (`app/schemas/evaluation_models.py`)
+- A curated local evaluation dataset with 7 cases and reference expected outputs (`data/evaluation/`)
+- An offline evaluation harness: dataset loader, deterministic scorer, and aggregated scoring runner (`app/evaluation/`)
+
+This evaluation layer is fully local and offline — it is independent of live AWS runtime availability. All 994 unit and evaluation tests pass without live AWS calls.
+
+**Phase G (Retrieval & Output Quality) is the next phase** — not yet started.
+
+**Live Bedrock runtime validation** remains pending due to AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. This is an external blocker, not a code issue.
+
+See [PROJECT_SPEC.md](PROJECT_SPEC.md) for the full roadmap and [ARCHITECTURE.md](ARCHITECTURE.md) for the technical design.

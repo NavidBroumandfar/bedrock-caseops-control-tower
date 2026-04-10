@@ -64,13 +64,15 @@ bedrock-caseops-control-tower/
 │   ├── agents/        ← agent classes (Supervisor, Retrieval, Analysis, Validation, ToolExecutor)
 │   ├── services/      ← AWS service wrappers (s3, bedrock, kb, cloudwatch)
 │   ├── workflows/     ← pipeline orchestration and supervisor routing
-│   ├── schemas/       ← Pydantic models (IntakeMetadata, EvidenceChunk, AnalysisOutput, CaseOutput, etc.)
+│   ├── schemas/       ← Pydantic models (IntakeMetadata, EvidenceChunk, AnalysisOutput, CaseOutput, evaluation_models, etc.)
+│   ├── evaluation/    ← offline evaluation harness: loader, scorer, runner (Phase F)
 │   └── utils/         ← id generation, logging, config, file helpers
 ├── notebooks/         ← exploration and prototyping only
 ├── tests/             ← unit tests; mock AWS, no live calls required
 ├── data/
 │   ├── sample_documents/   ← public-domain test docs (FDA, CISA, synthetic)
-│   └── expected_outputs/   ← reference JSON for test assertions
+│   ├── expected_outputs/   ← reference JSON for pipeline test assertions
+│   └── evaluation/         ← curated eval dataset: cases/ + expected/ (Phase F)
 ├── outputs/           ← runtime output (gitignored)
 └── docs/
     └── CURSOR_CONTEXT.md   ← this file
@@ -120,11 +122,11 @@ These are design contracts followed across all implementation work. They apply t
 
 ## Current Implementation Phase
 
-**Phase 1 — v1 MVP COMPLETE | Phases A, B, C, D, E-0, E-1, and E-2 complete**
+**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G is next**
 
-> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 678 unit and integration-style tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue.
+> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 994 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. The Phase F evaluation layer is fully independent of this blocker.
 
-The repository is portfolio-ready, test-complete, and demo-friendly for the full MVP engineering scope.
+The repository is portfolio-ready, test-complete, and demo-friendly for the full MVP and Phase F evaluation scope.
 
 ### Completed
 - **A-0** — repo foundation, source-of-truth docs, project scaffold
@@ -170,27 +172,32 @@ The repository is portfolio-ready, test-complete, and demo-friendly for the full
   - `README.md` — added Demo Flow section with step-by-step instructions for local demo without live AWS; updated status and test count
   - `ARCHITECTURE.md` — updated implementation status to reflect E-2 complete; updated test count
   - 678 total tests pass
+- **F-0** — evaluation contracts + scoring schemas (`app/schemas/evaluation_models.py`): typed models for `EvaluationCase`, `EvaluationExpectedOutput`, `EvaluationDimensionScores`, `EvaluationSummary`
+- **F-1** — curated reference dataset + expected outputs (`data/evaluation/`): 7 evaluation cases (FDA x2, CISA x2, Incident x2, edge x1) with corresponding reference expected outputs
+- **F-2** — offline evaluation harness: `app/evaluation/loader.py` (dataset loader), `app/evaluation/scorer.py` (deterministic dimension scorer), `app/evaluation/runner.py` (batch scoring runner with aggregated summary)
+  - 5 new test files: `test_evaluation_schemas.py`, `test_evaluation_dataset.py`, `test_evaluation_loader.py`, `test_evaluation_scorer.py`, `test_evaluation_runner.py`
+  - 994 total tests pass
 
 ### Next step
-- Phase 2 (v2: Evaluation and Optimization) — NOT started; see `PROJECT_SPEC.md §13`
+- **Phase G-0** — Retrieval quality metrics (first subphase of Phase G); see `PROJECT_SPEC.md §13`
 
-### Phase 2 roadmap (not started)
+### Phase 2 roadmap
 
 Phase 2 follows the same lettered-subphase naming convention as Phase 1 (A–E):
 
-| Phase | Theme | Subphases |
-|---|---|---|
-| **F** | Evaluation Foundation | F-0 evaluation contracts + schemas, F-1 reference dataset, F-2 scoring runner |
-| **G** | Retrieval & Output Quality | G-0 retrieval metrics, G-1 citation quality, G-2 output scoring |
-| **H** | Safety & Guardrails | H-0 safety contracts, H-1 Bedrock Guardrails integration, H-2 adversarial suite |
-| **I** | Optimization | I-0 prompt caching, I-1 prompt routing, I-2 baseline vs optimized comparison |
-| **J** | Observability & Reporting | J-0 CloudWatch dashboard, J-1 result artifacts, J-2 v2 hardening checkpoint |
+| Phase | Theme | Status | Subphases |
+|---|---|---|---|
+| **F** | Evaluation Foundation | ✅ Complete | F-0 evaluation contracts + schemas, F-1 reference dataset, F-2 scoring runner |
+| **G** | Retrieval & Output Quality | Not started | G-0 retrieval metrics, G-1 citation quality, G-2 output scoring |
+| **H** | Safety & Guardrails | Not started | H-0 safety contracts, H-1 Bedrock Guardrails integration, H-2 adversarial suite |
+| **I** | Optimization | Not started | I-0 prompt caching, I-1 prompt routing, I-2 baseline vs optimized comparison |
+| **J** | Observability & Reporting | Not started | J-0 CloudWatch dashboard, J-1 result artifacts, J-2 v2 hardening checkpoint |
 
 See `PROJECT_SPEC.md §13` for the full Phase 2 subphase breakdown.
 
 ### Not yet implemented
 - Live Bedrock validation (blocked by AWS-side throttling — not a code issue)
-- Phase 2: Bedrock Evaluations, Guardrails, prompt caching, evaluation harness (out of scope for MVP)
+- Phase G–J: retrieval quality, guardrails, prompt optimization, CloudWatch reporting
 
 Reference: `ARCHITECTURE.md §5–9` for component flows. `PROJECT_SPEC.md §13` for the full subphase roadmap.
 
