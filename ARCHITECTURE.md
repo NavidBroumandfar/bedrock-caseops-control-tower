@@ -3,9 +3,9 @@
 **Version:** 0.2
 **Last Updated:** 2026-04-10
 
-> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G (Retrieval & Output Quality) complete.**
+> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G (Retrieval & Output Quality) complete. Phase H-0 (Safety Contracts + Failure Policies) complete.**
 >
-> **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Phase F adds a fully local, offline evaluation layer: typed evaluation contracts and schemas (F-0), a curated evaluation dataset with 7 cases and reference expected outputs (F-1), and an offline evaluation harness with dataset loader, deterministic scorer, and scoring runner (F-2). Phase G-0 adds offline retrieval quality metrics: three deterministic metrics scored against F-1 retrieval expectations, with fixture-based candidate input and 55 new tests. Phase G-1 adds offline citation quality metrics: four deterministic metrics scored against CitationExpectation references, with five candidate output fixtures and 64 new tests. Phase G-2 adds a composite output-quality scorer that composes F-2 and G-1 sub-scores plus three final-output-only checks (summary_nonempty, recommendations_present_when_expected, unsupported_claims_clean), with 46 new tests. All 1156 unit and evaluation tests pass without live AWS calls.
+> **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Phase F adds a fully local, offline evaluation layer: typed evaluation contracts and schemas (F-0), a curated evaluation dataset with 7 cases and reference expected outputs (F-1), and an offline evaluation harness with dataset loader, deterministic scorer, and scoring runner (F-2). Phase G-0 adds offline retrieval quality metrics: three deterministic metrics scored against F-1 retrieval expectations, with fixture-based candidate input and 55 new tests. Phase G-1 adds offline citation quality metrics: four deterministic metrics scored against CitationExpectation references, with five candidate output fixtures and 64 new tests. Phase G-2 adds a composite output-quality scorer that composes F-2 and G-1 sub-scores plus three final-output-only checks (summary_nonempty, recommendations_present_when_expected, unsupported_claims_clean), with 46 new tests. Phase H-0 adds typed safety contracts (SafetyIssue, SafetyAssessment, FailurePolicy) and a local deterministic safety policy evaluator (evaluate_safety, evaluate_safety_from_raw) with six policy rules and 144 new tests. All 1300 unit and evaluation tests pass without live AWS calls.
 >
 > **Live Bedrock runtime validation is pending:** Live AWS Knowledge Base end-to-end validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. The architecture and all implementation are complete and correct — this is not a code issue. Live validation will be completed when the AWS-side blocker is resolved. The Phase F evaluation layer is fully independent of this blocker.
 
@@ -586,4 +586,57 @@ Overall score = mean of all five component scores. Pass/fail: `summary_nonempty`
 - **Local and deterministic** — scoring is rule-based; same inputs always produce the same scores
 - **Typed result** — `OutputQualityScoringResult` is a Pydantic model in `evaluation_models.py`; reuses `DimensionScore` for the three final-output checks
 
-> **v2 implementation roadmap:** Phase G is complete. Phase H (Safety & Guardrails) is next. See `PROJECT_SPEC.md §13` for the full breakdown.
+> **v2 implementation roadmap:** Phase G is complete. Phase H-0 (Safety Contracts + Failure Policies) is complete. Phase H-1 (Bedrock Guardrails) is next. See `PROJECT_SPEC.md §13` for the full breakdown.
+
+---
+
+## 17. Phase H-0 — Safety Contracts + Failure Policies
+
+Phase H-0 adds a local, deterministic safety foundation that answers: **"Is this candidate output safe and policy-compliant, and what action should be taken?"**
+
+It is the safety equivalent of F-0: contracts first, evaluator second, integration with Bedrock Guardrails deferred to H-1.
+
+### Components
+
+| Component | Location | Description |
+|---|---|---|
+| **Safety schemas** | `app/schemas/safety_models.py` | Typed contracts: `SafetyIssue`, `SafetyAssessment`, `FailurePolicy`; enums for `SafetyIssueCode`, `SafetyIssueSeverity`, `IssueSource`, `SafetyStatus` |
+| **Safety policy evaluator** | `app/evaluation/safety_policy.py` | Deterministic local evaluator: `evaluate_safety()` for typed `CaseOutput`; `evaluate_safety_from_raw()` for unvalidated dicts; `DEFAULT_POLICY` |
+| **Tests** | `tests/test_safety_models.py`, `tests/test_safety_policy.py` | 144 tests covering all six policy rules, status semantics, schema validation, separation, and determinism |
+
+### Safety issue codes
+
+| Code | Category |
+|---|---|
+| `unsupported_claims_present` | Raw observation — validation layer |
+| `missing_citations_when_required` | Raw observation — citation quality |
+| `empty_or_weak_retrieval` | Raw observation — retrieval layer |
+| `low_confidence_output` | Raw observation — output quality |
+| `schema_or_contract_failure` | Raw observation — schema layer |
+| `escalation_policy_triggered` | Raw observation — policy layer |
+| `unsafe_output_block_required` | Derived outcome — for caller use |
+
+### Status semantics
+
+| Status | Meaning |
+|---|---|
+| `allow` | No meaningful issues; output proceeds. |
+| `warn` | Non-blocking issues present; output proceeds with flag. |
+| `escalate` | Output may proceed but requires escalation or human review. |
+| `block` | Output must not be accepted as safe or usable. |
+
+### Status decision rule (deterministic)
+
+1. Any blocking issue → **BLOCK**
+2. `ESCALATION_POLICY_TRIGGERED` present, OR `LOW_CONFIDENCE_OUTPUT` + `escalate_on_low_confidence=True` → **ESCALATE**
+3. Any non-blocking issue present → **WARN**
+4. No issues → **ALLOW**
+
+### Design properties
+
+- **Local and offline** — no AWS calls; evaluates typed `CaseOutput` objects against configurable policy rules
+- **Deterministic** — same inputs always produce the same `SafetyAssessment`
+- **Schema-failure path** — `evaluate_safety_from_raw()` returns a blocking assessment immediately when the raw input cannot be parsed into a valid `CaseOutput`
+- **Decoupled** — does not import retrieval_scorer, citation_scorer, output_quality_scorer, runner, or any AWS service
+- **Policy-configurable** — `FailurePolicy` exposes thresholds and flags so rules can be tightened or relaxed without code changes
+- **Foundation for H-1** — Bedrock Guardrails integration will later plug into the `SafetyAssessment` contract cleanly

@@ -122,9 +122,9 @@ These are design contracts followed across all implementation work. They apply t
 
 ## Current Implementation Phase
 
-**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G — Retrieval & Output Quality COMPLETE**
+**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G — Retrieval & Output Quality COMPLETE | Phase H-0 — Safety Contracts + Failure Policies COMPLETE**
 
-> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 1156 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. The Phase F, G-0, G-1, and G-2 evaluation layers are fully independent of this blocker.
+> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 1300 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. The Phase F, G, and H-0 layers are fully independent of this blocker.
 
 The repository is portfolio-ready, test-complete, and demo-friendly for the full MVP and Phase F evaluation scope.
 
@@ -197,9 +197,15 @@ The repository is portfolio-ready, test-complete, and demo-friendly for the full
   - `tests/fixtures/output_quality_outputs/` — 5 targeted fixtures: `strong_output.json`, `blank_summary.json`, `missing_recommendations.json`, `unsupported_claims_present.json`, `good_core_weak_citations.json`
   - `tests/test_output_quality_scorer.py` — 46 tests covering all dimensions, hard gates, sub-score propagation, overall score formula, pass/fail threshold, fixture integration, architectural separation, and candidate typing
   - 1156 total tests pass
+- **H-0** — Safety contracts + failure policies:
+  - `app/schemas/safety_models.py` — typed safety contracts: `SafetyIssueSeverity`, `SafetyIssueCode` (7 codes), `IssueSource`, `SafetyStatus` (allow/warn/escalate/block), `SafetyIssue`, `SafetyAssessment`, `FailurePolicy`
+  - `app/evaluation/safety_policy.py` — local deterministic safety policy evaluator: `evaluate_safety()` (typed CaseOutput), `evaluate_safety_from_raw()` (unvalidated dict + schema-failure path), `DEFAULT_POLICY`; six policy rules; no AWS imports
+  - `tests/test_safety_models.py` — 63 tests covering all enum values, validators, field defaults, model_validator consistency checks, round-trip serialisation
+  - `tests/test_safety_policy.py` — 81 tests covering all six rules, status selection, SafetyAssessment output fields, DEFAULT_POLICY, determinism, and architectural separation
+  - 1300 total tests pass
 
 ### Next step
-- **Phase H** — Safety & Guardrails; see `PROJECT_SPEC.md §13`
+- **Phase H-1** — Bedrock Guardrails integration; see `PROJECT_SPEC.md §13`
 
 ### Phase 2 roadmap
 
@@ -209,7 +215,7 @@ Phase 2 follows the same lettered-subphase naming convention as Phase 1 (A–E):
 |---|---|---|---|
 | **F** | Evaluation Foundation | ✅ Complete | F-0 evaluation contracts + schemas, F-1 reference dataset, F-2 scoring runner |
 | **G** | Retrieval & Output Quality | ✅ Complete | G-0 retrieval metrics ✅, G-1 citation quality ✅, G-2 output scoring ✅ |
-| **H** | Safety & Guardrails | Not started | H-0 safety contracts, H-1 Bedrock Guardrails integration, H-2 adversarial suite |
+| **H** | Safety & Guardrails | In progress | H-0 safety contracts ✅, H-1 Bedrock Guardrails integration, H-2 adversarial suite |
 | **I** | Optimization | Not started | I-0 prompt caching, I-1 prompt routing, I-2 baseline vs optimized comparison |
 | **J** | Observability & Reporting | Not started | J-0 CloudWatch dashboard, J-1 result artifacts, J-2 v2 hardening checkpoint |
 
@@ -217,7 +223,8 @@ See `PROJECT_SPEC.md §13` for the full Phase 2 subphase breakdown.
 
 ### Not yet implemented
 - Live Bedrock validation (blocked by AWS-side throttling — not a code issue)
-- Phase H–J: safety guardrails, prompt optimization, CloudWatch reporting
+- Phase H-1, H-2: Bedrock Guardrails integration, adversarial evaluation suite
+- Phase I–J: prompt optimization, CloudWatch reporting
 
 Reference: `ARCHITECTURE.md §5–9` for component flows. `PROJECT_SPEC.md §13` for the full subphase roadmap.
 
