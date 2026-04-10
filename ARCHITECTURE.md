@@ -513,7 +513,7 @@ Overall score is the mean of the three metric scores.  Pass/fail uses `RETRIEVAL
 - **Reuses existing contracts** — `RetrievalResult`, `EvidenceChunk`, `RetrievalExpectation`, and `DimensionScore` are all existing types from the repo
 - **Extensible** — additional metrics (e.g. relevance-score distribution) can be added as new `_score_*` helpers without changing the public API
 
-> **v2 implementation roadmap:** Phase 2 is in progress. Phase F (Evaluation Foundation), Phase G-0 (Retrieval Quality Metrics), and Phase G-1 (Citation Quality Checks) are complete. Remaining Phase 2 subphases (G-2 through J) cover output scoring, safety and guardrails, optimization, and observability/reporting. See `PROJECT_SPEC.md §13` for the full breakdown.
+> **v2 implementation roadmap:** Phase 2 is in progress. Phase F (Evaluation Foundation) and Phase G (Retrieval & Output Quality — G-0, G-1, G-2) are complete. Remaining Phase 2 subphases (H through J) cover safety and guardrails, optimization, and observability/reporting. See `PROJECT_SPEC.md §13` for the full breakdown.
 
 ---
 

@@ -217,7 +217,7 @@ See `PROJECT_SPEC.md §13` for the full Phase 2 subphase breakdown.
 
 ### Not yet implemented
 - Live Bedrock validation (blocked by AWS-side throttling — not a code issue)
-- Phase G–J: retrieval quality, guardrails, prompt optimization, CloudWatch reporting
+- Phase H–J: safety guardrails, prompt optimization, CloudWatch reporting
 
 Reference: `ARCHITECTURE.md §5–9` for component flows. `PROJECT_SPEC.md §13` for the full subphase roadmap.
 

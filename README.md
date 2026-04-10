@@ -235,7 +235,7 @@ python -m app.cli intake --help
 
 ### Current status note
 
-Live Bedrock / Knowledge Base validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling in the target account. The full pipeline code is complete and correct; the `run` command will surface a clear failure message when AWS calls cannot be completed. All 1110 tests pass without live AWS calls.
+Live Bedrock / Knowledge Base validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling in the target account. The full pipeline code is complete and correct; the `run` command will surface a clear failure message when AWS calls cannot be completed. All 1156 tests pass without live AWS calls.
 
 ---
 
@@ -322,7 +322,7 @@ On success, the CLI prints a structured summary and writes a JSON output to `out
 - A curated local evaluation dataset with 7 cases and reference expected outputs (`data/evaluation/`)
 - An offline evaluation harness: dataset loader, deterministic scorer, and aggregated scoring runner (`app/evaluation/`)
 
-This evaluation layer is fully local and offline — it is independent of live AWS runtime availability. All 1110 unit and evaluation tests pass without live AWS calls.
+This evaluation layer is fully local and offline — it is independent of live AWS runtime availability. All 1156 unit and evaluation tests pass without live AWS calls.
 
 **Phase G-0 (Retrieval Quality Metrics) is complete** — offline retrieval quality scoring against F-1 retrieval expectations, with three deterministic metrics and 55 new tests.
 
