@@ -3,9 +3,9 @@
 **Version:** 0.2
 **Last Updated:** 2026-04-10
 
-> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G (Retrieval & Output Quality) complete. Phase H-0 (Safety Contracts + Failure Policies) complete.**
+> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G (Retrieval & Output Quality) complete. Phase H-0 (Safety Contracts + Failure Policies) complete. Phase H-1 (Bedrock Guardrails Integration) complete.**
 >
-> **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Phase F adds a fully local, offline evaluation layer: typed evaluation contracts and schemas (F-0), a curated evaluation dataset with 7 cases and reference expected outputs (F-1), and an offline evaluation harness with dataset loader, deterministic scorer, and scoring runner (F-2). Phase G-0 adds offline retrieval quality metrics: three deterministic metrics scored against F-1 retrieval expectations, with fixture-based candidate input and 55 new tests. Phase G-1 adds offline citation quality metrics: four deterministic metrics scored against CitationExpectation references, with five candidate output fixtures and 64 new tests. Phase G-2 adds a composite output-quality scorer that composes F-2 and G-1 sub-scores plus three final-output-only checks (summary_nonempty, recommendations_present_when_expected, unsupported_claims_clean), with 46 new tests. Phase H-0 adds typed safety contracts (SafetyIssue, SafetyAssessment, FailurePolicy) and a local deterministic safety policy evaluator (evaluate_safety, evaluate_safety_from_raw) with six policy rules and 144 new tests. All 1300 unit and evaluation tests pass without live AWS calls.
+> **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Phase F adds a fully local, offline evaluation layer: typed evaluation contracts and schemas (F-0), a curated evaluation dataset with 7 cases and reference expected outputs (F-1), and an offline evaluation harness with dataset loader, deterministic scorer, and scoring runner (F-2). Phase G-0 adds offline retrieval quality metrics: three deterministic metrics scored against F-1 retrieval expectations, with fixture-based candidate input and 55 new tests. Phase G-1 adds offline citation quality metrics: four deterministic metrics scored against CitationExpectation references, with five candidate output fixtures and 64 new tests. Phase G-2 adds a composite output-quality scorer that composes F-2 and G-1 sub-scores plus three final-output-only checks (summary_nonempty, recommendations_present_when_expected, unsupported_claims_clean), with 46 new tests. Phase H-0 adds typed safety contracts (SafetyIssue, SafetyAssessment, FailurePolicy) and a local deterministic safety policy evaluator (evaluate_safety, evaluate_safety_from_raw) with six policy rules and 144 new tests. Phase H-1 adds the Bedrock Guardrails integration foundation: a normalized GuardrailAssessmentResult contract (guardrail_models.py), a thin GuardrailsService wrapper for the ApplyGuardrail API (guardrails_service.py), a Guardrails → H-0 safety adapter (guardrails_adapter.py), GuardrailsConfig config block, and two new safety_models enum extensions (GUARDRAILS source, GUARDRAIL_INTERVENTION code), with 134 new tests. All 1434 unit and evaluation tests pass without live AWS calls.
 >
 > **Live Bedrock runtime validation is pending:** Live AWS Knowledge Base end-to-end validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. The architecture and all implementation are complete and correct — this is not a code issue. Live validation will be completed when the AWS-side blocker is resolved. The Phase F evaluation layer is fully independent of this blocker.
 
@@ -603,6 +603,62 @@ It is the safety equivalent of F-0: contracts first, evaluator second, integrati
 | **Safety schemas** | `app/schemas/safety_models.py` | Typed contracts: `SafetyIssue`, `SafetyAssessment`, `FailurePolicy`; enums for `SafetyIssueCode`, `SafetyIssueSeverity`, `IssueSource`, `SafetyStatus` |
 | **Safety policy evaluator** | `app/evaluation/safety_policy.py` | Deterministic local evaluator: `evaluate_safety()` for typed `CaseOutput`; `evaluate_safety_from_raw()` for unvalidated dicts; `DEFAULT_POLICY` |
 | **Tests** | `tests/test_safety_models.py`, `tests/test_safety_policy.py` | 144 tests covering all six policy rules, status semantics, schema validation, separation, and determinism |
+
+---
+
+## 18. Phase H-1 — Bedrock Guardrails Integration
+
+Phase H-1 adds the Bedrock Guardrails integration foundation, answering: **"Can Bedrock Guardrails findings flow into the H-0 safety layer?"**
+
+It is a thin integration layer — service wrapper + normalized contract + H-0 adapter.  No live AWS calls, no runtime pipeline changes.
+
+### Components
+
+| Component | Location | Description |
+|---|---|---|
+| **Guardrail schemas** | `app/schemas/guardrail_models.py` | Typed normalized contract: `GuardrailSource` enum, `GuardrailAssessmentResult` Pydantic model; repo-local normalization boundary for ApplyGuardrail responses |
+| **Guardrails service** | `app/services/guardrails_service.py` | Thin wrapper around ApplyGuardrail API: `GuardrailsService.assess_text()`, `GuardrailsServiceError`; injectable client for testability; finding extraction from all sub-policies |
+| **Guardrails adapter** | `app/evaluation/guardrails_adapter.py` | H-1 → H-0 bridge: `guardrail_result_to_issues()`, `guardrail_result_to_assessment()`; maps interventions to blocking `SafetyIssue` objects with `GUARDRAILS` source |
+| **Safety models extension** | `app/schemas/safety_models.py` | Added `GUARDRAILS` to `IssueSource`; added `GUARDRAIL_INTERVENTION` to `SafetyIssueCode` |
+| **Config** | `app/utils/config.py` | `GuardrailsConfig` dataclass + `load_guardrails_config()`; four env vars: `CASEOPS_ENABLE_GUARDRAILS`, `CASEOPS_GUARDRAIL_ID`, `CASEOPS_GUARDRAIL_VERSION`, `CASEOPS_GUARDRAIL_TRACE` |
+| **Tests** | `tests/test_guardrail_models.py`, `tests/test_guardrails_service.py`, `tests/test_guardrails_adapter.py` | 134 tests: schema validation, service request construction, all finding sub-policies, intervention/non-intervention paths, client failure handling, adapter mapping, structural separation |
+
+### Integration mapping
+
+```
+GuardrailsService.assess_text(text, guardrail_id, guardrail_version, source)
+     │
+     ▼
+GuardrailAssessmentResult
+  .intervened    → True / False
+  .blocked       → True / False
+  .finding_types → ["HATE", "PII_EMAIL", ...]
+  .action        → "GUARDRAIL_INTERVENED" / "NONE"
+     │
+     ▼ guardrails_adapter.guardrail_result_to_issues()
+     │
+     ▼
+list[SafetyIssue]  (one blocking issue on intervention; empty on non-intervention)
+  .issue_code  = SafetyIssueCode.GUARDRAIL_INTERVENTION
+  .source      = IssueSource.GUARDRAILS
+  .blocking    = True
+     │
+     ▼ guardrails_adapter.guardrail_result_to_assessment()
+     │
+     ▼
+SafetyAssessment
+  .status = BLOCK (intervention) | ALLOW (non-intervention)
+```
+
+### Design properties
+
+- **No live AWS dependency** — boto3 client is injected; all tests use mocks
+- **Thin service** — no policy logic in the service; all decisions in the adapter
+- **Normalized contract** — `GuardrailAssessmentResult` is the only type that crosses the service boundary
+- **H-0 compatible** — adapter output is `SafetyIssue` / `SafetyAssessment`, the same types produced by H-0
+- **Runtime pipeline untouched** — no changes to `pipeline_workflow.py`, `cli.py`, `bedrock_service.py`, or any agent
+
+> **H-2 roadmap:** Phase H-2 (adversarial and edge-case evaluation suite) is next. See `PROJECT_SPEC.md §13`.
 
 ### Safety issue codes
 

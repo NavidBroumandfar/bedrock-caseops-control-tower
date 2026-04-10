@@ -126,3 +126,43 @@ def load_pipeline_config() -> PipelineConfig:
         s3_document_bucket=os.getenv("S3_DOCUMENT_BUCKET", ""),
         s3_output_bucket=os.getenv("S3_OUTPUT_BUCKET", ""),
     )
+
+
+# ── guardrails config (H-1) ──────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class GuardrailsConfig:
+    """Bedrock Guardrails integration configuration (H-1)."""
+
+    enable_guardrails: bool
+    guardrail_id: str
+    guardrail_version: str
+    guardrail_trace: bool
+
+
+def load_guardrails_config() -> GuardrailsConfig:
+    """
+    Load Bedrock Guardrails config from environment variables.
+
+    Environment variables:
+      CASEOPS_ENABLE_GUARDRAILS    true | false  (default false)
+      CASEOPS_GUARDRAIL_ID         Guardrail identifier (default "")
+      CASEOPS_GUARDRAIL_VERSION    Guardrail version string (default "1")
+      CASEOPS_GUARDRAIL_TRACE      true | false  (default false)
+    """
+    enable_guardrails = (
+        os.getenv("CASEOPS_ENABLE_GUARDRAILS", "false").lower() == "true"
+    )
+    guardrail_id = os.getenv("CASEOPS_GUARDRAIL_ID", "")
+    guardrail_version = os.getenv("CASEOPS_GUARDRAIL_VERSION", "1")
+    guardrail_trace = (
+        os.getenv("CASEOPS_GUARDRAIL_TRACE", "false").lower() == "true"
+    )
+
+    return GuardrailsConfig(
+        enable_guardrails=enable_guardrails,
+        guardrail_id=guardrail_id,
+        guardrail_version=guardrail_version,
+        guardrail_trace=guardrail_trace,
+    )

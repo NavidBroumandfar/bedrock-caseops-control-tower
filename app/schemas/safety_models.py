@@ -55,6 +55,11 @@ class SafetyIssueCode(str, Enum):
     Derived outcome code (not raised from a raw observation):
       UNSAFE_OUTPUT_BLOCK_REQUIRED      — policy determined the output must be blocked;
                                           may be added as a synthetic summary issue by callers.
+
+    Bedrock Guardrails code (H-1):
+      GUARDRAIL_INTERVENTION            — Bedrock Guardrails intervened on the assessed text;
+                                          raised by the H-1 guardrails adapter when
+                                          GuardrailAssessmentResult.intervened is True.
     """
 
     UNSUPPORTED_CLAIMS_PRESENT = "unsupported_claims_present"
@@ -64,6 +69,7 @@ class SafetyIssueCode(str, Enum):
     SCHEMA_OR_CONTRACT_FAILURE = "schema_or_contract_failure"
     ESCALATION_POLICY_TRIGGERED = "escalation_policy_triggered"
     UNSAFE_OUTPUT_BLOCK_REQUIRED = "unsafe_output_block_required"
+    GUARDRAIL_INTERVENTION = "guardrail_intervention"
 
 
 class IssueSource(str, Enum):
@@ -75,6 +81,7 @@ class IssueSource(str, Enum):
     OUTPUT_QUALITY = "output_quality"
     SCHEMA = "schema"
     POLICY = "policy"
+    GUARDRAILS = "guardrails"
 
 
 class SafetyStatus(str, Enum):
