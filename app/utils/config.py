@@ -214,6 +214,65 @@ def load_prompt_caching_config() -> PromptCachingConfig:
     )
 
 
+# ── prompt routing config (I-1) ──────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class PromptRoutingConfig:
+    """
+    Prompt routing configuration (I-1).
+
+    Controls which Bedrock model ID is used for analysis and validation calls.
+    When enable_prompt_routing is False (default), both services use whatever
+    model ID they would have resolved without this config — behaviour is
+    identical to pre-I-1.
+
+    When enabled, resolve_model_id() applies this priority chain per route:
+      1. Route-specific override (analysis_model_id or validation_model_id)
+      2. default_model_id (if set)
+      3. The service's own fallback (from BEDROCK_MODEL_ID env or hardcoded default)
+
+    Intentionally narrow: only analysis and validation routes exist in I-1.
+    Document-type routing and dynamic heuristics are explicitly out of scope.
+    """
+
+    enable_prompt_routing: bool
+    default_model_id: str
+    analysis_model_id: str
+    validation_model_id: str
+
+
+def load_prompt_routing_config() -> PromptRoutingConfig:
+    """
+    Load prompt routing config from environment variables.
+
+    Environment variables:
+      CASEOPS_ENABLE_PROMPT_ROUTING       true | false  (default false)
+      CASEOPS_ROUTING_DEFAULT_MODEL_ID    model ID string (default "")
+      CASEOPS_ROUTING_ANALYSIS_MODEL_ID   model ID string (default "")
+      CASEOPS_ROUTING_VALIDATION_MODEL_ID model ID string (default "")
+
+    Model ID strings are not validated locally — Bedrock rejects invalid IDs
+    at runtime, which gives a clear failure signal without adding AWS calls here.
+
+    Raises ValueError on non-boolean enable flag so misconfigured deployments
+    fail at startup rather than silently routing to the wrong model.
+    """
+    raw_enable = os.getenv("CASEOPS_ENABLE_PROMPT_ROUTING", "false").strip().lower()
+    if raw_enable not in ("true", "false"):
+        raise ValueError(
+            f"CASEOPS_ENABLE_PROMPT_ROUTING must be 'true' or 'false', got: {raw_enable!r}"
+        )
+    enable_prompt_routing = raw_enable == "true"
+
+    return PromptRoutingConfig(
+        enable_prompt_routing=enable_prompt_routing,
+        default_model_id=os.getenv("CASEOPS_ROUTING_DEFAULT_MODEL_ID", ""),
+        analysis_model_id=os.getenv("CASEOPS_ROUTING_ANALYSIS_MODEL_ID", ""),
+        validation_model_id=os.getenv("CASEOPS_ROUTING_VALIDATION_MODEL_ID", ""),
+    )
+
+
 # ── guardrails config (H-1) ──────────────────────────────────────────────────
 
 

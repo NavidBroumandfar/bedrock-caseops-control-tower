@@ -1,11 +1,11 @@
 # Architecture — Bedrock CaseOps Multi-Agent Control Tower
 
 **Version:** 0.2
-**Last Updated:** 2026-04-10
+**Last Updated:** 2026-04-11
 
-> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G (Retrieval & Output Quality) complete. Phase H (Safety & Guardrails) complete. Phase I-0 (Prompt Caching) complete.**
+> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G (Retrieval & Output Quality) complete. Phase H (Safety & Guardrails) complete. Phase I-0 (Prompt Caching) complete. Phase I-1 (Prompt Routing) complete.**
 >
-> **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Phase F adds a fully local, offline evaluation layer: typed evaluation contracts and schemas (F-0), a curated evaluation dataset with 7 cases and reference expected outputs (F-1), and an offline evaluation harness with dataset loader, deterministic scorer, and scoring runner (F-2). Phase G-0 adds offline retrieval quality metrics: three deterministic metrics scored against F-1 retrieval expectations, with fixture-based candidate input and 55 new tests. Phase G-1 adds offline citation quality metrics: four deterministic metrics scored against CitationExpectation references, with five candidate output fixtures and 64 new tests. Phase G-2 adds a composite output-quality scorer that composes F-2 and G-1 sub-scores plus three final-output-only checks (summary_nonempty, recommendations_present_when_expected, unsupported_claims_clean), with 46 new tests. Phase H-0 adds typed safety contracts (SafetyIssue, SafetyAssessment, FailurePolicy) and a local deterministic safety policy evaluator (evaluate_safety, evaluate_safety_from_raw) with six policy rules and 144 new tests. Phase H-1 adds the Bedrock Guardrails integration foundation: a normalized GuardrailAssessmentResult contract (guardrail_models.py), a thin GuardrailsService wrapper for the ApplyGuardrail API (guardrails_service.py), a Guardrails → H-0 safety adapter (guardrails_adapter.py), GuardrailsConfig config block, and two new safety_models enum extensions (GUARDRAILS source, GUARDRAIL_INTERVENTION code), with 134 new tests. Phase H-2 adds the adversarial and edge-case safety evaluation suite: 10 curated fixtures covering schema failures, unsupported claims, missing citations, low confidence, empty retrieval, escalation-required, Guardrails intervention, combined blocking+escalation priority, and clean passing cases; plus a narrow safety suite runner (safety_suite.py) with SafetyCaseFixture, SafetyCaseResult, SafetySuiteSummary dataclasses and run_safety_suite() batch executor; 91 new tests. Phase I-0 adds prompt caching integration: PromptCachingConfig dataclass and loader (config.py), apply_prompt_caching() pure function (prompt_cache.py), optional caching_config wiring in BedrockAnalysisService and BedrockValidationService, .env.example section, and 63 new tests covering config defaults/overrides/validation/immutability, disabled and enabled request-shaping, service integration, and no-live-AWS confirmation. All 1588 unit and evaluation tests pass without live AWS calls.
+> **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Phase F adds a fully local, offline evaluation layer: typed evaluation contracts and schemas (F-0), a curated evaluation dataset with 7 cases and reference expected outputs (F-1), and an offline evaluation harness with dataset loader, deterministic scorer, and scoring runner (F-2). Phase G-0 adds offline retrieval quality metrics: three deterministic metrics scored against F-1 retrieval expectations, with fixture-based candidate input and 55 new tests. Phase G-1 adds offline citation quality metrics: four deterministic metrics scored against CitationExpectation references, with five candidate output fixtures and 64 new tests. Phase G-2 adds a composite output-quality scorer that composes F-2 and G-1 sub-scores plus three final-output-only checks (summary_nonempty, recommendations_present_when_expected, unsupported_claims_clean), with 46 new tests. Phase H-0 adds typed safety contracts (SafetyIssue, SafetyAssessment, FailurePolicy) and a local deterministic safety policy evaluator (evaluate_safety, evaluate_safety_from_raw) with six policy rules and 144 new tests. Phase H-1 adds the Bedrock Guardrails integration foundation: a normalized GuardrailAssessmentResult contract (guardrail_models.py), a thin GuardrailsService wrapper for the ApplyGuardrail API (guardrails_service.py), a Guardrails → H-0 safety adapter (guardrails_adapter.py), GuardrailsConfig config block, and two new safety_models enum extensions (GUARDRAILS source, GUARDRAIL_INTERVENTION code), with 134 new tests. Phase H-2 adds the adversarial and edge-case safety evaluation suite: 10 curated fixtures covering schema failures, unsupported claims, missing citations, low confidence, empty retrieval, escalation-required, Guardrails intervention, combined blocking+escalation priority, and clean passing cases; plus a narrow safety suite runner (safety_suite.py) with SafetyCaseFixture, SafetyCaseResult, SafetySuiteSummary dataclasses and run_safety_suite() batch executor; 91 new tests. Phase I-0 adds prompt caching integration: PromptCachingConfig dataclass and loader (config.py), apply_prompt_caching() pure function (prompt_cache.py), optional caching_config wiring in BedrockAnalysisService and BedrockValidationService, .env.example section, and 63 new tests covering config defaults/overrides/validation/immutability, disabled and enabled request-shaping, service integration, and no-live-AWS confirmation. Phase I-1 adds prompt routing: PromptRoutingConfig dataclass and loader (config.py), pure resolve_model_id() routing function (prompt_router.py), optional routing_config wiring in both Bedrock services (resolution at construction time via "analysis" and "validation" routes), .env.example section, and 63 new tests covering config defaults/overrides/case-insensitivity/invalid-flag/immutability, disabled and enabled routing paths, analysis and validation route resolution, priority chain (route override → routing default → caller fallback), service integration, no-regression with routing off, and no live AWS dependency. All 1651 unit and evaluation tests pass without live AWS calls.
 >
 > **Live Bedrock runtime validation is pending:** Live AWS Knowledge Base end-to-end validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. The architecture and all implementation are complete and correct — this is not a code issue. Live validation will be completed when the AWS-side blocker is resolved. The Phase F evaluation layer is fully independent of this blocker.
 
@@ -758,7 +758,7 @@ SafetySuiteSummary
 - **Deterministic** — same fixture directory always produces the same results in the same order
 - **Narrow** — `safety_suite.py` is a dedicated H-2 runner, not a replacement for the F-2 batch evaluation runner
 
-> **Phase H complete.** Phase I-0 (Prompt Caching) is now complete. See `PROJECT_SPEC.md §13`.
+> **Phase H complete. Phase I-0 and I-1 complete.** See `PROJECT_SPEC.md §13`.
 
 ---
 
@@ -813,4 +813,71 @@ client.converse(system=system_blocks, messages=[...])
 | `CASEOPS_MIN_CACHEABLE_TOKENS` | `1024` | Minimum token count (informational; Bedrock enforces server-side) |
 | `CASEOPS_MAX_CACHE_CHECKPOINTS` | `1` | Max cachePoint markers per request (1–4; I-0 uses 1) |
 
-> **I-1 and I-2 not started.** I-1 will add message-level caching (user turn / few-shot examples). I-2 will add a baseline vs. caching comparison workflow. See `PROJECT_SPEC.md §13`.
+> **I-1 complete. I-2 not started.** I-2 will add a baseline vs. optimized comparison workflow. See `PROJECT_SPEC.md §13`.
+
+---
+
+## 21. Phase I-1 — Prompt Routing Strategy
+
+Phase I-1 adds a clean, optional, config-driven routing layer that determines which Bedrock model ID is used for analysis and validation calls.  It creates the correct architecture seam for optimization and comparison work in I-2.  No live AWS calls, no benchmarking, no dynamic heuristics.
+
+### Components
+
+| Component | Location | Description |
+|---|---|---|
+| **PromptRoutingConfig** | `app/utils/config.py` | Frozen dataclass with four fields: `enable_prompt_routing`, `default_model_id`, `analysis_model_id`, `validation_model_id`; off by default |
+| **load_prompt_routing_config()** | `app/utils/config.py` | Loads config from four `CASEOPS_*` env vars; raises `ValueError` on invalid enable flag so misconfigured deployments fail loudly |
+| **prompt_router.py** | `app/services/prompt_router.py` | Pure `resolve_model_id(route, routing_config, fallback_model_id)` function; `PromptRoute` literal type; deterministic; no boto3 dependency |
+| **BedrockAnalysisService** | `app/services/bedrock_service.py` | Accepts optional `routing_config`; resolves model ID at construction time via `resolve_model_id("analysis", ...)` |
+| **BedrockValidationService** | `app/services/bedrock_service.py` | Accepts optional `routing_config`; resolves model ID at construction time via `resolve_model_id("validation", ...)` |
+| **Tests** | `tests/test_prompt_routing_config.py`, `tests/test_prompt_router.py` | 63 new tests: config defaults, overrides, case-insensitivity, invalid flag, immutability, disabled path, enabled path, analysis route, validation route, priority chain, service integration, no-regression, no live AWS |
+
+### Integration point
+
+```
+BedrockAnalysisService.__init__(model_id, routing_config)
+     │
+     ▼
+base_model_id = model_id or env("BEDROCK_MODEL_ID") or hardcoded_default
+     │
+     ▼ resolve_model_id("analysis", routing_config, base_model_id)  [I-1 integration point]
+     │
+     ├── routing disabled → base_model_id unchanged
+     │
+     └── routing enabled  → route override → routing default → base_model_id
+     │
+     ▼
+self._model_id = resolved_model_id
+     │
+     ▼ (rest of service unchanged)
+_call_converse(...) uses self._model_id as before
+```
+
+### Resolution priority chain (routing enabled)
+
+```
+1. Route-specific override (analysis_model_id / validation_model_id)
+2. routing_config.default_model_id
+3. Caller's fallback (from BEDROCK_MODEL_ID env or hardcoded safe default)
+```
+
+### Design properties
+
+- **Off by default** — `CASEOPS_ENABLE_PROMPT_ROUTING=false`; existing deployments unaffected without opt-in
+- **Resolution at construction time** — model ID is resolved once per service instance; `_call_converse` is completely unchanged
+- **Isolated** — `prompt_router.py` has no boto3 dependency, no I/O, no config loading; pure function only
+- **Task-based only** — only `analysis` and `validation` routes exist in I-1; document-type routing and dynamic heuristics are explicitly out of scope
+- **No agent changes** — the route name is implicit in the service type; agents and workflows are untouched
+- **Validated on load** — invalid enable flag raises `ValueError` at startup; model ID strings are not validated locally (Bedrock rejects invalid IDs at runtime)
+- **Honest scope** — no benchmarking, no dashboards, no comparison workflows; those are I-2
+
+### Environment variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `CASEOPS_ENABLE_PROMPT_ROUTING` | `false` | Master switch for prompt routing |
+| `CASEOPS_ROUTING_DEFAULT_MODEL_ID` | `""` | Default model when routing is enabled and no route override is set; falls through to `BEDROCK_MODEL_ID` if empty |
+| `CASEOPS_ROUTING_ANALYSIS_MODEL_ID` | `""` | Model ID used exclusively for analysis calls when routing is enabled |
+| `CASEOPS_ROUTING_VALIDATION_MODEL_ID` | `""` | Model ID used exclusively for validation calls when routing is enabled |
+
+> **I-2 not started.** I-2 will add a baseline vs. optimized comparison workflow. See `PROJECT_SPEC.md §13`.

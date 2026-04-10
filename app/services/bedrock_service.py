@@ -18,6 +18,14 @@ Prompt caching (I-0):
   ``apply_prompt_caching`` before the Converse call so Bedrock can cache the
   system prompt across repeated invocations.  When absent or disabled, the
   request is constructed identically to the pre-I-0 behaviour.
+
+Prompt routing (I-1):
+  Both services accept an optional ``routing_config`` constructor parameter.
+  When supplied and routing is enabled, the effective model ID is resolved at
+  construction time via ``resolve_model_id`` from ``prompt_router``.  The
+  analysis service always resolves using the "analysis" route; the validation
+  service uses "validation".  When absent or disabled, model_id resolution is
+  identical to pre-I-1 behaviour — no routing logic is applied.
 """
 
 import json
@@ -34,7 +42,8 @@ from app.schemas.retrieval_models import EvidenceChunk
 from app.schemas.validation_contract import ValidationProvider
 from app.schemas.validation_models import ValidationOutput
 from app.services.prompt_cache import apply_prompt_caching
-from app.utils.config import PromptCachingConfig
+from app.services.prompt_router import resolve_model_id
+from app.utils.config import PromptCachingConfig, PromptRoutingConfig
 
 # Keys the model must return in its JSON response.
 _REQUIRED_JSON_KEYS = {"severity", "category", "summary", "recommendations"}
@@ -67,6 +76,10 @@ class BedrockAnalysisService:
       caching_config    — when supplied and enabled, injects a cachePoint into
                           the system block before each Converse call (I-0).
                           When absent or disabled, behaviour is unchanged.
+      routing_config    — when supplied and routing is enabled, the effective
+                          model ID is resolved via the "analysis" route at
+                          construction time (I-1).  When absent or disabled,
+                          model_id resolution is unchanged from pre-I-1.
     """
 
     def __init__(
@@ -76,8 +89,14 @@ class BedrockAnalysisService:
         region: str | None = None,
         client: Any = None,
         caching_config: PromptCachingConfig | None = None,
+        routing_config: PromptRoutingConfig | None = None,
     ) -> None:
-        self._model_id = model_id or os.getenv("BEDROCK_MODEL_ID", _DEFAULT_MODEL_ID)
+        base_model_id = model_id or os.getenv("BEDROCK_MODEL_ID", _DEFAULT_MODEL_ID)
+        self._model_id = (
+            resolve_model_id("analysis", routing_config, base_model_id)
+            if routing_config is not None
+            else base_model_id
+        )
         self._client = client or boto3.client(
             "bedrock-runtime",
             region_name=region or os.getenv("AWS_REGION", "us-east-1"),
@@ -266,6 +285,10 @@ class BedrockValidationService:
 
     Optional:
       caching_config    — see BedrockAnalysisService for details (I-0).
+      routing_config    — when supplied and routing is enabled, the effective
+                          model ID is resolved via the "validation" route at
+                          construction time (I-1).  When absent or disabled,
+                          model_id resolution is unchanged from pre-I-1.
     """
 
     def __init__(
@@ -275,8 +298,14 @@ class BedrockValidationService:
         region: str | None = None,
         client: Any = None,
         caching_config: PromptCachingConfig | None = None,
+        routing_config: PromptRoutingConfig | None = None,
     ) -> None:
-        self._model_id = model_id or os.getenv("BEDROCK_MODEL_ID", _DEFAULT_MODEL_ID)
+        base_model_id = model_id or os.getenv("BEDROCK_MODEL_ID", _DEFAULT_MODEL_ID)
+        self._model_id = (
+            resolve_model_id("validation", routing_config, base_model_id)
+            if routing_config is not None
+            else base_model_id
+        )
         self._client = client or boto3.client(
             "bedrock-runtime",
             region_name=region or os.getenv("AWS_REGION", "us-east-1"),

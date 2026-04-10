@@ -122,9 +122,9 @@ These are design contracts followed across all implementation work. They apply t
 
 ## Current Implementation Phase
 
-**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G — Retrieval & Output Quality COMPLETE | Phase H — Safety & Guardrails COMPLETE | Phase I-0 — Prompt Caching COMPLETE**
+**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G — Retrieval & Output Quality COMPLETE | Phase H — Safety & Guardrails COMPLETE | Phase I-0 — Prompt Caching COMPLETE | Phase I-1 — Prompt Routing COMPLETE**
 
-> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 1588 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. The Phase F, G, H, and I-0 layers are fully independent of this blocker.
+> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 1651 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. The Phase F, G, H, I-0, and I-1 layers are fully independent of this blocker.
 
 The repository is portfolio-ready, test-complete, and demo-friendly for the full MVP and Phase F evaluation scope.
 
@@ -225,9 +225,17 @@ The repository is portfolio-ready, test-complete, and demo-friendly for the full
   - `tests/test_prompt_caching_config.py` — 31 tests: defaults, overrides, case insensitivity, invalid values, boundary values, immutability, return type
   - `tests/test_prompt_cache.py` — 32 tests: disabled path, enabled path, edge cases, determinism, service integration (no/disabled/enabled config), no-regression parsing, no live AWS
   - 1588 total tests pass
+- **I-1** — Prompt routing strategy:
+  - `app/utils/config.py` — `PromptRoutingConfig` frozen dataclass + `load_prompt_routing_config()`; four env vars (`CASEOPS_ENABLE_PROMPT_ROUTING`, `CASEOPS_ROUTING_DEFAULT_MODEL_ID`, `CASEOPS_ROUTING_ANALYSIS_MODEL_ID`, `CASEOPS_ROUTING_VALIDATION_MODEL_ID`); raises `ValueError` on invalid enable flag; off by default; empty model ID strings allowed (fallback chain handles them)
+  - `app/services/prompt_router.py` — `PromptRoute` literal type (`"analysis"`, `"validation"`); pure `resolve_model_id(route, routing_config, fallback_model_id)` function; three-level priority chain (route override → routing default → caller fallback); no boto3 dependency; no I/O
+  - `app/services/bedrock_service.py` — both services accept optional `routing_config: PromptRoutingConfig | None`; model ID resolved at construction time via `resolve_model_id("analysis", ...)` and `resolve_model_id("validation", ...)`; `_call_converse` unchanged; pre-I-1 behavior preserved when routing_config is None or routing is disabled
+  - `.env.example` — prompt routing section added
+  - `tests/test_prompt_routing_config.py` — 25 tests: defaults, overrides, case-insensitivity, invalid flag, immutability, return type
+  - `tests/test_prompt_router.py` — 38 tests: disabled routing, analysis route, validation route, fallback chain, determinism, service integration (analysis + validation), no-regression, no live AWS
+  - 1651 total tests pass
 
 ### Next step
-- **Phase I-1** — Prompt routing strategy (I-1); see `PROJECT_SPEC.md §13`
+- **Phase I-2** — Baseline vs. optimized comparison workflow; see `PROJECT_SPEC.md §13`
 
 ### Phase 2 roadmap
 
@@ -238,7 +246,7 @@ Phase 2 follows the same lettered-subphase naming convention as Phase 1 (A–E):
 | **F** | Evaluation Foundation | ✅ Complete | F-0 evaluation contracts + schemas, F-1 reference dataset, F-2 scoring runner |
 | **G** | Retrieval & Output Quality | ✅ Complete | G-0 retrieval metrics ✅, G-1 citation quality ✅, G-2 output scoring ✅ |
 | **H** | Safety & Guardrails | ✅ Complete | H-0 safety contracts ✅, H-1 Bedrock Guardrails integration ✅, H-2 adversarial suite ✅ |
-| **I** | Optimization | I-0 ✅ | I-0 prompt caching ✅, I-1 prompt routing, I-2 baseline vs optimized comparison |
+| **I** | Optimization | I-0 ✅, I-1 ✅ | I-0 prompt caching ✅, I-1 prompt routing ✅, I-2 baseline vs optimized comparison |
 | **J** | Observability & Reporting | Not started | J-0 CloudWatch dashboard, J-1 result artifacts, J-2 v2 hardening checkpoint |
 
 See `PROJECT_SPEC.md §13` for the full Phase 2 subphase breakdown.

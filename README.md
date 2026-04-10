@@ -235,7 +235,7 @@ python -m app.cli intake --help
 
 ### Current status note
 
-Live Bedrock / Knowledge Base validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling in the target account. The full pipeline code is complete and correct; the `run` command will surface a clear failure message when AWS calls cannot be completed. All 1525 tests pass without live AWS calls.
+Live Bedrock / Knowledge Base validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling in the target account. The full pipeline code is complete and correct; the `run` command will surface a clear failure message when AWS calls cannot be completed. All 1651 tests pass without live AWS calls.
 
 ---
 
@@ -250,7 +250,7 @@ pip install -r requirements.txt
 python -m pytest tests/ -v
 ```
 
-All 1588 tests pass without live AWS, covering intake, retrieval, analysis, validation, escalation, output writing, CLI commands, structured logging, CloudWatch service, config loading, the full Phase F evaluation layer (schemas, dataset loader, scorer, runner), Phase G-0 retrieval quality metrics (retrieval scorer, fixture loading, dataset alignment), Phase G-1 citation quality checks (citation scorer, citation expectations, fixture loading, dataset alignment), Phase G-2 output quality scoring (composite scorer, five-dimension result, fixture integration, architectural separation), Phase H-0 safety contracts and deterministic policy evaluator (safety_models, safety_policy — six policy rules), Phase H-1 Bedrock Guardrails integration (guardrail_models, guardrails_service, guardrails_adapter — intervention and non-intervention paths), Phase H-2 adversarial and edge-case safety evaluation suite (safety_suite runner, 10 adversarial fixtures, status-priority and combined-scenario coverage), and Phase I-0 prompt caching integration (PromptCachingConfig, apply_prompt_caching, service wiring — config defaults/overrides/validation, disabled and enabled request-shaping, no-regression with caching off).
+All 1651 tests pass without live AWS, covering intake, retrieval, analysis, validation, escalation, output writing, CLI commands, structured logging, CloudWatch service, config loading, the full Phase F evaluation layer (schemas, dataset loader, scorer, runner), Phase G-0 retrieval quality metrics (retrieval scorer, fixture loading, dataset alignment), Phase G-1 citation quality checks (citation scorer, citation expectations, fixture loading, dataset alignment), Phase G-2 output quality scoring (composite scorer, five-dimension result, fixture integration, architectural separation), Phase H-0 safety contracts and deterministic policy evaluator (safety_models, safety_policy — six policy rules), Phase H-1 Bedrock Guardrails integration (guardrail_models, guardrails_service, guardrails_adapter — intervention and non-intervention paths), Phase H-2 adversarial and edge-case safety evaluation suite (safety_suite runner, 10 adversarial fixtures, status-priority and combined-scenario coverage), Phase I-0 prompt caching integration (PromptCachingConfig, apply_prompt_caching, service wiring — config defaults/overrides/validation, disabled and enabled request-shaping, no-regression with caching off), and Phase I-1 prompt routing strategy (PromptRoutingConfig, resolve_model_id, service wiring — config defaults/overrides/invalid-flag/immutability, disabled and enabled routing paths, analysis and validation route resolution, priority chain, service integration, no-regression with routing off).
 
 ### Step 2: Explore sample inputs
 
@@ -345,7 +345,14 @@ This evaluation layer is fully local and offline — it is independent of live A
 - `BedrockAnalysisService` and `BedrockValidationService` in `app/services/bedrock_service.py` — accept optional `caching_config`; pass system blocks through `apply_prompt_caching` before each Converse call; pre-I-0 behavior is preserved when config is absent
 - `.env.example` — `# ── Prompt Caching (I-0)` section with all four variables
 
-All 1588 unit and evaluation tests pass without live AWS calls. Phase I-1 (Prompt Routing) is next.
+**Phase I-1 (Prompt Routing Strategy) is complete** — the repository now includes:
+
+- `PromptRoutingConfig` dataclass and `load_prompt_routing_config()` in `app/utils/config.py` — four env vars (enable flag, default model, per-route overrides for analysis and validation), off by default, fails loudly on invalid enable flag
+- `app/services/prompt_router.py` — pure `resolve_model_id(route, routing_config, fallback_model_id)` function; `PromptRoute` literal type; deterministic; no boto3 dependency; implements a three-level priority chain (route override → routing default → caller fallback)
+- `BedrockAnalysisService` and `BedrockValidationService` in `app/services/bedrock_service.py` — accept optional `routing_config`; resolve model ID at construction time via the `"analysis"` and `"validation"` routes respectively; `_call_converse` is untouched; pre-I-1 behavior is preserved when config is absent or routing is disabled
+- `.env.example` — `# ── Prompt Routing (I-1)` section with all four variables
+
+All 1651 unit and evaluation tests pass without live AWS calls. Phase I-2 (Baseline vs Optimized Comparison) is next.
 
 **Live Bedrock runtime validation** remains pending due to AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. This is an external blocker, not a code issue.
 
