@@ -513,7 +513,7 @@ Overall score is the mean of the three metric scores.  Pass/fail uses `RETRIEVAL
 - **Reuses existing contracts** — `RetrievalResult`, `EvidenceChunk`, `RetrievalExpectation`, and `DimensionScore` are all existing types from the repo
 - **Extensible** — additional metrics (e.g. relevance-score distribution) can be added as new `_score_*` helpers without changing the public API
 
-> **v2 implementation roadmap:** Phase 2 is in progress. Phase F (Evaluation Foundation) and Phase G (Retrieval & Output Quality — G-0, G-1, G-2) are complete. Remaining Phase 2 subphases (H through J) cover safety and guardrails, optimization, and observability/reporting. See `PROJECT_SPEC.md §13` for the full breakdown.
+> **v2 implementation roadmap:** Phase 2 is in progress. Phase F (Evaluation Foundation), Phase G (Retrieval & Output Quality — G-0, G-1, G-2), and Phase H (Safety & Guardrails — H-0, H-1, H-2) are complete. Remaining Phase 2 subphases (I and J) cover optimization and observability/reporting. See `PROJECT_SPEC.md §13` for the full breakdown.
 
 ---
 
@@ -586,7 +586,7 @@ Overall score = mean of all five component scores. Pass/fail: `summary_nonempty`
 - **Local and deterministic** — scoring is rule-based; same inputs always produce the same scores
 - **Typed result** — `OutputQualityScoringResult` is a Pydantic model in `evaluation_models.py`; reuses `DimensionScore` for the three final-output checks
 
-> **v2 implementation roadmap:** Phase G is complete. Phase H-0 (Safety Contracts + Failure Policies) is complete. Phase H-1 (Bedrock Guardrails) is next. See `PROJECT_SPEC.md §13` for the full breakdown.
+> **v2 implementation roadmap:** Phase G is complete. Phase H (Safety & Guardrails — H-0, H-1, H-2) is complete. Phase I (Optimization) is next. See `PROJECT_SPEC.md §13` for the full breakdown.
 
 ---
 
