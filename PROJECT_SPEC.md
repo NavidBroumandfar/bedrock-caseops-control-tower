@@ -89,9 +89,9 @@ The following are explicitly excluded from the MVP to keep scope manageable:
 - Full CI/CD pipeline (GitHub Actions, CodePipeline)
 - Web frontend or API server
 - Authentication and multi-user management
-- Bedrock Guardrails (planned v2)
-- Bedrock Evaluations (planned v2)
-- Prompt caching and prompt routing (planned v2)
+- Bedrock Guardrails (implemented — Phase H)
+- Bedrock Evaluations (implemented — Phase F/G)
+- Prompt caching and prompt routing (implemented — Phase I)
 - Bedrock Flows (planned v3)
 - Model customization / fine-tuning (planned v3)
 - Bedrock Data Automation (planned v3)

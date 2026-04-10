@@ -96,9 +96,9 @@ bedrock-caseops-control-tower/
 - Frontend or API server
 - Authentication / multi-user
 - CI/CD pipeline
-- Bedrock Guardrails (planned v2)
-- Bedrock Evaluations (planned v2)
-- Prompt caching / routing (planned v2)
+- Bedrock Guardrails (implemented — Phase H)
+- Bedrock Evaluations (implemented — Phase F/G)
+- Prompt caching / routing (implemented — Phase I)
 - Bedrock Flows (planned v3)
 - Model customization (planned v3)
 - Multi-region support

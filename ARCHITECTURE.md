@@ -513,7 +513,7 @@ Overall score is the mean of the three metric scores.  Pass/fail uses `RETRIEVAL
 - **Reuses existing contracts** — `RetrievalResult`, `EvidenceChunk`, `RetrievalExpectation`, and `DimensionScore` are all existing types from the repo
 - **Extensible** — additional metrics (e.g. relevance-score distribution) can be added as new `_score_*` helpers without changing the public API
 
-> **v2 implementation roadmap:** Phase 2 is in progress. Phase F (Evaluation Foundation), Phase G (Retrieval & Output Quality — G-0, G-1, G-2), and Phase H (Safety & Guardrails — H-0, H-1, H-2) are complete. Remaining Phase 2 subphases (I and J) cover optimization and observability/reporting. See `PROJECT_SPEC.md §13` for the full breakdown.
+> **v2 implementation roadmap:** Phase F (Evaluation Foundation), Phase G (Retrieval & Output Quality — G-0, G-1, G-2), Phase H (Safety & Guardrails — H-0, H-1, H-2), and Phase I (Optimization — I-0, I-1, I-2) are complete. Phase J (Observability & Reporting) is next. See `PROJECT_SPEC.md §13` for the full breakdown.
 
 ---
 
@@ -586,7 +586,7 @@ Overall score = mean of all five component scores. Pass/fail: `summary_nonempty`
 - **Local and deterministic** — scoring is rule-based; same inputs always produce the same scores
 - **Typed result** — `OutputQualityScoringResult` is a Pydantic model in `evaluation_models.py`; reuses `DimensionScore` for the three final-output checks
 
-> **v2 implementation roadmap:** Phase G is complete. Phase H (Safety & Guardrails — H-0, H-1, H-2) is complete. Phase I (Optimization) is next. See `PROJECT_SPEC.md §13` for the full breakdown.
+> **v2 implementation roadmap:** Phase G is complete. Phase H (Safety & Guardrails — H-0, H-1, H-2) is complete. Phase I (Optimization — I-0, I-1, I-2) is complete. Phase J (Observability & Reporting) is next. See `PROJECT_SPEC.md §13` for the full breakdown.
 
 ---
 
@@ -758,7 +758,7 @@ SafetySuiteSummary
 - **Deterministic** — same fixture directory always produces the same results in the same order
 - **Narrow** — `safety_suite.py` is a dedicated H-2 runner, not a replacement for the F-2 batch evaluation runner
 
-> **Phase H complete. Phase I-0 and I-1 complete.** See `PROJECT_SPEC.md §13`.
+> **Phase H complete. Phase I (I-0, I-1, I-2) complete.** Phase J (Observability & Reporting) is next. See `PROJECT_SPEC.md §13`.
 
 ---
 
@@ -813,7 +813,7 @@ client.converse(system=system_blocks, messages=[...])
 | `CASEOPS_MIN_CACHEABLE_TOKENS` | `1024` | Minimum token count (informational; Bedrock enforces server-side) |
 | `CASEOPS_MAX_CACHE_CHECKPOINTS` | `1` | Max cachePoint markers per request (1–4; I-0 uses 1) |
 
-> **I-1 complete. I-2 not started.** I-2 will add a baseline vs. optimized comparison workflow. See `PROJECT_SPEC.md §13`.
+> **Phase I complete (I-0, I-1, I-2).** Phase J (Observability & Reporting) is next. See `PROJECT_SPEC.md §13`.
 
 ---
 
