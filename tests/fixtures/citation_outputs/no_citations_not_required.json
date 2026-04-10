@@ -1,0 +1,18 @@
+{
+  "_note": "G-1 test fixture — thin edge case where citations are intentionally absent and not required. All citation dimensions should score 1.0 / N/A.",
+  "document_id": "doc-test-citation-not-required",
+  "source_filename": "sample_notice.txt",
+  "source_type": "Other",
+  "severity": "Low",
+  "category": "Regulatory",
+  "summary": "A routine notice was received and reviewed. No significant findings.",
+  "recommendations": [],
+  "citations": [],
+  "confidence_score": 0.90,
+  "unsupported_claims": [],
+  "escalation_required": false,
+  "escalation_reason": null,
+  "validated_by": "validation-agent-v1",
+  "session_id": "sess-test-005",
+  "timestamp": "2026-04-10T12:00:00Z"
+}

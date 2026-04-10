@@ -1,0 +1,33 @@
+{
+  "_note": "G-1 test fixture — citations present but one excerpt is empty. citation_excerpt_nonempty should fail.",
+  "document_id": "doc-test-citation-empty-excerpts",
+  "source_filename": "fda_warning_letter_01.md",
+  "source_type": "FDA",
+  "severity": "High",
+  "category": "Regulatory",
+  "summary": "The quality system was found to be inadequate.",
+  "recommendations": [
+    "Initiate CAPA for cleaning validation gaps"
+  ],
+  "citations": [
+    {
+      "source_id": "kb-src-001",
+      "source_label": "FDA Warning Letter — Uscom Kft 2025",
+      "excerpt": "Corrective action procedures were not established.",
+      "relevance_score": 0.85
+    },
+    {
+      "source_id": "kb-src-002",
+      "source_label": "FDA Regulatory Guidance 2025",
+      "excerpt": "   ",
+      "relevance_score": 0.72
+    }
+  ],
+  "confidence_score": 0.75,
+  "unsupported_claims": [],
+  "escalation_required": true,
+  "escalation_reason": "High severity.",
+  "validated_by": "validation-agent-v1",
+  "session_id": "sess-test-004",
+  "timestamp": "2026-04-10T12:00:00Z"
+}

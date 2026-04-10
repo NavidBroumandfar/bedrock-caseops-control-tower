@@ -5,12 +5,13 @@ These schemas define the typed foundation for automated evaluation of pipeline o
 against reference expectations.  No runner logic, live AWS calls, or dataset population
 belong here — this is the contract layer only.
 
-EvaluationCase       — reference descriptor for one document case used in evaluation.
-ExpectedOutput       — the reference judgment a pipeline run is scored against.
-RetrievalExpectation — contract for retrieval-quality evaluation of a given case.
-DimensionScore       — a single scored metric dimension; reused across all score types.
-EvaluationResult     — the evaluated result of one pipeline run against one reference case.
-EvaluationRunSummary — aggregated results across all cases in one evaluation run.
+EvaluationCase        — reference descriptor for one document case used in evaluation.
+ExpectedOutput        — the reference judgment a pipeline run is scored against.
+RetrievalExpectation  — contract for retrieval-quality evaluation of a given case.
+CitationExpectation   — contract for citation-quality evaluation of a given case (G-1).
+DimensionScore        — a single scored metric dimension; reused across all score types.
+EvaluationResult      — the evaluated result of one pipeline run against one reference case.
+EvaluationRunSummary  — aggregated results across all cases in one evaluation run.
 """
 
 import math
@@ -137,6 +138,51 @@ class RetrievalExpectation(BaseModel):
     def must_be_non_empty(cls, value: str) -> str:
         if not value.strip():
             raise ValueError("case_id must be a non-empty string")
+        return value
+
+
+# ── CitationExpectation ────────────────────────────────────────────────────────
+
+
+class CitationExpectation(BaseModel):
+    """
+    Contract for citation-quality evaluation of a single case (G-1).
+
+    Captures what correct citation behavior looks like so that the G-1 citation
+    scorer has a typed reference to evaluate against.  All fields are optional
+    or have safe defaults so that existing fixtures remain backward-compatible.
+
+    case_id                   — ties this expectation to an EvaluationCase.
+    citations_required        — True when the case output must include citations;
+                                False for cases where citations are intentionally absent.
+    expected_source_labels    — source labels that must appear in citation source_label fields
+                                (case-insensitive exact match after normalization).
+    required_excerpt_terms    — terms that must appear as substrings across the concatenated
+                                citation excerpts (case-insensitive).
+    minimum_citation_count    — candidate must have at least this many citations when
+                                citations_required is True; ignored when False.
+    """
+
+    case_id: str
+    citations_required: bool = True
+    expected_source_labels: list[str] = []
+    required_excerpt_terms: list[str] = []
+    minimum_citation_count: int = 1
+
+    @field_validator("case_id")
+    @classmethod
+    def must_be_non_empty(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("case_id must be a non-empty string")
+        return value
+
+    @field_validator("minimum_citation_count")
+    @classmethod
+    def must_be_positive(cls, value: int) -> int:
+        if value < 1:
+            raise ValueError(
+                f"minimum_citation_count must be at least 1, got: {value!r}"
+            )
         return value
 
 

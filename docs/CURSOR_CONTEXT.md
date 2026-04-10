@@ -122,9 +122,9 @@ These are design contracts followed across all implementation work. They apply t
 
 ## Current Implementation Phase
 
-**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G-0 — Retrieval Quality Metrics COMPLETE**
+**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G-0 — Retrieval Quality Metrics COMPLETE | Phase G-1 — Citation Quality Checks COMPLETE**
 
-> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 1046 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. The Phase F and G-0 evaluation layers are fully independent of this blocker.
+> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 1110 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. The Phase F, G-0, and G-1 evaluation layers are fully independent of this blocker.
 
 The repository is portfolio-ready, test-complete, and demo-friendly for the full MVP and Phase F evaluation scope.
 
@@ -183,9 +183,17 @@ The repository is portfolio-ready, test-complete, and demo-friendly for the full
   - `tests/fixtures/retrieval_outputs/` — 5 candidate retrieval fixtures: `strong_retrieval.json`, `weak_retrieval.json`, `missing_source_labels.json`, `missing_evidence_terms.json`, `empty_retrieval.json`
   - `tests/test_retrieval_scorer.py` — 55 tests covering all three metrics, pass/fail logic, fixture loading, dataset alignment, not-applicable policy, and deterministic repeated-run behavior
   - 1046 total tests pass
+- **G-1** — Citation quality checks:
+  - `app/schemas/evaluation_models.py` — extended with `CitationExpectation`: minimal new contract (`citations_required`, `expected_source_labels`, `required_excerpt_terms`, `minimum_citation_count`); backward-compatible with all existing fixtures
+  - `app/evaluation/citation_scorer.py` — four deterministic offline metrics: `citation_presence`, `citation_source_label_alignment`, `citation_excerpt_evidence_coverage`, `citation_excerpt_nonempty`; `CitationScoringResult` (frozen dataclass); `score_citations()` public API; hard-gate pass/fail rule; fully separate from retrieval scorer
+  - `app/evaluation/loader.py` — extended with `load_citation_expectations()` to extract `_citation_expectation` blocks from F-1 expected fixtures
+  - `data/evaluation/expected/` — `_citation_expectation` blocks added to eval-fda-001, eval-fda-002, eval-cisa-001, eval-incident-001, eval-edge-001 (5 of 7 fixtures; edge-001 uses `citations_required: false`)
+  - `tests/fixtures/citation_outputs/` — 5 candidate CaseOutput fixtures: `strong_citations.json`, `missing_citations.json`, `wrong_source_labels.json`, `empty_excerpts.json`, `no_citations_not_required.json`
+  - `tests/test_citation_scorer.py` — 64 tests covering all four metrics, pass/fail logic, fixture loading, dataset alignment, separation from G-0, determinism, and candidate typing
+  - 1110 total tests pass
 
 ### Next step
-- **Phase G-1** — Citation quality checks; see `PROJECT_SPEC.md §13`
+- **Phase G-2** — Output quality scoring; see `PROJECT_SPEC.md §13`
 
 ### Phase 2 roadmap
 
@@ -194,7 +202,7 @@ Phase 2 follows the same lettered-subphase naming convention as Phase 1 (A–E):
 | Phase | Theme | Status | Subphases |
 |---|---|---|---|
 | **F** | Evaluation Foundation | ✅ Complete | F-0 evaluation contracts + schemas, F-1 reference dataset, F-2 scoring runner |
-| **G** | Retrieval & Output Quality | In progress | G-0 retrieval metrics ✅, G-1 citation quality, G-2 output scoring |
+| **G** | Retrieval & Output Quality | In progress | G-0 retrieval metrics ✅, G-1 citation quality ✅, G-2 output scoring |
 | **H** | Safety & Guardrails | Not started | H-0 safety contracts, H-1 Bedrock Guardrails integration, H-2 adversarial suite |
 | **I** | Optimization | Not started | I-0 prompt caching, I-1 prompt routing, I-2 baseline vs optimized comparison |
 | **J** | Observability & Reporting | Not started | J-0 CloudWatch dashboard, J-1 result artifacts, J-2 v2 hardening checkpoint |

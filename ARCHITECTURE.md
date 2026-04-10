@@ -3,9 +3,9 @@
 **Version:** 0.2
 **Last Updated:** 2026-04-10
 
-> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G-0 (Retrieval Quality Metrics) complete.**
+> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G-0 (Retrieval Quality Metrics) complete. Phase G-1 (Citation Quality Checks) complete.**
 >
-> **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Phase F adds a fully local, offline evaluation layer: typed evaluation contracts and schemas (F-0), a curated evaluation dataset with 7 cases and reference expected outputs (F-1), and an offline evaluation harness with dataset loader, deterministic scorer, and scoring runner (F-2). Phase G-0 adds offline retrieval quality metrics: three deterministic metrics scored against F-1 retrieval expectations, with fixture-based candidate input and 55 new tests. All 1046 unit and evaluation tests pass without live AWS calls.
+> **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Phase F adds a fully local, offline evaluation layer: typed evaluation contracts and schemas (F-0), a curated evaluation dataset with 7 cases and reference expected outputs (F-1), and an offline evaluation harness with dataset loader, deterministic scorer, and scoring runner (F-2). Phase G-0 adds offline retrieval quality metrics: three deterministic metrics scored against F-1 retrieval expectations, with fixture-based candidate input and 55 new tests. Phase G-1 adds offline citation quality metrics: four deterministic metrics scored against CitationExpectation references, with five candidate output fixtures and 64 new tests. All 1110 unit and evaluation tests pass without live AWS calls.
 >
 > **Live Bedrock runtime validation is pending:** Live AWS Knowledge Base end-to-end validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. The architecture and all implementation are complete and correct — this is not a code issue. Live validation will be completed when the AWS-side blocker is resolved. The Phase F evaluation layer is fully independent of this blocker.
 
@@ -513,4 +513,39 @@ Overall score is the mean of the three metric scores.  Pass/fail uses `RETRIEVAL
 - **Reuses existing contracts** — `RetrievalResult`, `EvidenceChunk`, `RetrievalExpectation`, and `DimensionScore` are all existing types from the repo
 - **Extensible** — additional metrics (e.g. relevance-score distribution) can be added as new `_score_*` helpers without changing the public API
 
-> **v2 implementation roadmap:** Phase 2 is in progress. Phase F (Evaluation Foundation) and Phase G-0 (Retrieval Quality Metrics) are complete. Remaining Phase 2 subphases (G-1 through J) cover citation quality, output scoring, safety and guardrails, optimization, and observability/reporting. See `PROJECT_SPEC.md §13` for the full breakdown.
+> **v2 implementation roadmap:** Phase 2 is in progress. Phase F (Evaluation Foundation), Phase G-0 (Retrieval Quality Metrics), and Phase G-1 (Citation Quality Checks) are complete. Remaining Phase 2 subphases (G-2 through J) cover output scoring, safety and guardrails, optimization, and observability/reporting. See `PROJECT_SPEC.md §13` for the full breakdown.
+
+---
+
+## 15. Phase G-1 — Citation Quality Checks
+
+Phase G-1 adds an offline citation quality evaluation layer on top of the Phase F and G-0 foundations.  It scores citation fields in candidate `CaseOutput` objects against citation expectations embedded in the F-1 expected fixtures.  No live AWS calls are made.
+
+### Components
+
+| Component | Location | Description |
+|---|---|---|
+| **Citation scorer** | `app/evaluation/citation_scorer.py` | Deterministic scoring of candidate CaseOutput citation fields against CitationExpectation references across four metrics |
+| **CitationExpectation schema** | `app/schemas/evaluation_models.py` (extended) | Minimal new contract: `citations_required`, `expected_source_labels`, `required_excerpt_terms`, `minimum_citation_count` |
+| **Citation expectations loader** | `app/evaluation/loader.py` (extended) | `load_citation_expectations()` extracts `_citation_expectation` blocks from F-1 expected fixtures |
+| **F-1 fixture updates** | `data/evaluation/expected/` | `_citation_expectation` blocks added to eval-fda-001, eval-fda-002, eval-cisa-001, eval-incident-001, eval-edge-001 |
+| **Candidate citation fixtures** | `tests/fixtures/citation_outputs/` | Five test-only JSON fixtures: strong, missing citations, wrong source labels, empty excerpts, not-required |
+| **Tests** | `tests/test_citation_scorer.py` | 64 tests covering all four metrics, pass/fail logic, fixture loading, dataset alignment, separation from G-0 |
+
+### Scoring metrics
+
+| Metric | Behaviour |
+|---|---|
+| `citation_presence` | 1.0 if citations present when required (or not required); 0.0 if absent when required |
+| `citation_source_label_alignment` | Fraction of expected source labels matched (case-insensitive); 1.0 (N/A) if none defined |
+| `citation_excerpt_evidence_coverage` | Fraction of required terms found via substring search across concatenated excerpts (case-insensitive); 1.0 (N/A) if none defined |
+| `citation_excerpt_nonempty` | 1.0 if all excerpts non-empty; 0.0 if any excerpt is empty or whitespace-only; 1.0 when no citations and not required |
+
+Overall score is the mean of the four metric scores.  Pass/fail uses `CITATION_PASS_THRESHOLD = 0.75`; `citation_presence` and `citation_excerpt_nonempty` are hard-gate dimensions.
+
+### Design properties
+
+- **Separate from G-0 and F-2** — citation scoring works independently from retrieval scoring and the batch output runner; the scorer operates on `CaseOutput.citations` fields directly
+- **Local and deterministic** — scoring is rule-based; same inputs always produce the same scores
+- **Reuses existing contracts** — `CaseOutput`, `Citation`, `DimensionScore` are existing types; `CitationExpectation` is the only new schema (minimal addition)
+- **Backward-compatible fixture extension** — `_citation_expectation` blocks follow the same private-key convention as `_retrieval_expectation`; existing loader and scorer logic is unchanged

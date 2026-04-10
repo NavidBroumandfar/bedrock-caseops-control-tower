@@ -17,5 +17,13 @@
     "patient safety",
     "ransomware",
     "regulatory violation confirmed"
-  ]
+  ],
+  "_citation_expectation": {
+    "_schema": "CitationExpectation",
+    "case_id": "eval-edge-001",
+    "citations_required": false,
+    "expected_source_labels": [],
+    "required_excerpt_terms": [],
+    "minimum_citation_count": 1
+  }
 }

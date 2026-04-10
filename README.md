@@ -235,7 +235,7 @@ python -m app.cli intake --help
 
 ### Current status note
 
-Live Bedrock / Knowledge Base validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling in the target account. The full pipeline code is complete and correct; the `run` command will surface a clear failure message when AWS calls cannot be completed. All 994 tests pass without live AWS calls.
+Live Bedrock / Knowledge Base validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling in the target account. The full pipeline code is complete and correct; the `run` command will surface a clear failure message when AWS calls cannot be completed. All 1110 tests pass without live AWS calls.
 
 ---
 
@@ -250,7 +250,7 @@ pip install -r requirements.txt
 python -m pytest tests/ -v
 ```
 
-All 1046 tests pass without live AWS, covering intake, retrieval, analysis, validation, escalation, output writing, CLI commands, structured logging, CloudWatch service, config loading, the full Phase F evaluation layer (schemas, dataset loader, scorer, runner), and Phase G-0 retrieval quality metrics (retrieval scorer, fixture loading, dataset alignment).
+All 1110 tests pass without live AWS, covering intake, retrieval, analysis, validation, escalation, output writing, CLI commands, structured logging, CloudWatch service, config loading, the full Phase F evaluation layer (schemas, dataset loader, scorer, runner), Phase G-0 retrieval quality metrics (retrieval scorer, fixture loading, dataset alignment), and Phase G-1 citation quality checks (citation scorer, citation expectations, fixture loading, dataset alignment).
 
 ### Step 2: Explore sample inputs
 
@@ -322,9 +322,11 @@ On success, the CLI prints a structured summary and writes a JSON output to `out
 - A curated local evaluation dataset with 7 cases and reference expected outputs (`data/evaluation/`)
 - An offline evaluation harness: dataset loader, deterministic scorer, and aggregated scoring runner (`app/evaluation/`)
 
-This evaluation layer is fully local and offline — it is independent of live AWS runtime availability. All 1046 unit and evaluation tests pass without live AWS calls.
+This evaluation layer is fully local and offline — it is independent of live AWS runtime availability. All 1110 unit and evaluation tests pass without live AWS calls.
 
-**Phase G-0 (Retrieval Quality Metrics) is complete** — offline retrieval quality scoring against F-1 retrieval expectations, with three deterministic metrics and 55 new tests. Phase G-1 (Citation Quality) is next.
+**Phase G-0 (Retrieval Quality Metrics) is complete** — offline retrieval quality scoring against F-1 retrieval expectations, with three deterministic metrics and 55 new tests.
+
+**Phase G-1 (Citation Quality Checks) is complete** — offline citation quality scoring against new `CitationExpectation` references, with four deterministic metrics and 64 new tests. Phase G-2 (Output Quality Scoring) is next.
 
 **Live Bedrock runtime validation** remains pending due to AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. This is an external blocker, not a code issue.
 

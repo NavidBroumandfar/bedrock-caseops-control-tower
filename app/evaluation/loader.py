@@ -8,10 +8,14 @@ ordering across runs.
 Also exposes load_retrieval_expectations() for G-0 retrieval quality scoring,
 which extracts the _retrieval_expectation blocks embedded in expected fixtures.
 
+Also exposes load_citation_expectations() for G-1 citation quality scoring,
+which extracts the _citation_expectation blocks embedded in expected fixtures.
+
 Public surface:
   EvaluationDataset                 — container returned by load_dataset()
   load_dataset(dataset_dir)         — load and validate all fixtures; raises on any error
   load_retrieval_expectations(...)  — load RetrievalExpectation objects from expected fixtures
+  load_citation_expectations(...)   — load CitationExpectation objects from expected fixtures
   DatasetLoadError                  — raised when fixtures are missing, mismatched, or malformed
 """
 
@@ -20,6 +24,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.schemas.evaluation_models import (
+    CitationExpectation,
     EvaluationCase,
     ExpectedOutput,
     RetrievalExpectation,
@@ -169,6 +174,51 @@ def load_retrieval_expectations(
         except Exception as exc:
             raise DatasetLoadError(
                 f"Fixture {path.name} has an invalid _retrieval_expectation block: {exc}"
+            ) from exc
+        expectations[expectation.case_id] = expectation
+
+    return expectations
+
+
+def load_citation_expectations(
+    dataset_dir: Path | None = None,
+) -> dict[str, CitationExpectation]:
+    """
+    Load CitationExpectation objects from the F-1 expected fixtures.
+
+    Each expected fixture may embed a ``_citation_expectation`` block.
+    This function extracts and validates those blocks, returning a mapping
+    of case_id → CitationExpectation for all cases that have one.
+
+    Cases without a ``_citation_expectation`` block are silently omitted from
+    the returned dict — callers should handle absence (treat as N/A).
+
+    Raises DatasetLoadError if any present block fails schema validation.
+    """
+    root = dataset_dir if dataset_dir is not None else _DEFAULT_DATASET_DIR
+    expected_dir = root / "expected"
+
+    if not expected_dir.is_dir():
+        raise DatasetLoadError(
+            f"Expected expected directory not found: {expected_dir}"
+        )
+
+    json_files = sorted(expected_dir.glob("*.json"))
+    if not json_files:
+        raise DatasetLoadError(f"No JSON fixtures found in {expected_dir}")
+
+    expectations: dict[str, CitationExpectation] = {}
+    for path in json_files:
+        raw = _load_json(path)
+        block = raw.get("_citation_expectation")
+        if block is None:
+            continue
+        data = {k: v for k, v in block.items() if not k.startswith("_")}
+        try:
+            expectation = CitationExpectation(**data)
+        except Exception as exc:
+            raise DatasetLoadError(
+                f"Fixture {path.name} has an invalid _citation_expectation block: {exc}"
             ) from exc
         expectations[expectation.case_id] = expectation
 

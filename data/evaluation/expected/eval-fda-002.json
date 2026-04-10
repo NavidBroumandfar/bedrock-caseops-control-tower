@@ -41,5 +41,16 @@
       "undeclared",
       "blood pressure"
     ]
+  },
+  "_citation_expectation": {
+    "_schema": "CitationExpectation",
+    "case_id": "eval-fda-002",
+    "citations_required": true,
+    "expected_source_labels": [],
+    "required_excerpt_terms": [
+      "recall",
+      "undeclared"
+    ],
+    "minimum_citation_count": 1
   }
 }

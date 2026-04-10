@@ -2,7 +2,7 @@
 
 **Version:** 0.2
 **Last Updated:** 2026-04-10
-**Status:** Phase 1 Complete — Phase 2 In Progress (Phase F complete, Phase G-0 complete, Phase G-1 next)
+**Status:** Phase 1 Complete — Phase 2 In Progress (Phase F complete, Phase G-0 complete, Phase G-1 complete, Phase G-2 next)
 
 ---
 
@@ -272,7 +272,7 @@ The MVP engineering scope is complete. Success criteria are tracked in two categ
 
 - **Phase G — Retrieval & Output Quality**
   - G-0 Retrieval quality metrics ✅
-  - G-1 Citation quality checks
+  - G-1 Citation quality checks ✅
   - G-2 Output quality scoring
 
 - **Phase H — Safety & Guardrails**

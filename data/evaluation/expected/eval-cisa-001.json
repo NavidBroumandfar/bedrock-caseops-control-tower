@@ -40,5 +40,16 @@
       "advisory",
       "mitigation"
     ]
+  },
+  "_citation_expectation": {
+    "_schema": "CitationExpectation",
+    "case_id": "eval-cisa-001",
+    "citations_required": true,
+    "expected_source_labels": [],
+    "required_excerpt_terms": [
+      "ransomware",
+      "advisory"
+    ],
+    "minimum_citation_count": 1
   }
 }

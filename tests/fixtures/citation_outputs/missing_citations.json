@@ -1,0 +1,20 @@
+{
+  "_note": "G-1 test fixture — output with no citations when citations are required. citation_presence should fail.",
+  "document_id": "doc-test-citation-missing",
+  "source_filename": "fda_warning_letter_01.md",
+  "source_type": "FDA",
+  "severity": "High",
+  "category": "Regulatory",
+  "summary": "The quality system was found to be inadequate.",
+  "recommendations": [
+    "Initiate CAPA for cleaning validation gaps"
+  ],
+  "citations": [],
+  "confidence_score": 0.55,
+  "unsupported_claims": ["quality system inadequate"],
+  "escalation_required": true,
+  "escalation_reason": "Low confidence and missing citations.",
+  "validated_by": "validation-agent-v1",
+  "session_id": "sess-test-002",
+  "timestamp": "2026-04-10T12:00:00Z"
+}

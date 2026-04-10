@@ -41,5 +41,16 @@
       "root cause",
       "corrective"
     ]
+  },
+  "_citation_expectation": {
+    "_schema": "CitationExpectation",
+    "case_id": "eval-incident-001",
+    "citations_required": true,
+    "expected_source_labels": [],
+    "required_excerpt_terms": [
+      "outage",
+      "corrective"
+    ],
+    "minimum_citation_count": 1
   }
 }

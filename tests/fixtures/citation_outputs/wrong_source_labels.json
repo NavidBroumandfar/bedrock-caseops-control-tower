@@ -1,0 +1,27 @@
+{
+  "_note": "G-1 test fixture — citations present but source labels do not match expected labels. citation_source_label_alignment should score below 1.0.",
+  "document_id": "doc-test-citation-wrong-labels",
+  "source_filename": "fda_warning_letter_01.md",
+  "source_type": "FDA",
+  "severity": "High",
+  "category": "Regulatory",
+  "summary": "The quality system was found to be inadequate.",
+  "recommendations": [
+    "Initiate CAPA for cleaning validation gaps"
+  ],
+  "citations": [
+    {
+      "source_id": "kb-src-999",
+      "source_label": "Unrelated Reference Document",
+      "excerpt": "Some unrelated content that does not match the expected source.",
+      "relevance_score": 0.45
+    }
+  ],
+  "confidence_score": 0.70,
+  "unsupported_claims": [],
+  "escalation_required": true,
+  "escalation_reason": "High severity.",
+  "validated_by": "validation-agent-v1",
+  "session_id": "sess-test-003",
+  "timestamp": "2026-04-10T12:00:00Z"
+}

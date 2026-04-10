@@ -1,0 +1,34 @@
+{
+  "_note": "G-1 test fixture — strong citation output that should score well. Citations present, source labels match, excerpts contain required terms, all excerpts non-empty.",
+  "document_id": "doc-test-citation-strong",
+  "source_filename": "fda_warning_letter_01.md",
+  "source_type": "FDA",
+  "severity": "High",
+  "category": "Regulatory",
+  "summary": "The quality system was found to be inadequate. Corrective and preventive action procedures were not established.",
+  "recommendations": [
+    "Initiate CAPA for cleaning validation gaps",
+    "Escalate to compliance team within 48 hours"
+  ],
+  "citations": [
+    {
+      "source_id": "kb-src-001",
+      "source_label": "FDA Warning Letter — Uscom Kft 2025",
+      "excerpt": "Corrective and preventive action (CAPA) procedures were not established. The quality system was found inadequate.",
+      "relevance_score": 0.92
+    },
+    {
+      "source_id": "kb-src-002",
+      "source_label": "FDA Regulatory Guidance 2025",
+      "excerpt": "The device was found to be adulterated and misbranded under 21 CFR Part 820 requirements.",
+      "relevance_score": 0.85
+    }
+  ],
+  "confidence_score": 0.88,
+  "unsupported_claims": [],
+  "escalation_required": true,
+  "escalation_reason": "Severity is High; compliance team escalation recommended.",
+  "validated_by": "validation-agent-v1",
+  "session_id": "sess-test-001",
+  "timestamp": "2026-04-10T12:00:00Z"
+}
