@@ -14,6 +14,7 @@ EvaluationResult         — the evaluated result of one pipeline run against on
 EvaluationRunSummary     — aggregated results across all cases in one evaluation run.
 OutputQualityScoringResult — G-2 composite output-quality result combining F-2 and G-1 sub-scores.
 ComparisonVerdict        — I-2 verdict classifying how a case changed between baseline and optimized.
+EvaluationMetricDatum    — J-0 typed contract for a single CloudWatch Metrics datum.
 """
 
 import math
@@ -21,6 +22,19 @@ from datetime import datetime, timezone
 from typing import Any, Literal
 
 from pydantic import BaseModel, field_validator, model_validator
+
+# Valid CloudWatch metric unit strings accepted by put_metric_data.
+_CW_UNIT = Literal[
+    "Seconds", "Microseconds", "Milliseconds",
+    "Bytes", "Kilobytes", "Megabytes", "Gigabytes", "Terabytes",
+    "Bits", "Kilobits", "Megabits", "Gigabits", "Terabits",
+    "Percent", "Count",
+    "Bytes/Second", "Kilobytes/Second", "Megabytes/Second",
+    "Gigabytes/Second", "Terabytes/Second",
+    "Bits/Second", "Kilobits/Second", "Megabits/Second",
+    "Gigabits/Second", "Terabits/Second",
+    "Count/Second", "None",
+]
 
 from app.schemas.analysis_models import SeverityLevel
 
@@ -472,3 +486,45 @@ class OutputQualityScoringResult(BaseModel):
             if ds.metric_name == metric_name:
                 return ds
         return None
+
+
+# ── EvaluationMetricDatum ──────────────────────────────────────────────────────
+
+
+class EvaluationMetricDatum(BaseModel):
+    """
+    Typed contract for a single CloudWatch Metrics datum (J-0).
+
+    Represents one metric data point produced by the evaluation pipeline.
+    Used by the J-0 metrics translator to construct CloudWatch put_metric_data
+    payloads and by tests to verify metric translation correctness without
+    live AWS calls.
+
+    metric_name — CloudWatch metric name (e.g. "EvalPassCount").
+    value       — numeric value for this datum; must be finite (negative allowed).
+    unit        — CloudWatch metric unit string (e.g. "Count", "None" for scores/ratios).
+    namespace   — CloudWatch namespace this metric belongs to.
+    dimensions  — optional dimension key-value pairs (e.g. {"Environment": "development"}).
+    """
+
+    metric_name: str
+    value: float
+    unit: _CW_UNIT
+    namespace: str
+    dimensions: dict[str, str] = {}
+
+    @field_validator("metric_name", "namespace")
+    @classmethod
+    def must_be_non_empty(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("field must be a non-empty string")
+        return value
+
+    @field_validator("value")
+    @classmethod
+    def value_must_be_finite(cls, value: float) -> float:
+        if math.isnan(value) or math.isinf(value):
+            raise ValueError(
+                f"value must be a finite number, got: {value!r}"
+            )
+        return value

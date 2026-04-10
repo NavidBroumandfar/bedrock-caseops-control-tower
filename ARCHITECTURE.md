@@ -3,7 +3,7 @@
 **Version:** 0.2
 **Last Updated:** 2026-04-11
 
-> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G (Retrieval & Output Quality) complete. Phase H (Safety & Guardrails) complete. Phase I (Optimization) complete — I-0 (Prompt Caching), I-1 (Prompt Routing), I-2 (Baseline vs. Optimized Comparison).**
+> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G (Retrieval & Output Quality) complete. Phase H (Safety & Guardrails) complete. Phase I (Optimization) complete — I-0 (Prompt Caching), I-1 (Prompt Routing), I-2 (Baseline vs. Optimized Comparison). Phase J-0 (CloudWatch Evaluation Dashboard) complete.**
 >
 > **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Phase F adds a fully local, offline evaluation layer: typed evaluation contracts and schemas (F-0), a curated evaluation dataset with 7 cases and reference expected outputs (F-1), and an offline evaluation harness with dataset loader, deterministic scorer, and scoring runner (F-2). Phase G-0 adds offline retrieval quality metrics: three deterministic metrics scored against F-1 retrieval expectations, with fixture-based candidate input and 55 new tests. Phase G-1 adds offline citation quality metrics: four deterministic metrics scored against CitationExpectation references, with five candidate output fixtures and 64 new tests. Phase G-2 adds a composite output-quality scorer that composes F-2 and G-1 sub-scores plus three final-output-only checks (summary_nonempty, recommendations_present_when_expected, unsupported_claims_clean), with 46 new tests. Phase H-0 adds typed safety contracts (SafetyIssue, SafetyAssessment, FailurePolicy) and a local deterministic safety policy evaluator (evaluate_safety, evaluate_safety_from_raw) with six policy rules and 144 new tests. Phase H-1 adds the Bedrock Guardrails integration foundation: a normalized GuardrailAssessmentResult contract (guardrail_models.py), a thin GuardrailsService wrapper for the ApplyGuardrail API (guardrails_service.py), a Guardrails → H-0 safety adapter (guardrails_adapter.py), GuardrailsConfig config block, and two new safety_models enum extensions (GUARDRAILS source, GUARDRAIL_INTERVENTION code), with 134 new tests. Phase H-2 adds the adversarial and edge-case safety evaluation suite: 10 curated fixtures covering schema failures, unsupported claims, missing citations, low confidence, empty retrieval, escalation-required, Guardrails intervention, combined blocking+escalation priority, and clean passing cases; plus a narrow safety suite runner (safety_suite.py) with SafetyCaseFixture, SafetyCaseResult, SafetySuiteSummary dataclasses and run_safety_suite() batch executor; 91 new tests. Phase I-0 adds prompt caching integration: PromptCachingConfig dataclass and loader (config.py), apply_prompt_caching() pure function (prompt_cache.py), optional caching_config wiring in BedrockAnalysisService and BedrockValidationService, .env.example section, and 63 new tests covering config defaults/overrides/validation/immutability, disabled and enabled request-shaping, service integration, and no-live-AWS confirmation. Phase I-1 adds prompt routing: PromptRoutingConfig dataclass and loader (config.py), pure resolve_model_id() routing function (prompt_router.py), optional routing_config wiring in both Bedrock services (resolution at construction time via "analysis" and "validation" routes), .env.example section, and 63 new tests covering config defaults/overrides/case-insensitivity/invalid-flag/immutability, disabled and enabled routing paths, analysis and validation route resolution, priority chain (route override → routing default → caller fallback), service integration, no-regression with routing off, and no live AWS dependency. Phase I-2 adds the baseline vs. optimized comparison workflow: ComparisonVerdict Literal type in evaluation_models.py; app/evaluation/comparison_runner.py with ComparisonCaseResult, ComparisonSummary, and ComparisonRunResult frozen dataclasses and run_comparison() runner; the runner composes G-2 score_output_quality() and H-0 evaluate_safety() to score both sides, computes per-case score deltas and safety status changes, classifies verdicts (improved/regressed/unchanged) using COMPARISON_DELTA_EPSILON, and aggregates a ComparisonSummary; 4 paired fixtures in tests/fixtures/comparison_cases/ covering improved, unchanged, regressed, and safety-change scenarios; 108 new tests. All 1759 unit and evaluation tests pass without live AWS calls.
 >
@@ -758,7 +758,7 @@ SafetySuiteSummary
 - **Deterministic** — same fixture directory always produces the same results in the same order
 - **Narrow** — `safety_suite.py` is a dedicated H-2 runner, not a replacement for the F-2 batch evaluation runner
 
-> **Phase H complete. Phase I (I-0, I-1, I-2) complete.** Phase J (Observability & Reporting) is next. See `PROJECT_SPEC.md §13`.
+> **Phase H complete. Phase I (I-0, I-1, I-2) complete. Phase J-0 (CloudWatch Evaluation Dashboard) complete.** J-1 and J-2 remain not started. See `PROJECT_SPEC.md §13`.
 
 ---
 
@@ -888,6 +888,8 @@ _call_converse(...) uses self._model_id as before
 
 Phase I-2 adds a clean offline comparison workflow that answers: **"Did the optimized configuration improve output quality and safety?"**
 
+> **Phase J-0 complete.** See Section 23 for the full J-0 architecture.
+
 It is a composition layer — not a new scoring engine — that reuses G-2 and H-0 work and adds only the minimal logic needed to compute, classify, and aggregate per-case deltas.
 
 ### Components
@@ -974,3 +976,92 @@ Safety status change is tracked independently of the verdict — a case can have
 - **Deterministic** — same inputs always produce the same results in the same order
 - **Missing-case tolerant** — missing files are recorded, not raised; only fully-paired cases are scored
 - **Safety tracking decoupled from quality verdict** — safety status change is a separate field, not folded into the verdict
+
+---
+
+## 23. Phase J-0 — CloudWatch Evaluation Dashboard
+
+Phase J-0 adds the **evaluation observability foundation**: a typed metric contract, a pure translation layer, a thin CloudWatch Metrics service wrapper, and a dashboard body builder.  It surfaces the outcomes of the completed F / G / H / I evaluation phases in a CloudWatch dashboard without requiring live AWS in tests.
+
+### Components
+
+| Component | Location | Description |
+|---|---|---|
+| **EvaluationDashboardConfig** | `app/utils/config.py` | Frozen dataclass with five fields: `enable_evaluation_metrics`, `metrics_namespace`, `dashboard_name`, `environment`, `aws_region`; off by default; raises `ValueError` on invalid enable flag |
+| **load_evaluation_dashboard_config()** | `app/utils/config.py` | Loads config from four `CASEOPS_*` env vars plus `AWS_REGION` |
+| **EvaluationMetricDatum** | `app/schemas/evaluation_models.py` | Pydantic model: typed CloudWatch Metrics datum contract; validated `unit` (Literal of all CloudWatch units), finite `value`, non-empty `metric_name`/`namespace`, optional `dimensions` |
+| **cloudwatch_metrics_service.py** | `app/services/cloudwatch_metrics_service.py` | Thin boto3 `put_metric_data` wrapper: `CloudWatchMetricsService`, `NoOpMetricsService`, `build_metrics_service` factory; injectable client; all exceptions swallowed; no-op on empty datum list or None client |
+| **metrics_translator.py** | `app/evaluation/metrics_translator.py` | Pure translation functions: `evaluation_run_summary_to_metrics()`, `comparison_summary_to_metrics()`, `safety_distribution_to_metrics()`; 14 named metric constants shared with dashboard builder |
+| **dashboard_builder.py** | `app/evaluation/dashboard_builder.py` | Pure builder: `build_evaluation_dashboard(config)` → valid CloudWatch dashboard body dict; `dashboard_body_to_json(body)` → compact JSON string for `put_dashboard` |
+| **Tests** | `tests/test_evaluation_dashboard_config.py`, `tests/test_cloudwatch_metrics_service.py`, `tests/test_metrics_translator.py`, `tests/test_dashboard_builder.py` | 113 tests: config loading/validation, service wrapper with mocked client, translation correctness, dashboard structure |
+
+### Observability flow
+
+```
+EvaluationRunSummary (F-2)     ComparisonSummary (I-2)     safety distribution (dict)
+        │                               │                               │
+        └───────────────────────────────┴───────────────────────────────┘
+                                        │
+                        metrics_translator.py (pure functions)
+                                        │
+                            list[EvaluationMetricDatum]
+                                        │
+                        CloudWatchMetricsService.publish_metrics()
+                                        │
+                            CloudWatch Metrics put_metric_data
+                                  (when enabled + AWS available)
+```
+
+```
+EvaluationDashboardConfig
+        │
+dashboard_builder.build_evaluation_dashboard(config)
+        │
+dashboard body dict  →  dashboard_body_to_json()  →  compact JSON
+        │
+CloudWatch put_dashboard(DashboardName=..., DashboardBody=...)
+  (when deployed; not required for tests or offline use)
+```
+
+### Dashboard widget layout (24-column CloudWatch grid)
+
+| y | x | Width | Type | Content |
+|---|---|---|---|---|
+| 0 | 0 | 24 | text | Title + environment/namespace context |
+| 2 | 0 | 12 | metric | Evaluation Quality — EvalPassCount, EvalFailCount, EvalTotalCases |
+| 2 | 12 | 12 | metric | Safety Status Distribution — SafetyAllow, SafetyWarn, SafetyEscalate, SafetyBlock |
+| 8 | 0 | 12 | metric | Baseline vs. Optimized — CmpImprovedCount, CmpRegressedCount, CmpUnchangedCount |
+| 8 | 12 | 12 | metric | Output Quality Scores — EvalAverageScore, CmpBaselinePassCount, CmpOptimizedPassCount |
+
+### Metric names emitted by the translator
+
+| Metric name | Source function | Unit | Description |
+|---|---|---|---|
+| `EvalPassCount` | `evaluation_run_summary_to_metrics` | Count | Cases that passed the quality threshold |
+| `EvalFailCount` | `evaluation_run_summary_to_metrics` | Count | Cases that failed the quality threshold |
+| `EvalTotalCases` | `evaluation_run_summary_to_metrics` | Count | Total cases in the evaluation run |
+| `EvalAverageScore` | `evaluation_run_summary_to_metrics` | None | Mean overall quality score (0.0–1.0) |
+| `SafetyAllow` | `safety_distribution_to_metrics` | Count | Outputs with SafetyStatus = allow |
+| `SafetyWarn` | `safety_distribution_to_metrics` | Count | Outputs with SafetyStatus = warn |
+| `SafetyEscalate` | `safety_distribution_to_metrics` | Count | Outputs with SafetyStatus = escalate |
+| `SafetyBlock` | `safety_distribution_to_metrics` | Count | Outputs with SafetyStatus = block |
+| `CmpImprovedCount` | `comparison_summary_to_metrics` | Count | Cases where optimized improved over baseline |
+| `CmpRegressedCount` | `comparison_summary_to_metrics` | Count | Cases where optimized regressed from baseline |
+| `CmpUnchangedCount` | `comparison_summary_to_metrics` | Count | Cases within the comparison epsilon |
+| `CmpAverageScoreDelta` | `comparison_summary_to_metrics` | None | Mean score delta (may be negative) |
+| `CmpBaselinePassCount` | `comparison_summary_to_metrics` | Count | Baseline outputs passing the quality threshold |
+| `CmpOptimizedPassCount` | `comparison_summary_to_metrics` | Count | Optimized outputs passing the quality threshold |
+
+All datums carry an `Environment` dimension from `config.environment`.
+
+### Design properties
+
+- **Off by default** — `CASEOPS_ENABLE_EVALUATION_METRICS=false`; no AWS calls without opt-in
+- **Separated responsibilities** — translator maps data, service emits data, builder defines shape; no responsibility crosses boundaries
+- **No live AWS in tests** — all 113 tests use mocked boto3 clients or no client at all
+- **Distinct from E-0 Logs** — `cloudwatch_metrics_service.py` uses the `cloudwatch` boto3 client and `put_metric_data`; completely separate from the CloudWatch Logs service in E-0
+- **Metric names are constants** — imported from `metrics_translator.py` by `dashboard_builder.py` so widget references stay consistent with what is emitted
+- **Fail-safe** — all boto3 exceptions in the service are caught and discarded; a CloudWatch outage cannot affect the evaluation pipeline
+- **Pure functions** — translator and builder have no I/O, no state, no AWS dependency; same inputs always produce the same outputs
+
+> **J-1 and J-2 remain not started.** See `PROJECT_SPEC.md §13`.

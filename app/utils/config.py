@@ -311,3 +311,70 @@ def load_guardrails_config() -> GuardrailsConfig:
         guardrail_version=guardrail_version,
         guardrail_trace=guardrail_trace,
     )
+
+
+# ── evaluation dashboard config (J-0) ────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class EvaluationDashboardConfig:
+    """
+    CloudWatch evaluation dashboard configuration (J-0).
+
+    Controls whether evaluation metrics are published to CloudWatch Metrics
+    and defines the namespace, dashboard name, and environment dimension for
+    the J-0 evaluation observability layer.
+
+    When enable_evaluation_metrics is False (default), no CloudWatch Metrics
+    calls are made and all metric emission is a no-op.  Enabling this requires
+    valid AWS credentials and the cloudwatch:PutMetricData permission.
+
+    Design:
+    - Off by default so offline evaluation runs are entirely AWS-free.
+    - metrics_namespace determines which CloudWatch namespace receives the data.
+    - environment is used as a CloudWatch dimension on all emitted datums so that
+      metrics from different environments remain separable in the dashboard.
+    - dashboard_name is the name passed to put_dashboard when deploying the
+      dashboard definition; it does not appear inside the dashboard body itself.
+    """
+
+    enable_evaluation_metrics: bool
+    metrics_namespace: str
+    dashboard_name: str
+    environment: str
+    aws_region: str
+
+
+def load_evaluation_dashboard_config() -> EvaluationDashboardConfig:
+    """
+    Load evaluation dashboard config from environment variables.
+
+    Environment variables:
+      CASEOPS_ENABLE_EVALUATION_METRICS   true | false  (default false)
+      CASEOPS_METRICS_NAMESPACE           (default CaseOps/Evaluation)
+      CASEOPS_EVALUATION_DASHBOARD_NAME   (default CaseOps-EvaluationDashboard)
+      CASEOPS_ENVIRONMENT                 (default development)
+      AWS_REGION                          (default us-east-1)
+
+    Raises ValueError when CASEOPS_ENABLE_EVALUATION_METRICS is not 'true' or
+    'false' so misconfigured deployments fail loudly at startup.
+    """
+    raw_enable = (
+        os.getenv("CASEOPS_ENABLE_EVALUATION_METRICS", "false").strip().lower()
+    )
+    if raw_enable not in ("true", "false"):
+        raise ValueError(
+            "CASEOPS_ENABLE_EVALUATION_METRICS must be 'true' or 'false', "
+            f"got: {raw_enable!r}"
+        )
+    enable_evaluation_metrics = raw_enable == "true"
+
+    return EvaluationDashboardConfig(
+        enable_evaluation_metrics=enable_evaluation_metrics,
+        metrics_namespace=os.getenv("CASEOPS_METRICS_NAMESPACE", "CaseOps/Evaluation"),
+        dashboard_name=os.getenv(
+            "CASEOPS_EVALUATION_DASHBOARD_NAME", "CaseOps-EvaluationDashboard"
+        ),
+        environment=os.getenv("CASEOPS_ENVIRONMENT", "development"),
+        aws_region=os.getenv("AWS_REGION", "us-east-1"),
+    )

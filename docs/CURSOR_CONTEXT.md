@@ -122,9 +122,9 @@ These are design contracts followed across all implementation work. They apply t
 
 ## Current Implementation Phase
 
-**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G — Retrieval & Output Quality COMPLETE | Phase H — Safety & Guardrails COMPLETE | Phase I — Optimization COMPLETE (I-0 Prompt Caching, I-1 Prompt Routing, I-2 Baseline vs. Optimized Comparison)**
+**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G — Retrieval & Output Quality COMPLETE | Phase H — Safety & Guardrails COMPLETE | Phase I — Optimization COMPLETE (I-0 Prompt Caching, I-1 Prompt Routing, I-2 Baseline vs. Optimized Comparison) | Phase J-0 — CloudWatch Evaluation Dashboard COMPLETE**
 
-> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 1759 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. All Phase F, G, H, and I layers are fully independent of this blocker.
+> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 1872 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. All Phase F, G, H, I, and J-0 layers are fully independent of this blocker.
 
 The repository is portfolio-ready, test-complete, and demo-friendly for the full MVP and Phase F evaluation scope.
 
@@ -240,9 +240,22 @@ The repository is portfolio-ready, test-complete, and demo-friendly for the full
   - `tests/test_comparison_models.py` — 35 tests: model contracts, field types, immutability, verdict values, edge cases
   - `tests/test_comparison_runner.py` — 73 tests: verdict classification, fixture-based case assertions, aggregate summary correctness, missing-case handling, determinism, no live AWS
   - 1759 total tests pass
+- **J-0** — CloudWatch evaluation dashboard:
+  - `app/utils/config.py` — `EvaluationDashboardConfig` frozen dataclass + `load_evaluation_dashboard_config()`; five fields (enable, namespace, dashboard_name, environment, aws_region); off by default; raises `ValueError` on invalid enable flag
+  - `app/schemas/evaluation_models.py` — `EvaluationMetricDatum` Pydantic model: validated CloudWatch unit (Literal), finite value enforcement, non-empty metric_name/namespace, optional dimensions dict; `_CW_UNIT` type alias
+  - `app/services/cloudwatch_metrics_service.py` — `CloudWatchMetricsService` (thin boto3 `put_metric_data` wrapper; injectable client; swallowed exceptions; no-op on None client or empty list), `NoOpMetricsService`, `build_metrics_service` factory; entirely separate from E-0 CloudWatch Logs service
+  - `app/evaluation/metrics_translator.py` — pure translation functions: `evaluation_run_summary_to_metrics()` (4 datums), `comparison_summary_to_metrics()` (6 datums), `safety_distribution_to_metrics()` (4 datums or empty); 14 metric name constants; `_DIMENSION_KEY = "Environment"`
+  - `app/evaluation/dashboard_builder.py` — pure builder: `build_evaluation_dashboard(config)` → 5-widget CloudWatch dashboard body dict (1 text + 4 metric widgets, 24-column grid); `dashboard_body_to_json()` → compact JSON for `put_dashboard`; no live AWS
+  - `.env.example` — J-0 section with 4 variables (`CASEOPS_ENABLE_EVALUATION_METRICS`, `CASEOPS_METRICS_NAMESPACE`, `CASEOPS_EVALUATION_DASHBOARD_NAME`, `CASEOPS_ENVIRONMENT`)
+  - `tests/test_evaluation_dashboard_config.py` — 28 tests: defaults, overrides, case-insensitivity, whitespace handling, invalid flag, immutability, types
+  - `tests/test_cloudwatch_metrics_service.py` — 31 tests: NoOp behavior, factory routing, put_metric_data payload, dimensions presence/absence, multiple datums, exception swallowing, negative values, no live AWS
+  - `tests/test_metrics_translator.py` — 37 tests: eval summary (11), comparison summary (13), safety distribution (13)
+  - `tests/test_dashboard_builder.py` — 37 tests: structure, grid constraints, widget properties, namespace/dimension propagation, JSON serialisability, determinism
+  - 1872 total tests pass
 
 ### Next step
-- **Phase J** — Observability & Reporting (J-0 CloudWatch evaluation dashboard, J-1 result artifacts, J-2 v2 hardening checkpoint); see `PROJECT_SPEC.md §13`
+- **Phase J-1** — Evaluation result artifact generation; see `PROJECT_SPEC.md §13`
+- **Phase J-2** — v2 hardening + optimization checkpoint; see `PROJECT_SPEC.md §13`
 
 ### Phase 2 roadmap
 
@@ -254,13 +267,14 @@ Phase 2 follows the same lettered-subphase naming convention as Phase 1 (A–E):
 | **G** | Retrieval & Output Quality | ✅ Complete | G-0 retrieval metrics ✅, G-1 citation quality ✅, G-2 output scoring ✅ |
 | **H** | Safety & Guardrails | ✅ Complete | H-0 safety contracts ✅, H-1 Bedrock Guardrails integration ✅, H-2 adversarial suite ✅ |
 | **I** | Optimization | ✅ Complete | I-0 prompt caching ✅, I-1 prompt routing ✅, I-2 baseline vs. optimized comparison ✅ |
-| **J** | Observability & Reporting | Not started | J-0 CloudWatch dashboard, J-1 result artifacts, J-2 v2 hardening checkpoint |
+| **J** | Observability & Reporting | In progress | J-0 CloudWatch dashboard ✅, J-1 result artifacts, J-2 v2 hardening checkpoint |
 
 See `PROJECT_SPEC.md §13` for the full Phase 2 subphase breakdown.
 
 ### Not yet implemented
 - Live Bedrock validation (blocked by AWS-side throttling — not a code issue)
-- Phase J: CloudWatch evaluation dashboard, result artifacts, v2 hardening checkpoint
+- Phase J-1: Evaluation result artifact generation
+- Phase J-2: v2 hardening + optimization checkpoint
 
 Reference: `ARCHITECTURE.md §5–9` for component flows. `PROJECT_SPEC.md §13` for the full subphase roadmap.
 
