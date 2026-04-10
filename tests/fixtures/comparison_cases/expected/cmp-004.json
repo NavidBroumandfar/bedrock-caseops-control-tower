@@ -1,0 +1,17 @@
+{
+  "_note": "I-2 expected output fixture — cmp-004. Both baseline and optimized have identical quality scores (unchanged verdict). Difference is confidence: baseline=0.35 triggers ESCALATE; optimized=0.91 produces ALLOW. Safety status changes independently of quality verdict.",
+  "case_id": "cmp-004",
+  "expected_severity": "High",
+  "expected_category": "Operational",
+  "expected_escalation_required": false,
+  "expected_summary_facts": ["quality system"],
+  "expected_recommendation_keywords": ["CAPA"],
+  "forbidden_claims": [],
+  "_citation_expectation": {
+    "case_id": "cmp-004",
+    "citations_required": true,
+    "expected_source_labels": [],
+    "required_excerpt_terms": [],
+    "minimum_citation_count": 1
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "_note": "I-2 expected output fixture — cmp-003. Baseline meets all expectations cleanly. Optimized introduces an unsupported claim, which fails the G-2 unsupported_claims_clean hard gate. Delta is negative; verdict is regressed.",
+  "case_id": "cmp-003",
+  "expected_severity": "High",
+  "expected_category": "Security",
+  "expected_escalation_required": true,
+  "expected_summary_facts": ["quality system"],
+  "expected_recommendation_keywords": ["CAPA"],
+  "forbidden_claims": [],
+  "_citation_expectation": {
+    "case_id": "cmp-003",
+    "citations_required": true,
+    "expected_source_labels": [],
+    "required_excerpt_terms": [],
+    "minimum_citation_count": 1
+  }
+}

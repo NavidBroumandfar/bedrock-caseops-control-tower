@@ -1,0 +1,28 @@
+{
+  "_note": "I-2 baseline fixture — cmp-002. Strong output that hits all expected dimensions. Summary contains 'quality system'. Recommendations contain 'CAPA'. G-2 overall = 1.0. Identical to the optimized output for this case.",
+  "document_id": "doc-cmp-002-baseline",
+  "source_filename": "fda_recall_01.md",
+  "source_type": "FDA",
+  "severity": "High",
+  "category": "Regulatory",
+  "summary": "The facility had significant quality system deficiencies across multiple manufacturing areas.",
+  "recommendations": [
+    "Initiate a comprehensive CAPA to address all identified quality gaps.",
+    "Submit written response to FDA within 15 business days."
+  ],
+  "citations": [
+    {
+      "source_id": "kb-src-fda-002",
+      "source_label": "FDA Recall Notice 2026",
+      "excerpt": "The product was recalled due to undeclared allergen contamination found during routine testing.",
+      "relevance_score": 0.88
+    }
+  ],
+  "confidence_score": 0.88,
+  "unsupported_claims": [],
+  "escalation_required": true,
+  "escalation_reason": "Severity is High and product recall is active.",
+  "validated_by": "validation-agent-v1",
+  "session_id": "sess-cmp-002-baseline",
+  "timestamp": "2026-04-10T10:01:00Z"
+}

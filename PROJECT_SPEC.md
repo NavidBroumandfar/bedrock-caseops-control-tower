@@ -2,7 +2,7 @@
 
 **Version:** 0.2
 **Last Updated:** 2026-04-11
-**Status:** Phase 1 Complete — Phase 2 In Progress (Phase F complete, Phase G complete, Phase H complete, Phase I-0 complete, Phase I-1 complete)
+**Status:** Phase 1 Complete — Phase 2 In Progress (Phase F complete, Phase G complete, Phase H complete, Phase I complete)
 
 ---
 
@@ -185,7 +185,7 @@ The following are explicitly excluded from the MVP to keep scope manageable:
 The MVP engineering scope is complete. Success criteria are tracked in two categories:
 
 **Engineering / repo completion (complete):**
-- [x] The codebase passes unit tests for intake, schema validation, and escalation logic without live AWS calls — 1651 tests pass
+- [x] The codebase passes unit tests for intake, schema validation, and escalation logic without live AWS calls — 1759 tests pass
 - [x] Escalation is triggered correctly for a document meeting the escalation criteria — covered by unit tests
 - [x] The Validation Agent detects at least one unsupported claim in a synthetic adversarial test case — covered by unit tests
 - [x] All agent steps are logged with document and session IDs — structured logging implemented (E-0) and tested
@@ -217,11 +217,11 @@ The MVP engineering scope is complete. Success criteria are tracked in two categ
 
 **Exit Criteria:** An operator can run `python -m app.cli run <file>` and produce a valid, grounded JSON output end-to-end.
 
-**Status:** Engineering scope complete (all subphases A–E-2 implemented and test-complete). Repository is portfolio-ready. Live Bedrock end-to-end validation remains pending due to AWS-side Titan Text Embeddings V2 throttling/runtime issues — this is an external blocker, not a code issue. Phase 2 phases F, G, H, I-0, and I-1 are also complete.
+**Status:** Engineering scope complete (all subphases A–E-2 implemented and test-complete). Repository is portfolio-ready. Live Bedrock end-to-end validation remains pending due to AWS-side Titan Text Embeddings V2 throttling/runtime issues — this is an external blocker, not a code issue. Phase 2 phases F, G, H, and I are also complete.
 
 #### Phase 1 Subphase Roadmap
 
-> **Current status:** Phase 1 complete — all subphases (A, B, C, D, E-0, E-1, E-2) implemented in code and test-complete. Phase 2 in progress — Phase F (Evaluation Foundation) complete; Phase G (Retrieval & Output Quality) complete; Phase H (Safety & Guardrails) complete; Phase I-0 (Prompt Caching) complete; Phase I-1 (Prompt Routing) complete; I-2 is next.
+> **Current status:** Phase 1 complete — all subphases (A, B, C, D, E-0, E-1, E-2) implemented in code and test-complete. Phase 2 in progress — Phase F (Evaluation Foundation) complete; Phase G (Retrieval & Output Quality) complete; Phase H (Safety & Guardrails) complete; Phase I (Optimization) complete (I-0 Prompt Caching, I-1 Prompt Routing, I-2 Baseline vs. Optimized Comparison). Phase J (Observability & Reporting) is next.
 >
 > **Live Bedrock runtime validation is pending:** All code is implemented correctly. Live AWS Knowledge Base end-to-end validation remains blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. This is an external blocker, not a code issue.
 
@@ -255,7 +255,7 @@ The MVP engineering scope is complete. Success criteria are tracked in two categ
 
 ### Phase 2 — v2: Evaluation and Optimization
 
-**Status:** In progress — Phase F complete, Phase G complete, Phase H complete, Phase I-0 complete, Phase I-1 complete.
+**Status:** In progress — Phase F complete, Phase G complete, Phase H complete, Phase I complete (I-0 through I-2).
 
 **Goal:** Make the system measurably better and observable — through structured evaluation, safety controls, optimization, and production-grade reporting.
 
@@ -280,10 +280,10 @@ The MVP engineering scope is complete. Success criteria are tracked in two categ
   - H-1 Bedrock Guardrails integration ✅
   - H-2 Adversarial and edge-case evaluation suite ✅
 
-- **Phase I — Optimization**
+- **Phase I — Optimization** ✅
   - I-0 Prompt caching integration ✅
   - I-1 Prompt routing strategy ✅
-  - I-2 Baseline vs optimized comparison workflow
+  - I-2 Baseline vs. optimized comparison workflow ✅
 
 - **Phase J — Observability & Reporting**
   - J-0 CloudWatch evaluation dashboard

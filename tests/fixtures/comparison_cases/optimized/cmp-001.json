@@ -1,0 +1,28 @@
+{
+  "_note": "I-2 optimized fixture — cmp-001. Summary NOW contains 'quality system'. Recommendations NOW contain 'CAPA'. All F-2 dimensions score 1.0. G-2 overall = 1.0. Delta vs baseline is positive. Verdict: improved.",
+  "document_id": "doc-cmp-001-optimized",
+  "source_filename": "fda_warning_letter_01.md",
+  "source_type": "FDA",
+  "severity": "High",
+  "category": "Regulatory",
+  "summary": "The FDA issued a warning letter citing significant quality system deficiencies at the facility, including failures in CAPA procedures and cleaning validation.",
+  "recommendations": [
+    "Initiate a comprehensive CAPA to address all identified quality system gaps.",
+    "Submit a written response to the FDA within 15 business days."
+  ],
+  "citations": [
+    {
+      "source_id": "kb-src-fda-001",
+      "source_label": "FDA Warning Letter 2026",
+      "excerpt": "Your facility failed to establish written procedures for equipment maintenance and cleaning validation.",
+      "relevance_score": 0.94
+    }
+  ],
+  "confidence_score": 0.95,
+  "unsupported_claims": [],
+  "escalation_required": true,
+  "escalation_reason": "Severity is High and significant regulatory non-compliance detected.",
+  "validated_by": "validation-agent-v1",
+  "session_id": "sess-cmp-001-optimized",
+  "timestamp": "2026-04-10T10:00:30Z"
+}

@@ -1,0 +1,17 @@
+{
+  "_note": "I-2 expected output fixture — cmp-002. Both baseline and optimized outputs are identical strong outputs that meet all expectations. Delta is zero; verdict is unchanged.",
+  "case_id": "cmp-002",
+  "expected_severity": "High",
+  "expected_category": "Regulatory",
+  "expected_escalation_required": true,
+  "expected_summary_facts": ["quality system"],
+  "expected_recommendation_keywords": ["CAPA"],
+  "forbidden_claims": [],
+  "_citation_expectation": {
+    "case_id": "cmp-002",
+    "citations_required": true,
+    "expected_source_labels": [],
+    "required_excerpt_terms": [],
+    "minimum_citation_count": 1
+  }
+}

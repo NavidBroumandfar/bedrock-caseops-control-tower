@@ -3,9 +3,9 @@
 **Version:** 0.2
 **Last Updated:** 2026-04-11
 
-> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G (Retrieval & Output Quality) complete. Phase H (Safety & Guardrails) complete. Phase I-0 (Prompt Caching) complete. Phase I-1 (Prompt Routing) complete.**
+> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G (Retrieval & Output Quality) complete. Phase H (Safety & Guardrails) complete. Phase I (Optimization) complete — I-0 (Prompt Caching), I-1 (Prompt Routing), I-2 (Baseline vs. Optimized Comparison).**
 >
-> **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Phase F adds a fully local, offline evaluation layer: typed evaluation contracts and schemas (F-0), a curated evaluation dataset with 7 cases and reference expected outputs (F-1), and an offline evaluation harness with dataset loader, deterministic scorer, and scoring runner (F-2). Phase G-0 adds offline retrieval quality metrics: three deterministic metrics scored against F-1 retrieval expectations, with fixture-based candidate input and 55 new tests. Phase G-1 adds offline citation quality metrics: four deterministic metrics scored against CitationExpectation references, with five candidate output fixtures and 64 new tests. Phase G-2 adds a composite output-quality scorer that composes F-2 and G-1 sub-scores plus three final-output-only checks (summary_nonempty, recommendations_present_when_expected, unsupported_claims_clean), with 46 new tests. Phase H-0 adds typed safety contracts (SafetyIssue, SafetyAssessment, FailurePolicy) and a local deterministic safety policy evaluator (evaluate_safety, evaluate_safety_from_raw) with six policy rules and 144 new tests. Phase H-1 adds the Bedrock Guardrails integration foundation: a normalized GuardrailAssessmentResult contract (guardrail_models.py), a thin GuardrailsService wrapper for the ApplyGuardrail API (guardrails_service.py), a Guardrails → H-0 safety adapter (guardrails_adapter.py), GuardrailsConfig config block, and two new safety_models enum extensions (GUARDRAILS source, GUARDRAIL_INTERVENTION code), with 134 new tests. Phase H-2 adds the adversarial and edge-case safety evaluation suite: 10 curated fixtures covering schema failures, unsupported claims, missing citations, low confidence, empty retrieval, escalation-required, Guardrails intervention, combined blocking+escalation priority, and clean passing cases; plus a narrow safety suite runner (safety_suite.py) with SafetyCaseFixture, SafetyCaseResult, SafetySuiteSummary dataclasses and run_safety_suite() batch executor; 91 new tests. Phase I-0 adds prompt caching integration: PromptCachingConfig dataclass and loader (config.py), apply_prompt_caching() pure function (prompt_cache.py), optional caching_config wiring in BedrockAnalysisService and BedrockValidationService, .env.example section, and 63 new tests covering config defaults/overrides/validation/immutability, disabled and enabled request-shaping, service integration, and no-live-AWS confirmation. Phase I-1 adds prompt routing: PromptRoutingConfig dataclass and loader (config.py), pure resolve_model_id() routing function (prompt_router.py), optional routing_config wiring in both Bedrock services (resolution at construction time via "analysis" and "validation" routes), .env.example section, and 63 new tests covering config defaults/overrides/case-insensitivity/invalid-flag/immutability, disabled and enabled routing paths, analysis and validation route resolution, priority chain (route override → routing default → caller fallback), service integration, no-regression with routing off, and no live AWS dependency. All 1651 unit and evaluation tests pass without live AWS calls.
+> **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Phase F adds a fully local, offline evaluation layer: typed evaluation contracts and schemas (F-0), a curated evaluation dataset with 7 cases and reference expected outputs (F-1), and an offline evaluation harness with dataset loader, deterministic scorer, and scoring runner (F-2). Phase G-0 adds offline retrieval quality metrics: three deterministic metrics scored against F-1 retrieval expectations, with fixture-based candidate input and 55 new tests. Phase G-1 adds offline citation quality metrics: four deterministic metrics scored against CitationExpectation references, with five candidate output fixtures and 64 new tests. Phase G-2 adds a composite output-quality scorer that composes F-2 and G-1 sub-scores plus three final-output-only checks (summary_nonempty, recommendations_present_when_expected, unsupported_claims_clean), with 46 new tests. Phase H-0 adds typed safety contracts (SafetyIssue, SafetyAssessment, FailurePolicy) and a local deterministic safety policy evaluator (evaluate_safety, evaluate_safety_from_raw) with six policy rules and 144 new tests. Phase H-1 adds the Bedrock Guardrails integration foundation: a normalized GuardrailAssessmentResult contract (guardrail_models.py), a thin GuardrailsService wrapper for the ApplyGuardrail API (guardrails_service.py), a Guardrails → H-0 safety adapter (guardrails_adapter.py), GuardrailsConfig config block, and two new safety_models enum extensions (GUARDRAILS source, GUARDRAIL_INTERVENTION code), with 134 new tests. Phase H-2 adds the adversarial and edge-case safety evaluation suite: 10 curated fixtures covering schema failures, unsupported claims, missing citations, low confidence, empty retrieval, escalation-required, Guardrails intervention, combined blocking+escalation priority, and clean passing cases; plus a narrow safety suite runner (safety_suite.py) with SafetyCaseFixture, SafetyCaseResult, SafetySuiteSummary dataclasses and run_safety_suite() batch executor; 91 new tests. Phase I-0 adds prompt caching integration: PromptCachingConfig dataclass and loader (config.py), apply_prompt_caching() pure function (prompt_cache.py), optional caching_config wiring in BedrockAnalysisService and BedrockValidationService, .env.example section, and 63 new tests covering config defaults/overrides/validation/immutability, disabled and enabled request-shaping, service integration, and no-live-AWS confirmation. Phase I-1 adds prompt routing: PromptRoutingConfig dataclass and loader (config.py), pure resolve_model_id() routing function (prompt_router.py), optional routing_config wiring in both Bedrock services (resolution at construction time via "analysis" and "validation" routes), .env.example section, and 63 new tests covering config defaults/overrides/case-insensitivity/invalid-flag/immutability, disabled and enabled routing paths, analysis and validation route resolution, priority chain (route override → routing default → caller fallback), service integration, no-regression with routing off, and no live AWS dependency. Phase I-2 adds the baseline vs. optimized comparison workflow: ComparisonVerdict Literal type in evaluation_models.py; app/evaluation/comparison_runner.py with ComparisonCaseResult, ComparisonSummary, and ComparisonRunResult frozen dataclasses and run_comparison() runner; the runner composes G-2 score_output_quality() and H-0 evaluate_safety() to score both sides, computes per-case score deltas and safety status changes, classifies verdicts (improved/regressed/unchanged) using COMPARISON_DELTA_EPSILON, and aggregates a ComparisonSummary; 4 paired fixtures in tests/fixtures/comparison_cases/ covering improved, unchanged, regressed, and safety-change scenarios; 108 new tests. All 1759 unit and evaluation tests pass without live AWS calls.
 >
 > **Live Bedrock runtime validation is pending:** Live AWS Knowledge Base end-to-end validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. The architecture and all implementation are complete and correct — this is not a code issue. Live validation will be completed when the AWS-side blocker is resolved. The Phase F evaluation layer is fully independent of this blocker.
 
@@ -880,4 +880,97 @@ _call_converse(...) uses self._model_id as before
 | `CASEOPS_ROUTING_ANALYSIS_MODEL_ID` | `""` | Model ID used exclusively for analysis calls when routing is enabled |
 | `CASEOPS_ROUTING_VALIDATION_MODEL_ID` | `""` | Model ID used exclusively for validation calls when routing is enabled |
 
-> **I-2 not started.** I-2 will add a baseline vs. optimized comparison workflow. See `PROJECT_SPEC.md §13`.
+> **Phase I complete.** Phase J (Observability & Reporting) is next. See `PROJECT_SPEC.md §13`.
+
+---
+
+## 22. Phase I-2 — Baseline vs. Optimized Comparison Workflow
+
+Phase I-2 adds a clean offline comparison workflow that answers: **"Did the optimized configuration improve output quality and safety?"**
+
+It is a composition layer — not a new scoring engine — that reuses G-2 and H-0 work and adds only the minimal logic needed to compute, classify, and aggregate per-case deltas.
+
+### Components
+
+| Component | Location | Description |
+|---|---|---|
+| **ComparisonVerdict type** | `app/schemas/evaluation_models.py` (extended) | Literal type alias `"improved"` / `"regressed"` / `"unchanged"` |
+| **Comparison runner** | `app/evaluation/comparison_runner.py` | `run_comparison()` runner; `ComparisonCaseResult`, `ComparisonSummary`, `ComparisonRunResult` frozen dataclasses; `ComparisonAlignmentError` |
+| **Comparison fixtures** | `tests/fixtures/comparison_cases/` | 4 paired fixture sets: cases/, expected/, baseline/, optimized/ |
+| **Tests** | `tests/test_comparison_models.py`, `tests/test_comparison_runner.py` | 108 tests covering model contracts, verdict classification, delta correctness, improved/regressed/unchanged cases, missing-case handling, aggregate summary, determinism, no live AWS |
+
+### Comparison flow
+
+```
+run_comparison(baseline_dir, optimized_dir, dataset_dir)
+     │
+     ▼ load_dataset() — EvaluationCase + ExpectedOutput pairs
+     │ load_citation_expectations() — CitationExpectation per case
+     │
+     ▼ scan baseline_dir and optimized_dir → dict[case_id, Path]
+     │
+     ▼ for each case in dataset:
+     │   if missing from either dir → record in missing_*_case_ids; skip
+     │
+     ├── score_output_quality(baseline, expected, citation_exp)  [G-2]
+     ├── score_output_quality(optimized, expected, citation_exp) [G-2]
+     ├── evaluate_safety(baseline, policy)                       [H-0]
+     ├── evaluate_safety(optimized, policy)                      [H-0]
+     │
+     ▼ compute:
+     │   score_delta = optimized_score − baseline_score
+     │   verdict = "improved" | "regressed" | "unchanged"  (COMPARISON_DELTA_EPSILON gate)
+     │   safety_status_changed = baseline_status ≠ optimized_status
+     │
+     ▼ ComparisonCaseResult (per case)
+     │
+     ▼ ComparisonSummary (aggregate):
+     │   baseline_average_score vs. optimized_average_score
+     │   average_score_delta
+     │   baseline_pass_count vs. optimized_pass_count
+     │   baseline_safety_distribution vs. optimized_safety_distribution
+     │   improved_case_ids / regressed_case_ids / unchanged_case_ids
+     │
+     ▼ ComparisonRunResult
+```
+
+### Input contract
+
+```
+baseline_dir/
+  {case_id}.json   ← CaseOutput JSON, one file per case
+optimized_dir/
+  {case_id}.json   ← CaseOutput JSON, one file per case
+dataset_dir/
+  cases/           ← EvaluationCase JSONs (shared expected reference)
+  expected/        ← ExpectedOutput + optional _citation_expectation blocks
+```
+
+### Verdict classification
+
+```
+score_delta > COMPARISON_DELTA_EPSILON   →  "improved"
+score_delta < -COMPARISON_DELTA_EPSILON  →  "regressed"
+|score_delta| ≤ COMPARISON_DELTA_EPSILON →  "unchanged"
+
+COMPARISON_DELTA_EPSILON = 0.005 (absorbs floating-point noise)
+```
+
+Safety status change is tracked independently of the verdict — a case can have an "unchanged" quality verdict while its safety status changes (as demonstrated by the cmp-004 fixture).
+
+### Fixture case mix
+
+| File | Case ID | Expected verdict | Scenario |
+|---|---|---|---|
+| `baseline/cmp-001.json` + `optimized/cmp-001.json` | `cmp-001` | improved | Optimized hits all expected facts and keywords; baseline misses both |
+| `baseline/cmp-002.json` + `optimized/cmp-002.json` | `cmp-002` | unchanged | Identical outputs; delta = 0.0 |
+| `baseline/cmp-003.json` + `optimized/cmp-003.json` | `cmp-003` | regressed | Optimized introduces unsupported claims; G-2 hard gate fails |
+| `baseline/cmp-004.json` + `optimized/cmp-004.json` | `cmp-004` | unchanged (safety changes) | Same quality score; baseline confidence=0.35 → ESCALATE; optimized confidence=0.91 → ALLOW |
+
+### Design properties
+
+- **Composition over duplication** — calls `score_output_quality()` and `evaluate_safety()` directly; no scoring logic is duplicated
+- **No live AWS dependency** — no boto3, no Bedrock client, no Converse inference
+- **Deterministic** — same inputs always produce the same results in the same order
+- **Missing-case tolerant** — missing files are recorded, not raised; only fully-paired cases are scored
+- **Safety tracking decoupled from quality verdict** — safety status change is a separate field, not folded into the verdict

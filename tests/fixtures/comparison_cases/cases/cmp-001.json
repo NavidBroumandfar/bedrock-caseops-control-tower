@@ -1,0 +1,9 @@
+{
+  "_note": "I-2 comparison fixture — cmp-001. Optimized output clearly improves over baseline: baseline misses expected summary facts and recommendation keywords; optimized hits all of them. Verdict: improved.",
+  "case_id": "cmp-001",
+  "source_filename": "fda_warning_letter_01.md",
+  "source_type": "FDA",
+  "document_date": "2026-04-01",
+  "case_description": "Comparison test case: optimized output improves over baseline by covering required summary facts and recommendation keywords.",
+  "tags": ["comparison", "improved"]
+}

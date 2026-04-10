@@ -1,0 +1,28 @@
+{
+  "_note": "I-2 baseline fixture — cmp-001. Summary does NOT contain 'quality system'. Recommendations do NOT contain 'CAPA'. Both fact and keyword dimensions score 0.0 in F-2. G-2 overall is lower than optimized. Safety: ESCALATE (escalation_required=true).",
+  "document_id": "doc-cmp-001-baseline",
+  "source_filename": "fda_warning_letter_01.md",
+  "source_type": "FDA",
+  "severity": "High",
+  "category": "Regulatory",
+  "summary": "The facility was found to have issues with its manufacturing procedures.",
+  "recommendations": [
+    "Review all manufacturing procedures.",
+    "Submit a response to the FDA within 15 days."
+  ],
+  "citations": [
+    {
+      "source_id": "kb-src-fda-001",
+      "source_label": "FDA Warning Letter 2026",
+      "excerpt": "Your facility failed to establish written procedures for equipment maintenance.",
+      "relevance_score": 0.81
+    }
+  ],
+  "confidence_score": 0.80,
+  "unsupported_claims": [],
+  "escalation_required": true,
+  "escalation_reason": "Severity is High and escalation is required per regulatory protocol.",
+  "validated_by": "validation-agent-v1",
+  "session_id": "sess-cmp-001-baseline",
+  "timestamp": "2026-04-10T10:00:00Z"
+}

@@ -1,0 +1,17 @@
+{
+  "_note": "I-2 expected output fixture — cmp-001. Requires summary to contain 'quality system' fact and recommendations to include 'CAPA' keyword. Baseline misses both; optimized hits both.",
+  "case_id": "cmp-001",
+  "expected_severity": "High",
+  "expected_category": "Regulatory",
+  "expected_escalation_required": true,
+  "expected_summary_facts": ["quality system"],
+  "expected_recommendation_keywords": ["CAPA"],
+  "forbidden_claims": [],
+  "_citation_expectation": {
+    "case_id": "cmp-001",
+    "citations_required": true,
+    "expected_source_labels": [],
+    "required_excerpt_terms": [],
+    "minimum_citation_count": 1
+  }
+}

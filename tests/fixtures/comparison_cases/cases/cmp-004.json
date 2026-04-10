@@ -1,0 +1,9 @@
+{
+  "_note": "I-2 comparison fixture — cmp-004. Both outputs have the same quality score (unchanged verdict), but baseline has low confidence (0.35) triggering safety ESCALATE while optimized has high confidence (0.91) resulting in safety ALLOW. Demonstrates that safety change tracking is independent of score-based verdict.",
+  "case_id": "cmp-004",
+  "source_filename": "sample_notice.txt",
+  "source_type": "Incident",
+  "document_date": "2026-04-04",
+  "case_description": "Comparison test case: quality score is identical (unchanged verdict), but safety status changes from ESCALATE to ALLOW due to improved confidence score.",
+  "tags": ["comparison", "unchanged", "safety-change"]
+}

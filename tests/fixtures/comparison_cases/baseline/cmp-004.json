@@ -1,0 +1,28 @@
+{
+  "_note": "I-2 baseline fixture — cmp-004. Strong quality output that hits all expected dimensions (quality score = 1.0). BUT confidence_score=0.35 is below the H-0 low_confidence_threshold of 0.6, which triggers SafetyStatus.ESCALATE. escalation_required=false so no escalation policy issue — only low confidence drives the safety status.",
+  "document_id": "doc-cmp-004-baseline",
+  "source_filename": "sample_notice.txt",
+  "source_type": "Incident",
+  "severity": "High",
+  "category": "Operational",
+  "summary": "The incident report identified significant quality system failures in the operational workflow.",
+  "recommendations": [
+    "Initiate a CAPA process to address all identified operational gaps.",
+    "Conduct a root cause analysis within 30 days."
+  ],
+  "citations": [
+    {
+      "source_id": "kb-src-incident-001",
+      "source_label": "Incident Report 2026",
+      "excerpt": "The incident was caused by a failure in the standard operating procedure for equipment calibration.",
+      "relevance_score": 0.78
+    }
+  ],
+  "confidence_score": 0.35,
+  "unsupported_claims": [],
+  "escalation_required": false,
+  "escalation_reason": null,
+  "validated_by": "validation-agent-v1",
+  "session_id": "sess-cmp-004-baseline",
+  "timestamp": "2026-04-10T10:03:00Z"
+}

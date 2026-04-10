@@ -1,0 +1,9 @@
+{
+  "_note": "I-2 comparison fixture — cmp-002. Baseline and optimized outputs are identical strong outputs. Both score 1.0. Verdict: unchanged.",
+  "case_id": "cmp-002",
+  "source_filename": "fda_recall_01.md",
+  "source_type": "FDA",
+  "document_date": "2026-04-02",
+  "case_description": "Comparison test case: baseline and optimized are identical strong outputs — no measurable delta. Verdict: unchanged.",
+  "tags": ["comparison", "unchanged"]
+}

@@ -1,0 +1,28 @@
+{
+  "_note": "I-2 optimized fixture — cmp-004. Same quality output as baseline (quality score = 1.0, verdict = unchanged). BUT confidence_score=0.91 is now above the 0.6 threshold — no low_confidence issue, no escalation_required flag, so safety = ALLOW. Safety status changed from ESCALATE (baseline) to ALLOW (optimized).",
+  "document_id": "doc-cmp-004-optimized",
+  "source_filename": "sample_notice.txt",
+  "source_type": "Incident",
+  "severity": "High",
+  "category": "Operational",
+  "summary": "The incident report identified significant quality system failures in the operational workflow.",
+  "recommendations": [
+    "Initiate a CAPA process to address all identified operational gaps.",
+    "Conduct a root cause analysis within 30 days."
+  ],
+  "citations": [
+    {
+      "source_id": "kb-src-incident-001",
+      "source_label": "Incident Report 2026",
+      "excerpt": "The incident was caused by a failure in the standard operating procedure for equipment calibration.",
+      "relevance_score": 0.78
+    }
+  ],
+  "confidence_score": 0.91,
+  "unsupported_claims": [],
+  "escalation_required": false,
+  "escalation_reason": null,
+  "validated_by": "validation-agent-v1",
+  "session_id": "sess-cmp-004-optimized",
+  "timestamp": "2026-04-10T10:03:30Z"
+}

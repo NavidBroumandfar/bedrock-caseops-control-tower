@@ -122,9 +122,9 @@ These are design contracts followed across all implementation work. They apply t
 
 ## Current Implementation Phase
 
-**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G — Retrieval & Output Quality COMPLETE | Phase H — Safety & Guardrails COMPLETE | Phase I-0 — Prompt Caching COMPLETE | Phase I-1 — Prompt Routing COMPLETE**
+**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G — Retrieval & Output Quality COMPLETE | Phase H — Safety & Guardrails COMPLETE | Phase I — Optimization COMPLETE (I-0 Prompt Caching, I-1 Prompt Routing, I-2 Baseline vs. Optimized Comparison)**
 
-> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 1651 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. The Phase F, G, H, I-0, and I-1 layers are fully independent of this blocker.
+> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 1759 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. All Phase F, G, H, and I layers are fully independent of this blocker.
 
 The repository is portfolio-ready, test-complete, and demo-friendly for the full MVP and Phase F evaluation scope.
 
@@ -233,9 +233,16 @@ The repository is portfolio-ready, test-complete, and demo-friendly for the full
   - `tests/test_prompt_routing_config.py` — 25 tests: defaults, overrides, case-insensitivity, invalid flag, immutability, return type
   - `tests/test_prompt_router.py` — 38 tests: disabled routing, analysis route, validation route, fallback chain, determinism, service integration (analysis + validation), no-regression, no live AWS
   - 1651 total tests pass
+- **I-2** — Baseline vs. optimized comparison workflow:
+  - `app/schemas/evaluation_models.py` — `ComparisonVerdict` Literal type alias (`"improved"` / `"regressed"` / `"unchanged"`) added
+  - `app/evaluation/comparison_runner.py` — offline comparison runner; `ComparisonCaseResult`, `ComparisonSummary`, `ComparisonRunResult` frozen dataclasses; `run_comparison(baseline_dir, optimized_dir, dataset_dir)` composes G-2 `score_output_quality()` and H-0 `evaluate_safety()` to score both sides; per-case score delta + verdict classification using `COMPARISON_DELTA_EPSILON`; safety status change tracking independent of quality verdict; missing cases tracked, not raised
+  - `tests/fixtures/comparison_cases/` — 4 paired fixture sets (cases/, expected/, baseline/, optimized/): improved (cmp-001), unchanged (cmp-002), regressed (cmp-003), unchanged-with-safety-change (cmp-004)
+  - `tests/test_comparison_models.py` — 35 tests: model contracts, field types, immutability, verdict values, edge cases
+  - `tests/test_comparison_runner.py` — 73 tests: verdict classification, fixture-based case assertions, aggregate summary correctness, missing-case handling, determinism, no live AWS
+  - 1759 total tests pass
 
 ### Next step
-- **Phase I-2** — Baseline vs. optimized comparison workflow; see `PROJECT_SPEC.md §13`
+- **Phase J** — Observability & Reporting (J-0 CloudWatch evaluation dashboard, J-1 result artifacts, J-2 v2 hardening checkpoint); see `PROJECT_SPEC.md §13`
 
 ### Phase 2 roadmap
 
@@ -246,14 +253,14 @@ Phase 2 follows the same lettered-subphase naming convention as Phase 1 (A–E):
 | **F** | Evaluation Foundation | ✅ Complete | F-0 evaluation contracts + schemas, F-1 reference dataset, F-2 scoring runner |
 | **G** | Retrieval & Output Quality | ✅ Complete | G-0 retrieval metrics ✅, G-1 citation quality ✅, G-2 output scoring ✅ |
 | **H** | Safety & Guardrails | ✅ Complete | H-0 safety contracts ✅, H-1 Bedrock Guardrails integration ✅, H-2 adversarial suite ✅ |
-| **I** | Optimization | I-0 ✅, I-1 ✅ | I-0 prompt caching ✅, I-1 prompt routing ✅, I-2 baseline vs optimized comparison |
+| **I** | Optimization | ✅ Complete | I-0 prompt caching ✅, I-1 prompt routing ✅, I-2 baseline vs. optimized comparison ✅ |
 | **J** | Observability & Reporting | Not started | J-0 CloudWatch dashboard, J-1 result artifacts, J-2 v2 hardening checkpoint |
 
 See `PROJECT_SPEC.md §13` for the full Phase 2 subphase breakdown.
 
 ### Not yet implemented
 - Live Bedrock validation (blocked by AWS-side throttling — not a code issue)
-- Phase I–J: prompt optimization, CloudWatch reporting
+- Phase J: CloudWatch evaluation dashboard, result artifacts, v2 hardening checkpoint
 
 Reference: `ARCHITECTURE.md §5–9` for component flows. `PROJECT_SPEC.md §13` for the full subphase roadmap.
 

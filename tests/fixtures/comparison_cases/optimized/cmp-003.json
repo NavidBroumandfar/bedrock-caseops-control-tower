@@ -1,0 +1,28 @@
+{
+  "_note": "I-2 optimized fixture — cmp-003. INTRODUCES an unsupported claim. G-2 unsupported_claims_clean hard gate FAILS. G-2 pass_fail=False. G-2 overall score is lower than baseline (0.8 vs 1.0). Delta is negative. Verdict: regressed. Safety: BLOCK (unsupported claim is blocking under DEFAULT_POLICY max_unsupported_claims_before_block=0).",
+  "document_id": "doc-cmp-003-optimized",
+  "source_filename": "cisa_advisory_01.md",
+  "source_type": "CISA",
+  "severity": "High",
+  "category": "Security",
+  "summary": "The advisory describes critical quality system weaknesses in industrial control systems that could allow unauthorized access.",
+  "recommendations": [
+    "Initiate a CAPA to address the identified control system vulnerabilities.",
+    "Apply all available patches and update firmware to the latest version."
+  ],
+  "citations": [
+    {
+      "source_id": "kb-src-cisa-001",
+      "source_label": "CISA Advisory 2026",
+      "excerpt": "Affected versions of the software contain a critical buffer overflow vulnerability.",
+      "relevance_score": 0.90
+    }
+  ],
+  "confidence_score": 0.87,
+  "unsupported_claims": ["This vulnerability has been exploited in over 500 known incidents globally."],
+  "escalation_required": true,
+  "escalation_reason": "Critical ICS vulnerability requires immediate escalation.",
+  "validated_by": "validation-agent-v1",
+  "session_id": "sess-cmp-003-optimized",
+  "timestamp": "2026-04-10T10:02:30Z"
+}

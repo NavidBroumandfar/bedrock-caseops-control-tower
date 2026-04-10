@@ -1,0 +1,9 @@
+{
+  "_note": "I-2 comparison fixture — cmp-003. Baseline is a clean strong output. Optimized introduces unsupported claims, which fails the G-2 hard gate and lowers the overall score. Verdict: regressed.",
+  "case_id": "cmp-003",
+  "source_filename": "cisa_advisory_01.md",
+  "source_type": "CISA",
+  "document_date": "2026-04-03",
+  "case_description": "Comparison test case: optimized output regresses by introducing unsupported claims not present in baseline. G-2 hard gate fails. Verdict: regressed.",
+  "tags": ["comparison", "regressed"]
+}

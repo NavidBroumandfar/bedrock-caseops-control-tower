@@ -13,15 +13,26 @@ DimensionScore           — a single scored metric dimension; reused across all
 EvaluationResult         — the evaluated result of one pipeline run against one reference case.
 EvaluationRunSummary     — aggregated results across all cases in one evaluation run.
 OutputQualityScoringResult — G-2 composite output-quality result combining F-2 and G-1 sub-scores.
+ComparisonVerdict        — I-2 verdict classifying how a case changed between baseline and optimized.
 """
 
 import math
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, field_validator, model_validator
 
 from app.schemas.analysis_models import SeverityLevel
+
+
+# ── ComparisonVerdict ──────────────────────────────────────────────────────────
+
+# Verdict classifying how a case changed between baseline and optimized.
+# Used by the I-2 comparison runner and stored in ComparisonCaseResult.
+#   "improved"  — optimized score exceeds baseline score by more than the comparison epsilon.
+#   "regressed" — optimized score is below baseline score by more than the comparison epsilon.
+#   "unchanged" — the absolute delta is within the comparison epsilon; no meaningful change.
+ComparisonVerdict = Literal["improved", "regressed", "unchanged"]
 
 
 # ── EvaluationCase ─────────────────────────────────────────────────────────────
