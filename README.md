@@ -250,7 +250,7 @@ pip install -r requirements.txt
 python -m pytest tests/ -v
 ```
 
-All 1525 tests pass without live AWS, covering intake, retrieval, analysis, validation, escalation, output writing, CLI commands, structured logging, CloudWatch service, config loading, the full Phase F evaluation layer (schemas, dataset loader, scorer, runner), Phase G-0 retrieval quality metrics (retrieval scorer, fixture loading, dataset alignment), Phase G-1 citation quality checks (citation scorer, citation expectations, fixture loading, dataset alignment), Phase G-2 output quality scoring (composite scorer, five-dimension result, fixture integration, architectural separation), Phase H-0 safety contracts and deterministic policy evaluator (safety_models, safety_policy — six policy rules), Phase H-1 Bedrock Guardrails integration (guardrail_models, guardrails_service, guardrails_adapter — intervention and non-intervention paths), and Phase H-2 adversarial and edge-case safety evaluation suite (safety_suite runner, 10 adversarial fixtures, status-priority and combined-scenario coverage).
+All 1588 tests pass without live AWS, covering intake, retrieval, analysis, validation, escalation, output writing, CLI commands, structured logging, CloudWatch service, config loading, the full Phase F evaluation layer (schemas, dataset loader, scorer, runner), Phase G-0 retrieval quality metrics (retrieval scorer, fixture loading, dataset alignment), Phase G-1 citation quality checks (citation scorer, citation expectations, fixture loading, dataset alignment), Phase G-2 output quality scoring (composite scorer, five-dimension result, fixture integration, architectural separation), Phase H-0 safety contracts and deterministic policy evaluator (safety_models, safety_policy — six policy rules), Phase H-1 Bedrock Guardrails integration (guardrail_models, guardrails_service, guardrails_adapter — intervention and non-intervention paths), Phase H-2 adversarial and edge-case safety evaluation suite (safety_suite runner, 10 adversarial fixtures, status-priority and combined-scenario coverage), and Phase I-0 prompt caching integration (PromptCachingConfig, apply_prompt_caching, service wiring — config defaults/overrides/validation, disabled and enabled request-shaping, no-regression with caching off).
 
 ### Step 2: Explore sample inputs
 
@@ -338,7 +338,14 @@ This evaluation layer is fully local and offline — it is independent of live A
 - Normalized Guardrails contract, thin service wrapper, and H-0 adapter (`app/schemas/guardrail_models.py`, `app/services/guardrails_service.py`, `app/evaluation/guardrails_adapter.py`)
 - Adversarial and edge-case safety evaluation suite: 10 curated fixtures covering schema failures, unsupported claims, missing citations, low confidence, empty retrieval, escalation, Guardrails intervention, combined scenarios, and clean passing cases (`tests/fixtures/safety_cases/`, `app/evaluation/safety_suite.py`)
 
-All 1525 unit and evaluation tests pass without live AWS calls. Phase I (Optimization) is next.
+**Phase I-0 (Prompt Caching Integration) is complete** — the repository now includes:
+
+- `PromptCachingConfig` dataclass and `load_prompt_caching_config()` in `app/utils/config.py` — four validated env vars, off by default, safe behavior when absent
+- `app/services/prompt_cache.py` — single pure function `apply_prompt_caching(system_blocks, config)` that injects a `cachePoint` block into the Bedrock Converse `system` array when enabled; returns input unchanged when disabled
+- `BedrockAnalysisService` and `BedrockValidationService` in `app/services/bedrock_service.py` — accept optional `caching_config`; pass system blocks through `apply_prompt_caching` before each Converse call; pre-I-0 behavior is preserved when config is absent
+- `.env.example` — `# ── Prompt Caching (I-0)` section with all four variables
+
+All 1588 unit and evaluation tests pass without live AWS calls. Phase I-1 (Prompt Routing) is next.
 
 **Live Bedrock runtime validation** remains pending due to AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. This is an external blocker, not a code issue.
 

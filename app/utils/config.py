@@ -128,6 +128,90 @@ def load_pipeline_config() -> PipelineConfig:
     )
 
 
+# ── prompt caching config (I-0) ──────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class PromptCachingConfig:
+    """
+    Prompt caching integration configuration (I-0).
+
+    When enable_prompt_caching is False (default), the Bedrock invocation path
+    is entirely unchanged.  When True, the service layer injects a cachePoint
+    marker into the Converse system block so repeated calls with identical
+    system prompts benefit from Bedrock-side prompt caching.
+
+    Design notes:
+    - Off by default so existing deployments are unaffected without opt-in.
+    - cache_system_prompt controls whether the system block is eligible for
+      caching; set to False to disable caching even when the feature is on.
+    - min_cacheable_tokens is informational — Bedrock enforces a 1024-token
+      minimum on the server side; this field lets operators document that
+      constraint explicitly and is validated on load.
+    - max_cache_checkpoints caps how many cachePoint markers are injected
+      per request (Bedrock allows up to 4; I-0 only uses the system block,
+      so 1 is the effective ceiling today).
+    """
+
+    enable_prompt_caching: bool
+    cache_system_prompt: bool
+    min_cacheable_tokens: int
+    max_cache_checkpoints: int
+
+
+def load_prompt_caching_config() -> PromptCachingConfig:
+    """
+    Load prompt caching config from environment variables.
+
+    Environment variables:
+      CASEOPS_ENABLE_PROMPT_CACHING     true | false  (default false)
+      CASEOPS_CACHE_SYSTEM_PROMPT       true | false  (default true)
+      CASEOPS_MIN_CACHEABLE_TOKENS      integer >= 1  (default 1024)
+      CASEOPS_MAX_CACHE_CHECKPOINTS     integer 1–4   (default 1)
+
+    Raises ValueError on invalid values so misconfigured deployments fail
+    loudly at startup rather than silently proceeding with wrong behaviour.
+    """
+    enable_prompt_caching = (
+        os.getenv("CASEOPS_ENABLE_PROMPT_CACHING", "false").lower() == "true"
+    )
+    cache_system_prompt = (
+        os.getenv("CASEOPS_CACHE_SYSTEM_PROMPT", "true").lower() != "false"
+    )
+
+    raw_min_tokens = os.getenv("CASEOPS_MIN_CACHEABLE_TOKENS", "1024")
+    try:
+        min_cacheable_tokens = int(raw_min_tokens)
+    except ValueError as exc:
+        raise ValueError(
+            f"CASEOPS_MIN_CACHEABLE_TOKENS must be a positive integer, got: {raw_min_tokens!r}"
+        ) from exc
+    if min_cacheable_tokens < 1:
+        raise ValueError(
+            f"CASEOPS_MIN_CACHEABLE_TOKENS must be >= 1, got: {min_cacheable_tokens}"
+        )
+
+    raw_checkpoints = os.getenv("CASEOPS_MAX_CACHE_CHECKPOINTS", "1")
+    try:
+        max_cache_checkpoints = int(raw_checkpoints)
+    except ValueError as exc:
+        raise ValueError(
+            f"CASEOPS_MAX_CACHE_CHECKPOINTS must be an integer 1–4, got: {raw_checkpoints!r}"
+        ) from exc
+    if not (1 <= max_cache_checkpoints <= 4):
+        raise ValueError(
+            f"CASEOPS_MAX_CACHE_CHECKPOINTS must be between 1 and 4 inclusive, "
+            f"got: {max_cache_checkpoints}"
+        )
+
+    return PromptCachingConfig(
+        enable_prompt_caching=enable_prompt_caching,
+        cache_system_prompt=cache_system_prompt,
+        min_cacheable_tokens=min_cacheable_tokens,
+        max_cache_checkpoints=max_cache_checkpoints,
+    )
+
+
 # ── guardrails config (H-1) ──────────────────────────────────────────────────
 
 

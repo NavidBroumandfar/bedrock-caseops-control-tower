@@ -122,9 +122,9 @@ These are design contracts followed across all implementation work. They apply t
 
 ## Current Implementation Phase
 
-**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G — Retrieval & Output Quality COMPLETE | Phase H — Safety & Guardrails COMPLETE**
+**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G — Retrieval & Output Quality COMPLETE | Phase H — Safety & Guardrails COMPLETE | Phase I-0 — Prompt Caching COMPLETE**
 
-> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 1525 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. The Phase F, G, and H layers are fully independent of this blocker.
+> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 1588 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. The Phase F, G, H, and I-0 layers are fully independent of this blocker.
 
 The repository is portfolio-ready, test-complete, and demo-friendly for the full MVP and Phase F evaluation scope.
 
@@ -217,9 +217,17 @@ The repository is portfolio-ready, test-complete, and demo-friendly for the full
   - `app/evaluation/safety_suite.py` — narrow H-2 runner: `SafetyCaseFixture`, `SafetyCaseResult`, `SafetySuiteSummary` frozen dataclasses; `load_safety_fixture()`, `load_safety_suite()`, `evaluate_case()`, `run_safety_suite()`; routes through H-0 and H-1 logic, no duplication
   - `tests/test_safety_suite.py` — 91 tests: fixture loading, one test group per adversarial case, batch runner, result contracts, structural isolation (no AWS, no runtime imports)
   - 1525 total tests pass
+- **I-0** — Prompt caching integration:
+  - `app/utils/config.py` — `PromptCachingConfig` frozen dataclass + `load_prompt_caching_config()`; four env vars (`CASEOPS_ENABLE_PROMPT_CACHING`, `CASEOPS_CACHE_SYSTEM_PROMPT`, `CASEOPS_MIN_CACHEABLE_TOKENS`, `CASEOPS_MAX_CACHE_CHECKPOINTS`); validation raises `ValueError` on invalid values; off by default
+  - `app/services/prompt_cache.py` — `apply_prompt_caching(system_blocks, config)`: pure function; injects `{"cachePoint": {"type": "default"}}` after last text block when enabled; returns input unchanged when disabled; no boto3 dependency
+  - `app/services/bedrock_service.py` — `BedrockAnalysisService` and `BedrockValidationService` both accept optional `caching_config: PromptCachingConfig | None`; `_call_converse` passes system blocks through `apply_prompt_caching` before each Converse call; pre-I-0 behavior unchanged when absent
+  - `.env.example` — prompt caching section added
+  - `tests/test_prompt_caching_config.py` — 31 tests: defaults, overrides, case insensitivity, invalid values, boundary values, immutability, return type
+  - `tests/test_prompt_cache.py` — 32 tests: disabled path, enabled path, edge cases, determinism, service integration (no/disabled/enabled config), no-regression parsing, no live AWS
+  - 1588 total tests pass
 
 ### Next step
-- **Phase I** — Optimization (I-0 prompt caching, I-1 prompt routing, I-2 baseline vs optimized comparison); see `PROJECT_SPEC.md §13`
+- **Phase I-1** — Prompt routing strategy (I-1); see `PROJECT_SPEC.md §13`
 
 ### Phase 2 roadmap
 
@@ -230,7 +238,7 @@ Phase 2 follows the same lettered-subphase naming convention as Phase 1 (A–E):
 | **F** | Evaluation Foundation | ✅ Complete | F-0 evaluation contracts + schemas, F-1 reference dataset, F-2 scoring runner |
 | **G** | Retrieval & Output Quality | ✅ Complete | G-0 retrieval metrics ✅, G-1 citation quality ✅, G-2 output scoring ✅ |
 | **H** | Safety & Guardrails | ✅ Complete | H-0 safety contracts ✅, H-1 Bedrock Guardrails integration ✅, H-2 adversarial suite ✅ |
-| **I** | Optimization | Not started | I-0 prompt caching, I-1 prompt routing, I-2 baseline vs optimized comparison |
+| **I** | Optimization | I-0 ✅ | I-0 prompt caching ✅, I-1 prompt routing, I-2 baseline vs optimized comparison |
 | **J** | Observability & Reporting | Not started | J-0 CloudWatch dashboard, J-1 result artifacts, J-2 v2 hardening checkpoint |
 
 See `PROJECT_SPEC.md §13` for the full Phase 2 subphase breakdown.

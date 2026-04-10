@@ -3,9 +3,9 @@
 **Version:** 0.2
 **Last Updated:** 2026-04-10
 
-> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G (Retrieval & Output Quality) complete. Phase H (Safety & Guardrails) complete.**
+> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G (Retrieval & Output Quality) complete. Phase H (Safety & Guardrails) complete. Phase I-0 (Prompt Caching) complete.**
 >
-> **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Phase F adds a fully local, offline evaluation layer: typed evaluation contracts and schemas (F-0), a curated evaluation dataset with 7 cases and reference expected outputs (F-1), and an offline evaluation harness with dataset loader, deterministic scorer, and scoring runner (F-2). Phase G-0 adds offline retrieval quality metrics: three deterministic metrics scored against F-1 retrieval expectations, with fixture-based candidate input and 55 new tests. Phase G-1 adds offline citation quality metrics: four deterministic metrics scored against CitationExpectation references, with five candidate output fixtures and 64 new tests. Phase G-2 adds a composite output-quality scorer that composes F-2 and G-1 sub-scores plus three final-output-only checks (summary_nonempty, recommendations_present_when_expected, unsupported_claims_clean), with 46 new tests. Phase H-0 adds typed safety contracts (SafetyIssue, SafetyAssessment, FailurePolicy) and a local deterministic safety policy evaluator (evaluate_safety, evaluate_safety_from_raw) with six policy rules and 144 new tests. Phase H-1 adds the Bedrock Guardrails integration foundation: a normalized GuardrailAssessmentResult contract (guardrail_models.py), a thin GuardrailsService wrapper for the ApplyGuardrail API (guardrails_service.py), a Guardrails → H-0 safety adapter (guardrails_adapter.py), GuardrailsConfig config block, and two new safety_models enum extensions (GUARDRAILS source, GUARDRAIL_INTERVENTION code), with 134 new tests. Phase H-2 adds the adversarial and edge-case safety evaluation suite: 10 curated fixtures covering schema failures, unsupported claims, missing citations, low confidence, empty retrieval, escalation-required, Guardrails intervention, combined blocking+escalation priority, and clean passing cases; plus a narrow safety suite runner (safety_suite.py) with SafetyCaseFixture, SafetyCaseResult, SafetySuiteSummary dataclasses and run_safety_suite() batch executor; 91 new tests. All 1525 unit and evaluation tests pass without live AWS calls.
+> **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Phase F adds a fully local, offline evaluation layer: typed evaluation contracts and schemas (F-0), a curated evaluation dataset with 7 cases and reference expected outputs (F-1), and an offline evaluation harness with dataset loader, deterministic scorer, and scoring runner (F-2). Phase G-0 adds offline retrieval quality metrics: three deterministic metrics scored against F-1 retrieval expectations, with fixture-based candidate input and 55 new tests. Phase G-1 adds offline citation quality metrics: four deterministic metrics scored against CitationExpectation references, with five candidate output fixtures and 64 new tests. Phase G-2 adds a composite output-quality scorer that composes F-2 and G-1 sub-scores plus three final-output-only checks (summary_nonempty, recommendations_present_when_expected, unsupported_claims_clean), with 46 new tests. Phase H-0 adds typed safety contracts (SafetyIssue, SafetyAssessment, FailurePolicy) and a local deterministic safety policy evaluator (evaluate_safety, evaluate_safety_from_raw) with six policy rules and 144 new tests. Phase H-1 adds the Bedrock Guardrails integration foundation: a normalized GuardrailAssessmentResult contract (guardrail_models.py), a thin GuardrailsService wrapper for the ApplyGuardrail API (guardrails_service.py), a Guardrails → H-0 safety adapter (guardrails_adapter.py), GuardrailsConfig config block, and two new safety_models enum extensions (GUARDRAILS source, GUARDRAIL_INTERVENTION code), with 134 new tests. Phase H-2 adds the adversarial and edge-case safety evaluation suite: 10 curated fixtures covering schema failures, unsupported claims, missing citations, low confidence, empty retrieval, escalation-required, Guardrails intervention, combined blocking+escalation priority, and clean passing cases; plus a narrow safety suite runner (safety_suite.py) with SafetyCaseFixture, SafetyCaseResult, SafetySuiteSummary dataclasses and run_safety_suite() batch executor; 91 new tests. Phase I-0 adds prompt caching integration: PromptCachingConfig dataclass and loader (config.py), apply_prompt_caching() pure function (prompt_cache.py), optional caching_config wiring in BedrockAnalysisService and BedrockValidationService, .env.example section, and 63 new tests covering config defaults/overrides/validation/immutability, disabled and enabled request-shaping, service integration, and no-live-AWS confirmation. All 1588 unit and evaluation tests pass without live AWS calls.
 >
 > **Live Bedrock runtime validation is pending:** Live AWS Knowledge Base end-to-end validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. The architecture and all implementation are complete and correct — this is not a code issue. Live validation will be completed when the AWS-side blocker is resolved. The Phase F evaluation layer is fully independent of this blocker.
 
@@ -758,4 +758,59 @@ SafetySuiteSummary
 - **Deterministic** — same fixture directory always produces the same results in the same order
 - **Narrow** — `safety_suite.py` is a dedicated H-2 runner, not a replacement for the F-2 batch evaluation runner
 
-> **Phase H complete.** Phase I (Optimization) is next. See `PROJECT_SPEC.md §13`.
+> **Phase H complete.** Phase I-0 (Prompt Caching) is now complete. See `PROJECT_SPEC.md §13`.
+
+---
+
+## 20. Phase I-0 — Prompt Caching Integration
+
+Phase I-0 adds a narrow, optional prompt-caching integration layer to the Bedrock Converse invocation path.  It is designed for **integration readiness and architecture correctness**, not live performance measurement — live AWS validation remains pending due to the existing Titan Embeddings throttling blocker.
+
+### Components
+
+| Component | Location | Description |
+|---|---|---|
+| **PromptCachingConfig** | `app/utils/config.py` | Frozen dataclass with four fields: `enable_prompt_caching`, `cache_system_prompt`, `min_cacheable_tokens`, `max_cache_checkpoints`; validated on load; off by default |
+| **load_prompt_caching_config()** | `app/utils/config.py` | Loads config from four `CASEOPS_*` env vars; raises `ValueError` on invalid values so misconfigured deployments fail loudly |
+| **prompt_cache.py** | `app/services/prompt_cache.py` | Single pure function `apply_prompt_caching(system_blocks, config)`; injects a `{"cachePoint": {"type": "default"}}` block after the last text block in the Converse `system` array; returns input unchanged when disabled |
+| **BedrockAnalysisService** | `app/services/bedrock_service.py` | Accepts optional `caching_config`; passes system blocks through `apply_prompt_caching` before each Converse call |
+| **BedrockValidationService** | `app/services/bedrock_service.py` | Same as analysis service; caching is symmetric across both invocation paths |
+| **Tests** | `tests/test_prompt_caching_config.py`, `tests/test_prompt_cache.py` | 63 new tests: config defaults, env var overrides, case insensitivity, invalid value validation, boundary values, immutability, disabled/enabled request-shaping, service integration, no-regression with caching off, no live AWS dependency |
+
+### Integration point
+
+```
+BedrockAnalysisService._call_converse(system_prompt, user_message)
+     │
+     ▼
+system_blocks = [{"text": system_prompt}]
+     │
+     ▼ apply_prompt_caching(system_blocks, caching_config)   [I-0 integration point]
+     │
+     ├── caching disabled → system_blocks unchanged (same object returned)
+     │
+     └── caching enabled  → [{"text": system_prompt}, {"cachePoint": {"type": "default"}}]
+     │
+     ▼
+client.converse(system=system_blocks, messages=[...])
+```
+
+### Design properties
+
+- **Off by default** — `CASEOPS_ENABLE_PROMPT_CACHING=false`; no opt-in required for existing deployments
+- **Single integration point** — caching logic lives entirely in `prompt_cache.py`; not scattered across agents or workflows
+- **No business logic change** — agents, workflows, and schemas are untouched
+- **Pure and testable** — `apply_prompt_caching` is a pure function; all 63 tests run without live AWS
+- **Validated on load** — invalid env var values raise `ValueError` at startup
+- **Extensible for I-1** — message-level caching (few-shot examples) can be added to `apply_prompt_caching` without changing callers
+
+### Environment variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `CASEOPS_ENABLE_PROMPT_CACHING` | `false` | Master switch for prompt caching |
+| `CASEOPS_CACHE_SYSTEM_PROMPT` | `true` | Cache the system block when caching is enabled |
+| `CASEOPS_MIN_CACHEABLE_TOKENS` | `1024` | Minimum token count (informational; Bedrock enforces server-side) |
+| `CASEOPS_MAX_CACHE_CHECKPOINTS` | `1` | Max cachePoint markers per request (1–4; I-0 uses 1) |
+
+> **I-1 and I-2 not started.** I-1 will add message-level caching (user turn / few-shot examples). I-2 will add a baseline vs. caching comparison workflow. See `PROJECT_SPEC.md §13`.

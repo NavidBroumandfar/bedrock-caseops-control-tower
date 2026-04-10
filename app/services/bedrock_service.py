@@ -11,6 +11,13 @@ Public surface:
 
 Raw Bedrock response shapes are never exposed to callers.
 All prompt construction and response parsing happen inside this module.
+
+Prompt caching (I-0):
+  Both services accept an optional ``caching_config`` constructor parameter.
+  When supplied and enabled, system blocks are passed through
+  ``apply_prompt_caching`` before the Converse call so Bedrock can cache the
+  system prompt across repeated invocations.  When absent or disabled, the
+  request is constructed identically to the pre-I-0 behaviour.
 """
 
 import json
@@ -26,6 +33,8 @@ from app.schemas.analysis_models import AnalysisOutput
 from app.schemas.retrieval_models import EvidenceChunk
 from app.schemas.validation_contract import ValidationProvider
 from app.schemas.validation_models import ValidationOutput
+from app.services.prompt_cache import apply_prompt_caching
+from app.utils.config import PromptCachingConfig
 
 # Keys the model must return in its JSON response.
 _REQUIRED_JSON_KEYS = {"severity", "category", "summary", "recommendations"}
@@ -53,6 +62,11 @@ class BedrockAnalysisService:
     Required configuration:
       AWS_REGION        — AWS region (default: us-east-1)
       BEDROCK_MODEL_ID  — model identifier (default: claude-3-haiku)
+
+    Optional:
+      caching_config    — when supplied and enabled, injects a cachePoint into
+                          the system block before each Converse call (I-0).
+                          When absent or disabled, behaviour is unchanged.
     """
 
     def __init__(
@@ -61,12 +75,14 @@ class BedrockAnalysisService:
         model_id: str | None = None,
         region: str | None = None,
         client: Any = None,
+        caching_config: PromptCachingConfig | None = None,
     ) -> None:
         self._model_id = model_id or os.getenv("BEDROCK_MODEL_ID", _DEFAULT_MODEL_ID)
         self._client = client or boto3.client(
             "bedrock-runtime",
             region_name=region or os.getenv("AWS_REGION", "us-east-1"),
         )
+        self._caching_config = caching_config
 
     # ── public interface ───────────────────────────────────────────────────────
 
@@ -92,13 +108,21 @@ class BedrockAnalysisService:
         """
         Invoke the Converse API and return the raw text content of the model's reply.
 
+        System blocks are passed through apply_prompt_caching before the call;
+        when caching is disabled the blocks are returned unchanged so there is
+        no observable difference in the request for callers without caching.
+
         Raises BedrockServiceError on any SDK-level failure so boto3 exceptions
         never propagate to callers.
         """
+        system_blocks: list[dict[str, Any]] = [{"text": system_prompt}]
+        if self._caching_config is not None:
+            system_blocks = apply_prompt_caching(system_blocks, self._caching_config)
+
         try:
             response = self._client.converse(
                 modelId=self._model_id,
-                system=[{"text": system_prompt}],
+                system=system_blocks,
                 messages=[
                     {"role": "user", "content": [{"text": user_message}]}
                 ],
@@ -239,6 +263,9 @@ class BedrockValidationService:
     Required configuration:
       AWS_REGION        — AWS region (default: us-east-1)
       BEDROCK_MODEL_ID  — model identifier (default: claude-3-haiku)
+
+    Optional:
+      caching_config    — see BedrockAnalysisService for details (I-0).
     """
 
     def __init__(
@@ -247,12 +274,14 @@ class BedrockValidationService:
         model_id: str | None = None,
         region: str | None = None,
         client: Any = None,
+        caching_config: PromptCachingConfig | None = None,
     ) -> None:
         self._model_id = model_id or os.getenv("BEDROCK_MODEL_ID", _DEFAULT_MODEL_ID)
         self._client = client or boto3.client(
             "bedrock-runtime",
             region_name=region or os.getenv("AWS_REGION", "us-east-1"),
         )
+        self._caching_config = caching_config
 
     # ── public interface ───────────────────────────────────────────────────────
 
@@ -279,13 +308,20 @@ class BedrockValidationService:
         """
         Invoke the Converse API and return the raw text content of the model's reply.
 
+        System blocks are passed through apply_prompt_caching before the call;
+        when caching is disabled the blocks are returned unchanged.
+
         Raises BedrockServiceError on any SDK-level failure so boto3 exceptions
         never propagate to callers.
         """
+        system_blocks: list[dict[str, Any]] = [{"text": system_prompt}]
+        if self._caching_config is not None:
+            system_blocks = apply_prompt_caching(system_blocks, self._caching_config)
+
         try:
             response = self._client.converse(
                 modelId=self._model_id,
-                system=[{"text": system_prompt}],
+                system=system_blocks,
                 messages=[
                     {"role": "user", "content": [{"text": user_message}]}
                 ],
