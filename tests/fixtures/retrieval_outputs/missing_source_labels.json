@@ -1,0 +1,25 @@
+{
+  "_note": "G-0 test fixture — retrieval result missing expected source labels. Chunks are present but do not match the expected source labels.",
+  "document_id": "doc-test-retrieval-labels",
+  "evidence_chunks": [
+    {
+      "chunk_id": "chunk-001",
+      "text": "Ransomware actors used phishing campaigns to gain initial access to victim networks.",
+      "source_id": "kb-src-001",
+      "source_label": "Unknown Source 2025",
+      "excerpt": "Ransomware actors used phishing campaigns.",
+      "relevance_score": 0.78
+    },
+    {
+      "chunk_id": "chunk-002",
+      "text": "Mitigation strategies include applying patches, enforcing multi-factor authentication, and maintaining offline backups.",
+      "source_id": "kb-src-002",
+      "source_label": "General Security Guide",
+      "excerpt": "Apply patches and enforce multi-factor authentication.",
+      "relevance_score": 0.72
+    }
+  ],
+  "retrieval_status": "success",
+  "retrieved_count": 2,
+  "warning": null
+}

@@ -1,0 +1,25 @@
+{
+  "_note": "G-0 test fixture — strong retrieval result that should score well. Chunk count meets minimum, source labels match, evidence terms are covered.",
+  "document_id": "doc-test-retrieval-strong",
+  "evidence_chunks": [
+    {
+      "chunk_id": "chunk-001",
+      "text": "The quality system was found to be inadequate. Corrective and preventive action (CAPA) procedures were not established for device manufacturing.",
+      "source_id": "kb-src-001",
+      "source_label": "FDA Warning Letter — Uscom Kft 2025",
+      "excerpt": "Corrective and preventive action (CAPA) procedures were not established.",
+      "relevance_score": 0.92
+    },
+    {
+      "chunk_id": "chunk-002",
+      "text": "The device was found to be adulterated and misbranded under 21 CFR Part 820 requirements.",
+      "source_id": "kb-src-002",
+      "source_label": "FDA Regulatory Guidance 2025",
+      "excerpt": "The device was found to be adulterated and misbranded.",
+      "relevance_score": 0.85
+    }
+  ],
+  "retrieval_status": "success",
+  "retrieved_count": 2,
+  "warning": null
+}

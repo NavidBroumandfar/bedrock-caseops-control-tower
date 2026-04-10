@@ -1,0 +1,8 @@
+{
+  "_note": "G-0 test fixture — edge case: empty retrieval result with zero chunks. Models the low-information case where the KB returned nothing.",
+  "document_id": "doc-test-retrieval-empty",
+  "evidence_chunks": [],
+  "retrieval_status": "empty",
+  "retrieved_count": 0,
+  "warning": "No relevant chunks found in the knowledge base for this query."
+}

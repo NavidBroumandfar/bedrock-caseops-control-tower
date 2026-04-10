@@ -1,0 +1,17 @@
+{
+  "_note": "G-0 test fixture — weak retrieval result with too few chunks. Chunk count falls below the expected minimum of 3.",
+  "document_id": "doc-test-retrieval-weak",
+  "evidence_chunks": [
+    {
+      "chunk_id": "chunk-001",
+      "text": "A general administrative notice was issued regarding facility operations.",
+      "source_id": "kb-src-001",
+      "source_label": "Administrative Notice 2025",
+      "excerpt": "A general administrative notice was issued.",
+      "relevance_score": 0.45
+    }
+  ],
+  "retrieval_status": "success",
+  "retrieved_count": 1,
+  "warning": null
+}

@@ -5,17 +5,25 @@ Loads EvaluationCase and ExpectedOutput fixtures from the F-1 reference dataset
 under data/evaluation/.  Returns matched pairs sorted by case_id for deterministic
 ordering across runs.
 
+Also exposes load_retrieval_expectations() for G-0 retrieval quality scoring,
+which extracts the _retrieval_expectation blocks embedded in expected fixtures.
+
 Public surface:
-  EvaluationDataset          — container returned by load_dataset()
-  load_dataset(dataset_dir)  — load and validate all fixtures; raises on any error
-  DatasetLoadError           — raised when fixtures are missing, mismatched, or malformed
+  EvaluationDataset                 — container returned by load_dataset()
+  load_dataset(dataset_dir)         — load and validate all fixtures; raises on any error
+  load_retrieval_expectations(...)  — load RetrievalExpectation objects from expected fixtures
+  DatasetLoadError                  — raised when fixtures are missing, mismatched, or malformed
 """
 
 import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.schemas.evaluation_models import EvaluationCase, ExpectedOutput
+from app.schemas.evaluation_models import (
+    EvaluationCase,
+    ExpectedOutput,
+    RetrievalExpectation,
+)
 
 # Default path relative to the repo root; callers may override for tests.
 _DEFAULT_DATASET_DIR = Path(__file__).parent.parent.parent / "data" / "evaluation"
@@ -120,6 +128,51 @@ def _load_expected(expected_dir: Path) -> dict[str, ExpectedOutput]:
         expected[output.case_id] = output
 
     return expected
+
+
+def load_retrieval_expectations(
+    dataset_dir: Path | None = None,
+) -> dict[str, RetrievalExpectation]:
+    """
+    Load RetrievalExpectation objects from the F-1 expected fixtures.
+
+    Each expected fixture may embed a ``_retrieval_expectation`` block.
+    This function extracts and validates those blocks, returning a mapping
+    of case_id → RetrievalExpectation for all cases that have one.
+
+    Cases without a ``_retrieval_expectation`` block (e.g. thin edge cases)
+    are silently omitted from the returned dict — callers should handle absence.
+
+    Raises DatasetLoadError if any present block fails schema validation.
+    """
+    root = dataset_dir if dataset_dir is not None else _DEFAULT_DATASET_DIR
+    expected_dir = root / "expected"
+
+    if not expected_dir.is_dir():
+        raise DatasetLoadError(
+            f"Expected expected directory not found: {expected_dir}"
+        )
+
+    json_files = sorted(expected_dir.glob("*.json"))
+    if not json_files:
+        raise DatasetLoadError(f"No JSON fixtures found in {expected_dir}")
+
+    expectations: dict[str, RetrievalExpectation] = {}
+    for path in json_files:
+        raw = _load_json(path)
+        block = raw.get("_retrieval_expectation")
+        if block is None:
+            continue
+        data = {k: v for k, v in block.items() if not k.startswith("_")}
+        try:
+            expectation = RetrievalExpectation(**data)
+        except Exception as exc:
+            raise DatasetLoadError(
+                f"Fixture {path.name} has an invalid _retrieval_expectation block: {exc}"
+            ) from exc
+        expectations[expectation.case_id] = expectation
+
+    return expectations
 
 
 def load_dataset(dataset_dir: Path | None = None) -> EvaluationDataset:

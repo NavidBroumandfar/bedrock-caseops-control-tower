@@ -2,7 +2,7 @@
 
 **Version:** 0.2
 **Last Updated:** 2026-04-10
-**Status:** Phase 1 Complete — Phase 2 In Progress (Phase F complete, Phase G next)
+**Status:** Phase 1 Complete — Phase 2 In Progress (Phase F complete, Phase G-0 complete, Phase G-1 next)
 
 ---
 
@@ -255,7 +255,7 @@ The MVP engineering scope is complete. Success criteria are tracked in two categ
 
 ### Phase 2 — v2: Evaluation and Optimization
 
-**Status:** In progress — Phase F complete, Phase G next.
+**Status:** In progress — Phase F complete, Phase G-0 complete, Phase G-1 next.
 
 **Goal:** Make the system measurably better and observable — through structured evaluation, safety controls, optimization, and production-grade reporting.
 
@@ -271,7 +271,7 @@ The MVP engineering scope is complete. Success criteria are tracked in two categ
   - F-2 Offline evaluation harness / deterministic scoring runner ✅
 
 - **Phase G — Retrieval & Output Quality**
-  - G-0 Retrieval quality metrics
+  - G-0 Retrieval quality metrics ✅
   - G-1 Citation quality checks
   - G-2 Output quality scoring
 

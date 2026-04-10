@@ -1,0 +1,25 @@
+{
+  "_note": "G-0 test fixture — retrieval result missing key evidence terms. Chunks are present and source labels match, but the required evidence terms are absent from chunk text.",
+  "document_id": "doc-test-retrieval-terms",
+  "evidence_chunks": [
+    {
+      "chunk_id": "chunk-001",
+      "text": "The advisory describes general operational procedures and standard maintenance intervals.",
+      "source_id": "kb-src-001",
+      "source_label": "CISA Advisory 2025",
+      "excerpt": "General operational procedures and maintenance intervals.",
+      "relevance_score": 0.55
+    },
+    {
+      "chunk_id": "chunk-002",
+      "text": "Organizations should review their continuity plans on a regular schedule.",
+      "source_id": "kb-src-002",
+      "source_label": "CISA Guidance 2025",
+      "excerpt": "Review continuity plans regularly.",
+      "relevance_score": 0.50
+    }
+  ],
+  "retrieval_status": "success",
+  "retrieved_count": 2,
+  "warning": null
+}

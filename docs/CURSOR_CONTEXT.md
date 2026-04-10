@@ -122,9 +122,9 @@ These are design contracts followed across all implementation work. They apply t
 
 ## Current Implementation Phase
 
-**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G is next**
+**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G-0 — Retrieval Quality Metrics COMPLETE**
 
-> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 994 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. The Phase F evaluation layer is fully independent of this blocker.
+> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 1046 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. The Phase F and G-0 evaluation layers are fully independent of this blocker.
 
 The repository is portfolio-ready, test-complete, and demo-friendly for the full MVP and Phase F evaluation scope.
 
@@ -177,9 +177,15 @@ The repository is portfolio-ready, test-complete, and demo-friendly for the full
 - **F-2** — offline evaluation harness: `app/evaluation/loader.py` (dataset loader), `app/evaluation/scorer.py` (deterministic dimension scorer), `app/evaluation/runner.py` (batch scoring runner with aggregated summary)
   - 5 new test files: `test_evaluation_schemas.py`, `test_evaluation_dataset.py`, `test_evaluation_loader.py`, `test_evaluation_scorer.py`, `test_evaluation_runner.py`
   - 994 total tests pass
+- **G-0** — Retrieval quality metrics:
+  - `app/evaluation/retrieval_scorer.py` — three deterministic offline metrics: `minimum_chunks_match`, `source_label_hit_rate`, `required_evidence_term_coverage`; `RetrievalScoringResult` (frozen dataclass); `score_retrieval()` public API
+  - `app/evaluation/loader.py` — extended with `load_retrieval_expectations()` to extract `_retrieval_expectation` blocks from F-1 expected fixtures
+  - `tests/fixtures/retrieval_outputs/` — 5 candidate retrieval fixtures: `strong_retrieval.json`, `weak_retrieval.json`, `missing_source_labels.json`, `missing_evidence_terms.json`, `empty_retrieval.json`
+  - `tests/test_retrieval_scorer.py` — 55 tests covering all three metrics, pass/fail logic, fixture loading, dataset alignment, not-applicable policy, and deterministic repeated-run behavior
+  - 1046 total tests pass
 
 ### Next step
-- **Phase G-0** — Retrieval quality metrics (first subphase of Phase G); see `PROJECT_SPEC.md §13`
+- **Phase G-1** — Citation quality checks; see `PROJECT_SPEC.md §13`
 
 ### Phase 2 roadmap
 
@@ -188,7 +194,7 @@ Phase 2 follows the same lettered-subphase naming convention as Phase 1 (A–E):
 | Phase | Theme | Status | Subphases |
 |---|---|---|---|
 | **F** | Evaluation Foundation | ✅ Complete | F-0 evaluation contracts + schemas, F-1 reference dataset, F-2 scoring runner |
-| **G** | Retrieval & Output Quality | Not started | G-0 retrieval metrics, G-1 citation quality, G-2 output scoring |
+| **G** | Retrieval & Output Quality | In progress | G-0 retrieval metrics ✅, G-1 citation quality, G-2 output scoring |
 | **H** | Safety & Guardrails | Not started | H-0 safety contracts, H-1 Bedrock Guardrails integration, H-2 adversarial suite |
 | **I** | Optimization | Not started | I-0 prompt caching, I-1 prompt routing, I-2 baseline vs optimized comparison |
 | **J** | Observability & Reporting | Not started | J-0 CloudWatch dashboard, J-1 result artifacts, J-2 v2 hardening checkpoint |

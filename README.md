@@ -250,7 +250,7 @@ pip install -r requirements.txt
 python -m pytest tests/ -v
 ```
 
-All 994 tests pass without live AWS, covering intake, retrieval, analysis, validation, escalation, output writing, CLI commands, structured logging, CloudWatch service, config loading, and the full Phase F evaluation layer (schemas, dataset loader, scorer, runner).
+All 1046 tests pass without live AWS, covering intake, retrieval, analysis, validation, escalation, output writing, CLI commands, structured logging, CloudWatch service, config loading, the full Phase F evaluation layer (schemas, dataset loader, scorer, runner), and Phase G-0 retrieval quality metrics (retrieval scorer, fixture loading, dataset alignment).
 
 ### Step 2: Explore sample inputs
 
@@ -322,9 +322,9 @@ On success, the CLI prints a structured summary and writes a JSON output to `out
 - A curated local evaluation dataset with 7 cases and reference expected outputs (`data/evaluation/`)
 - An offline evaluation harness: dataset loader, deterministic scorer, and aggregated scoring runner (`app/evaluation/`)
 
-This evaluation layer is fully local and offline — it is independent of live AWS runtime availability. All 994 unit and evaluation tests pass without live AWS calls.
+This evaluation layer is fully local and offline — it is independent of live AWS runtime availability. All 1046 unit and evaluation tests pass without live AWS calls.
 
-**Phase G (Retrieval & Output Quality) is the next phase** — not yet started.
+**Phase G-0 (Retrieval Quality Metrics) is complete** — offline retrieval quality scoring against F-1 retrieval expectations, with three deterministic metrics and 55 new tests. Phase G-1 (Citation Quality) is next.
 
 **Live Bedrock runtime validation** remains pending due to AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. This is an external blocker, not a code issue.
 
