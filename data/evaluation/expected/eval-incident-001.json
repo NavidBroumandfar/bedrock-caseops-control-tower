@@ -1,0 +1,45 @@
+{
+  "_schema": "ExpectedOutput",
+  "_note": "F-1 reference expected output. Keyword/concept-based — not exact-match. The F-2 scorer checks presence of required facts and absence of forbidden claims, not verbatim text.",
+  "case_id": "eval-incident-001",
+  "expected_severity": "Medium",
+  "expected_category": "Operational",
+  "expected_escalation_required": false,
+  "expected_summary_facts": [
+    "outage",
+    "payment",
+    "resolved",
+    "root cause",
+    "cron",
+    "database",
+    "connection",
+    "corrective action"
+  ],
+  "expected_recommendation_keywords": [
+    "runbook",
+    "checklist",
+    "monitoring",
+    "review",
+    "schedule",
+    "corrective"
+  ],
+  "forbidden_claims": [
+    "data lost",
+    "breach",
+    "security incident",
+    "escalation required",
+    "immediate escalation",
+    "ongoing risk"
+  ],
+  "_retrieval_expectation": {
+    "_schema": "RetrievalExpectation",
+    "case_id": "eval-incident-001",
+    "minimum_expected_chunks": 1,
+    "expected_source_labels": [],
+    "required_evidence_terms": [
+      "outage",
+      "root cause",
+      "corrective"
+    ]
+  }
+}

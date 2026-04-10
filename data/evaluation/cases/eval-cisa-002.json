@@ -1,0 +1,11 @@
+{
+  "_schema": "EvaluationCase",
+  "_note": "F-1 reference fixture. Validates pipeline behavior on a CISA ICS advisory with a CVSS 9.8 critical remote authentication bypass affecting industrial control systems. Escalation must be triggered.",
+  "case_id": "eval-cisa-002",
+  "source_filename": "cisa_ics_advisory_01.md",
+  "source_type": "CISA",
+  "document_date": "2026-01-15",
+  "submitter_note": "Critical CVSS 9.8 ICS vulnerability — remotely exploitable authentication bypass in PLC firmware affecting water treatment and energy infrastructure",
+  "case_description": "CISA ICS advisory for a remotely exploitable authentication bypass vulnerability (CVSS 9.8) in PLC firmware deployed across critical infrastructure sectors including water treatment and electric substations. No user interaction required. Immediate patching and network isolation recommended. Expected to produce Critical severity with escalation — a CVSS 9.8 RCE-class vulnerability in OT/critical infrastructure warrants immediate escalation.",
+  "tags": ["security", "cisa", "ics", "ot", "critical-infrastructure", "cvss-critical", "escalation", "remote-code-execution"]
+}

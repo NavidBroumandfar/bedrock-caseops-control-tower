@@ -1,0 +1,47 @@
+{
+  "_schema": "ExpectedOutput",
+  "_note": "F-1 reference expected output. Keyword/concept-based — not exact-match. The F-2 scorer checks presence of required facts and absence of forbidden claims, not verbatim text.",
+  "case_id": "eval-incident-002",
+  "expected_severity": "High",
+  "expected_category": "Operational",
+  "expected_escalation_required": true,
+  "expected_summary_facts": [
+    "data exposure",
+    "misconfiguration",
+    "storage bucket",
+    "customer",
+    "email",
+    "password",
+    "personal data",
+    "11 days",
+    "regulatory",
+    "12,500"
+  ],
+  "expected_recommendation_keywords": [
+    "notify",
+    "regulatory",
+    "audit",
+    "access control",
+    "password reset",
+    "legal",
+    "escalate"
+  ],
+  "forbidden_claims": [
+    "no personal data involved",
+    "no regulatory implications",
+    "confirmed no exfiltration",
+    "no action required",
+    "low risk"
+  ],
+  "_retrieval_expectation": {
+    "_schema": "RetrievalExpectation",
+    "case_id": "eval-incident-002",
+    "minimum_expected_chunks": 1,
+    "expected_source_labels": [],
+    "required_evidence_terms": [
+      "exposure",
+      "customer",
+      "regulatory"
+    ]
+  }
+}

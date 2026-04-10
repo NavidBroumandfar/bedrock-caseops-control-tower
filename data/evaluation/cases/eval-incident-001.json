@@ -1,0 +1,11 @@
+{
+  "_schema": "EvaluationCase",
+  "_note": "F-1 reference fixture. Validates pipeline behavior on a resolved operational service outage with documented root cause and corrective actions. No escalation expected.",
+  "case_id": "eval-incident-001",
+  "source_filename": "incident_report_service_outage_01.md",
+  "source_type": "Incident",
+  "document_date": "2026-02-10",
+  "submitter_note": "Post-incident report — payment service outage resolved, root cause documented",
+  "case_description": "Post-incident report for a 4-hour payment service outage caused by a misconfigured cron job. The incident is resolved, no data loss occurred, and corrective actions are documented. Expected to produce Medium severity without escalation — the incident is contained, root-cause is clear, and no ongoing risk is present. This case tests that the pipeline does not over-escalate fully resolved operational incidents.",
+  "tags": ["operational", "incident", "service-outage", "resolved", "no-escalation"]
+}

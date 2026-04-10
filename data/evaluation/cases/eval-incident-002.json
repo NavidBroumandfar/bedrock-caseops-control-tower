@@ -1,0 +1,11 @@
+{
+  "_schema": "EvaluationCase",
+  "_note": "F-1 reference fixture. Validates pipeline behavior on a data exposure incident involving customer PII with potential regulatory notification implications. Escalation expected.",
+  "case_id": "eval-incident-002",
+  "source_filename": "incident_report_data_breach_01.md",
+  "source_type": "Incident",
+  "document_date": "2026-03-01",
+  "submitter_note": "Data exposure incident — customer PII exposed via misconfigured storage bucket, regulatory notification assessment underway",
+  "case_description": "Customer data exposure incident involving 12,500 accounts with names, email addresses, and hashed passwords exposed via a misconfigured cloud storage bucket for approximately 11 days. No payment data or plaintext passwords were involved, but no confirmed exfiltration cannot be fully excluded. Legal and regulatory teams have been notified. Expected to produce High severity with escalation — exposure of customer PII with regulatory implications requires escalation regardless of whether confirmed exfiltration occurred.",
+  "tags": ["operational", "incident", "data-breach", "pii", "regulatory-notification", "escalation"]
+}

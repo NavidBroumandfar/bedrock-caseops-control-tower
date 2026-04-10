@@ -1,0 +1,11 @@
+{
+  "_schema": "EvaluationCase",
+  "_note": "F-1 reference fixture. Edge case: minimal document content with almost no signal. Tests that the pipeline does not fabricate severity or escalation when evidence is thin.",
+  "case_id": "eval-edge-001",
+  "source_filename": "sample_notice.txt",
+  "source_type": "FDA",
+  "document_date": "2026-01-01",
+  "submitter_note": null,
+  "case_description": "Minimal one-sentence FDA-style notice with no substantive content. Used as an edge case to test pipeline behavior when the input document provides little usable evidence. Expected to produce Low severity without escalation. The pipeline must not fabricate claims or escalate in the absence of signal. Confidence score may be low, and the validation agent may flag unsupported claims if the pipeline tries to infer beyond the thin input.",
+  "tags": ["edge-case", "minimal-content", "low-confidence", "no-escalation", "adversarial"]
+}

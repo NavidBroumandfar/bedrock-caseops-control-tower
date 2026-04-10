@@ -1,0 +1,45 @@
+{
+  "_schema": "ExpectedOutput",
+  "_note": "F-1 reference expected output. Keyword/concept-based — not exact-match. The F-2 scorer checks presence of required facts and absence of forbidden claims, not verbatim text.",
+  "case_id": "eval-fda-002",
+  "expected_severity": "High",
+  "expected_category": "Regulatory",
+  "expected_escalation_required": true,
+  "expected_summary_facts": [
+    "recall",
+    "sildenafil",
+    "tadalafil",
+    "undeclared",
+    "blood pressure",
+    "nitrates",
+    "health risk",
+    "honey",
+    "enhancement"
+  ],
+  "expected_recommendation_keywords": [
+    "recall",
+    "consumer",
+    "health",
+    "escalate",
+    "compliance",
+    "notify"
+  ],
+  "forbidden_claims": [
+    "no health risk",
+    "safe for consumption",
+    "no action required",
+    "no recall necessary",
+    "ingredients are declared"
+  ],
+  "_retrieval_expectation": {
+    "_schema": "RetrievalExpectation",
+    "case_id": "eval-fda-002",
+    "minimum_expected_chunks": 1,
+    "expected_source_labels": [],
+    "required_evidence_terms": [
+      "recall",
+      "undeclared",
+      "blood pressure"
+    ]
+  }
+}

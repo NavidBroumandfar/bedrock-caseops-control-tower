@@ -1,0 +1,11 @@
+{
+  "_schema": "EvaluationCase",
+  "_note": "F-1 reference fixture. Validates pipeline behavior on an FDA medical device warning letter with quality system deficiencies.",
+  "case_id": "eval-fda-001",
+  "source_filename": "fda_warning_letter_01.md",
+  "source_type": "FDA",
+  "document_date": "2025-07-30",
+  "submitter_note": "FDA warning letter — medical device quality system deficiencies requiring CAPA",
+  "case_description": "FDA warning letter to Uscom Kft citing quality system deficiencies in a medical device manufacturer. Covers CAPA gaps, cleaning/disinfection validation failures, nonconforming product controls, and an adulterated/misbranded device finding. Expected to produce a High severity output with escalation triggered by an explicit escalation recommendation.",
+  "tags": ["regulatory", "fda", "medical-device", "quality-system", "capa", "escalation"]
+}

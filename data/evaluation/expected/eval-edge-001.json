@@ -1,0 +1,21 @@
+{
+  "_schema": "ExpectedOutput",
+  "_note": "F-1 reference expected output. Edge case with minimal content. The F-2 scorer must confirm Low severity and no escalation. The forbidden_claims list is the primary scoring signal here.",
+  "case_id": "eval-edge-001",
+  "expected_severity": "Low",
+  "expected_category": "Regulatory",
+  "expected_escalation_required": false,
+  "expected_summary_facts": [
+    "notice"
+  ],
+  "expected_recommendation_keywords": [],
+  "forbidden_claims": [
+    "critical vulnerability",
+    "immediate escalation",
+    "data breach",
+    "recall",
+    "patient safety",
+    "ransomware",
+    "regulatory violation confirmed"
+  ]
+}

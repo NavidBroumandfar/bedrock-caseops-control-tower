@@ -1,0 +1,44 @@
+{
+  "_schema": "ExpectedOutput",
+  "_note": "F-1 reference expected output. Keyword/concept-based — not exact-match. The F-2 scorer checks presence of required facts and absence of forbidden claims, not verbatim text.",
+  "case_id": "eval-cisa-001",
+  "expected_severity": "High",
+  "expected_category": "Security",
+  "expected_escalation_required": false,
+  "expected_summary_facts": [
+    "ransomware",
+    "advisory",
+    "threat",
+    "mitigation",
+    "detection",
+    "defender",
+    "CISA"
+  ],
+  "expected_recommendation_keywords": [
+    "patch",
+    "mitigate",
+    "backup",
+    "multi-factor",
+    "authentication",
+    "indicator",
+    "monitor"
+  ],
+  "forbidden_claims": [
+    "no threat detected",
+    "system is safe",
+    "no action required",
+    "attack is confirmed in the environment",
+    "breach confirmed"
+  ],
+  "_retrieval_expectation": {
+    "_schema": "RetrievalExpectation",
+    "case_id": "eval-cisa-001",
+    "minimum_expected_chunks": 1,
+    "expected_source_labels": [],
+    "required_evidence_terms": [
+      "ransomware",
+      "advisory",
+      "mitigation"
+    ]
+  }
+}

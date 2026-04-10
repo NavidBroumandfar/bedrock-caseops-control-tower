@@ -1,0 +1,49 @@
+{
+  "_schema": "ExpectedOutput",
+  "_note": "F-1 reference expected output. Keyword/concept-based — not exact-match. The F-2 scorer checks presence of required facts and absence of forbidden claims, not verbatim text.",
+  "case_id": "eval-cisa-002",
+  "expected_severity": "Critical",
+  "expected_category": "Security",
+  "expected_escalation_required": true,
+  "expected_summary_facts": [
+    "authentication bypass",
+    "CVSS",
+    "9.8",
+    "critical",
+    "PLC",
+    "firmware",
+    "water treatment",
+    "remote",
+    "unauthenticated",
+    "industrial control"
+  ],
+  "expected_recommendation_keywords": [
+    "patch",
+    "firmware",
+    "update",
+    "firewall",
+    "network",
+    "escalate",
+    "OT",
+    "isolate"
+  ],
+  "forbidden_claims": [
+    "no action required",
+    "low risk",
+    "not exploitable remotely",
+    "user interaction required",
+    "limited impact"
+  ],
+  "_retrieval_expectation": {
+    "_schema": "RetrievalExpectation",
+    "case_id": "eval-cisa-002",
+    "minimum_expected_chunks": 1,
+    "expected_source_labels": [],
+    "required_evidence_terms": [
+      "authentication bypass",
+      "PLC",
+      "firmware",
+      "critical"
+    ]
+  }
+}

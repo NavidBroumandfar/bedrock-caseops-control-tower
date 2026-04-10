@@ -1,0 +1,11 @@
+{
+  "_schema": "EvaluationCase",
+  "_note": "F-1 reference fixture. Validates pipeline behavior on a CISA #StopRansomware advisory — defender-oriented threat intelligence without confirmed active exploitation in the environment.",
+  "case_id": "eval-cisa-001",
+  "source_filename": "cisa_advisory_01.md",
+  "source_type": "CISA",
+  "document_date": "2025-02-19",
+  "submitter_note": "CISA StopRansomware advisory — ransomware threat intelligence and mitigation guidance",
+  "case_description": "CISA #StopRansomware joint advisory providing threat intelligence on an active ransomware campaign. Advisory includes technical indicators, MITRE ATT&CK mappings, and recommended mitigations. This is a general advisory — no confirmed active compromise in the operator's environment. Expected to produce High severity (ransomware threats to critical infrastructure are inherently high risk) without triggering automatic escalation, since the advisory is a general threat notice rather than a confirmed incident.",
+  "tags": ["security", "cisa", "ransomware", "threat-intel", "mitigations"]
+}

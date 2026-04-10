@@ -1,0 +1,11 @@
+{
+  "_schema": "EvaluationCase",
+  "_note": "F-1 reference fixture. Validates pipeline behavior on an FDA voluntary recall notice involving undeclared pharmaceutical ingredients.",
+  "case_id": "eval-fda-002",
+  "source_filename": "fda_recall_01.md",
+  "source_type": "FDA",
+  "document_date": "2026-03-14",
+  "submitter_note": "FDA voluntary recall — undeclared sildenafil and tadalafil in consumer honey products",
+  "case_description": "FDA voluntary recall by Pure Vitamins involving honey-style male enhancement products containing undeclared prescription drug ingredients (sildenafil, tadalafil). Products pose a health risk due to dangerous blood pressure interactions with nitrates. Expected to produce High severity with escalation — the health risk and consumer impact justify escalation to a compliance or consumer safety team.",
+  "tags": ["regulatory", "fda", "recall", "undeclared-ingredients", "consumer-safety", "escalation"]
+}

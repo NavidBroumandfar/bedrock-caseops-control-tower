@@ -1,0 +1,46 @@
+{
+  "_schema": "ExpectedOutput",
+  "_note": "F-1 reference expected output. Keyword/concept-based — not exact-match. The F-2 scorer checks presence of required facts and absence of forbidden claims, not verbatim text.",
+  "case_id": "eval-fda-001",
+  "expected_severity": "High",
+  "expected_category": "Regulatory",
+  "expected_escalation_required": true,
+  "expected_summary_facts": [
+    "quality system",
+    "corrective and preventive action",
+    "CAPA",
+    "cleaning",
+    "disinfection",
+    "nonconforming",
+    "adulterated",
+    "misbranded",
+    "SpiroSonic",
+    "Uscom",
+    "inadequate"
+  ],
+  "expected_recommendation_keywords": [
+    "CAPA",
+    "corrective",
+    "FDA",
+    "compliance",
+    "escalate",
+    "regulatory"
+  ],
+  "forbidden_claims": [
+    "no quality issues found",
+    "fully compliant",
+    "no action required",
+    "no deficiencies"
+  ],
+  "_retrieval_expectation": {
+    "_schema": "RetrievalExpectation",
+    "case_id": "eval-fda-001",
+    "minimum_expected_chunks": 1,
+    "expected_source_labels": [],
+    "required_evidence_terms": [
+      "quality system",
+      "corrective",
+      "device"
+    ]
+  }
+}
