@@ -1,0 +1,28 @@
+{
+  "_note": "F-2 test fixture — candidate containing a forbidden claim for eval-fda-001. Should fail forbidden_claims_check regardless of other scores.",
+  "document_id": "doc-20250730-eval0003",
+  "source_filename": "fda_warning_letter_01.md",
+  "source_type": "FDA",
+  "severity": "High",
+  "category": "Regulatory",
+  "summary": "The FDA issued a warning letter to Uscom Kft regarding quality system deficiencies. The facility is fully compliant with all corrective and preventive action requirements. The SpiroSonic device meets all applicable standards.",
+  "recommendations": [
+    "Continue current CAPA procedures as the facility has demonstrated compliance with FDA regulatory requirements.",
+    "No action required at this time pending further review."
+  ],
+  "citations": [
+    {
+      "source_id": "kb-src-001",
+      "source_label": "FDA Warning Letter — Uscom Kft 2025",
+      "excerpt": "Your quality system is inadequate.",
+      "relevance_score": 0.90
+    }
+  ],
+  "confidence_score": 0.80,
+  "unsupported_claims": [],
+  "escalation_required": true,
+  "escalation_reason": "Severity is High.",
+  "validated_by": "validation-agent-v1",
+  "session_id": "sess-test-forbidden-001",
+  "timestamp": "2025-07-30T12:00:00+00:00"
+}

@@ -1,0 +1,31 @@
+{
+  "_note": "F-2 test fixture — strong candidate that should score well and pass for eval-fda-001.",
+  "document_id": "doc-20250730-eval0001",
+  "source_filename": "fda_warning_letter_01.md",
+  "source_type": "FDA",
+  "severity": "High",
+  "category": "Regulatory",
+  "summary": "The FDA issued a warning letter to Uscom Kft citing significant quality system deficiencies in their medical device manufacturing facility. Key findings include inadequate corrective and preventive action (CAPA) procedures, failures in cleaning and disinfection validation for the SpiroSonic device, improper controls for nonconforming products, and a determination that the device is adulterated and misbranded. The facility was found to be inadequate in meeting 21 CFR Part 820 requirements.",
+  "recommendations": [
+    "Initiate a comprehensive CAPA review addressing all identified quality system gaps and submit a corrective action plan to the FDA within 30 days.",
+    "Conduct a full cleaning and disinfection validation study for the SpiroSonic device in compliance with regulatory requirements.",
+    "Escalate this matter to the compliance team and senior regulatory leadership for immediate attention.",
+    "Engage qualified FDA regulatory counsel to assess exposure and develop a remediation roadmap.",
+    "Review and update all nonconforming product procedures to ensure compliance with CFR requirements."
+  ],
+  "citations": [
+    {
+      "source_id": "kb-src-001",
+      "source_label": "FDA Warning Letter — Uscom Kft 2025",
+      "excerpt": "Your quality system is inadequate because you have not established and maintained procedures for implementing corrective and preventive action.",
+      "relevance_score": 0.92
+    }
+  ],
+  "confidence_score": 0.88,
+  "unsupported_claims": [],
+  "escalation_required": true,
+  "escalation_reason": "Explicit escalation recommendation present and severity is High.",
+  "validated_by": "validation-agent-v1",
+  "session_id": "sess-test-strong-001",
+  "timestamp": "2025-07-30T12:00:00+00:00"
+}

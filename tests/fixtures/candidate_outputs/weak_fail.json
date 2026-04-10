@@ -1,0 +1,21 @@
+{
+  "_note": "F-2 test fixture — weak candidate that should fail for eval-fda-001. Wrong severity (Medium instead of High), no escalation, thin summary missing required facts.",
+  "document_id": "doc-20250730-eval0002",
+  "source_filename": "fda_warning_letter_01.md",
+  "source_type": "FDA",
+  "severity": "Medium",
+  "category": "Regulatory",
+  "summary": "A letter was received from the FDA regarding a facility inspection. Some procedural concerns were noted. The facility should review its internal documentation.",
+  "recommendations": [
+    "Review internal documentation.",
+    "Consult legal if needed."
+  ],
+  "citations": [],
+  "confidence_score": 0.45,
+  "unsupported_claims": [],
+  "escalation_required": false,
+  "escalation_reason": null,
+  "validated_by": "validation-agent-v1",
+  "session_id": "sess-test-weak-001",
+  "timestamp": "2025-07-30T12:00:00+00:00"
+}

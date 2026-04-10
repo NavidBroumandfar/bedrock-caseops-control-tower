@@ -1,0 +1,20 @@
+{
+  "_note": "F-2 test fixture — minimal edge-case candidate for eval-edge-001 (Low severity, no escalation, empty keyword list). Summary contains 'notice' to satisfy the single expected fact.",
+  "document_id": "doc-20250101-eval0004",
+  "source_filename": "sample_notice.txt",
+  "source_type": "Other",
+  "severity": "Low",
+  "category": "Regulatory",
+  "summary": "This is a routine administrative notice with no significant findings. No immediate action is required.",
+  "recommendations": [
+    "File for reference."
+  ],
+  "citations": [],
+  "confidence_score": 0.70,
+  "unsupported_claims": [],
+  "escalation_required": false,
+  "escalation_reason": null,
+  "validated_by": "validation-agent-v1",
+  "session_id": "sess-test-thin-001",
+  "timestamp": "2025-01-01T00:00:00+00:00"
+}
