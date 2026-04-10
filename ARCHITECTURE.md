@@ -3,7 +3,7 @@
 **Version:** 0.2
 **Last Updated:** 2026-04-11
 
-> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G (Retrieval & Output Quality) complete. Phase H (Safety & Guardrails) complete. Phase I (Optimization) complete — I-0 (Prompt Caching), I-1 (Prompt Routing), I-2 (Baseline vs. Optimized Comparison). Phase J-0 (CloudWatch Evaluation Dashboard) complete.**
+> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G (Retrieval & Output Quality) complete. Phase H (Safety & Guardrails) complete. Phase I (Optimization) complete — I-0 (Prompt Caching), I-1 (Prompt Routing), I-2 (Baseline vs. Optimized Comparison). Phase J-0 (CloudWatch Evaluation Dashboard) complete. Phase J-1 (Evaluation Result Artifacts + Reporting) complete.**
 >
 > **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Phase F adds a fully local, offline evaluation layer: typed evaluation contracts and schemas (F-0), a curated evaluation dataset with 7 cases and reference expected outputs (F-1), and an offline evaluation harness with dataset loader, deterministic scorer, and scoring runner (F-2). Phase G-0 adds offline retrieval quality metrics: three deterministic metrics scored against F-1 retrieval expectations, with fixture-based candidate input and 55 new tests. Phase G-1 adds offline citation quality metrics: four deterministic metrics scored against CitationExpectation references, with five candidate output fixtures and 64 new tests. Phase G-2 adds a composite output-quality scorer that composes F-2 and G-1 sub-scores plus three final-output-only checks (summary_nonempty, recommendations_present_when_expected, unsupported_claims_clean), with 46 new tests. Phase H-0 adds typed safety contracts (SafetyIssue, SafetyAssessment, FailurePolicy) and a local deterministic safety policy evaluator (evaluate_safety, evaluate_safety_from_raw) with six policy rules and 144 new tests. Phase H-1 adds the Bedrock Guardrails integration foundation: a normalized GuardrailAssessmentResult contract (guardrail_models.py), a thin GuardrailsService wrapper for the ApplyGuardrail API (guardrails_service.py), a Guardrails → H-0 safety adapter (guardrails_adapter.py), GuardrailsConfig config block, and two new safety_models enum extensions (GUARDRAILS source, GUARDRAIL_INTERVENTION code), with 134 new tests. Phase H-2 adds the adversarial and edge-case safety evaluation suite: 10 curated fixtures covering schema failures, unsupported claims, missing citations, low confidence, empty retrieval, escalation-required, Guardrails intervention, combined blocking+escalation priority, and clean passing cases; plus a narrow safety suite runner (safety_suite.py) with SafetyCaseFixture, SafetyCaseResult, SafetySuiteSummary dataclasses and run_safety_suite() batch executor; 91 new tests. Phase I-0 adds prompt caching integration: PromptCachingConfig dataclass and loader (config.py), apply_prompt_caching() pure function (prompt_cache.py), optional caching_config wiring in BedrockAnalysisService and BedrockValidationService, .env.example section, and 63 new tests covering config defaults/overrides/validation/immutability, disabled and enabled request-shaping, service integration, and no-live-AWS confirmation. Phase I-1 adds prompt routing: PromptRoutingConfig dataclass and loader (config.py), pure resolve_model_id() routing function (prompt_router.py), optional routing_config wiring in both Bedrock services (resolution at construction time via "analysis" and "validation" routes), .env.example section, and 63 new tests covering config defaults/overrides/case-insensitivity/invalid-flag/immutability, disabled and enabled routing paths, analysis and validation route resolution, priority chain (route override → routing default → caller fallback), service integration, no-regression with routing off, and no live AWS dependency. Phase I-2 adds the baseline vs. optimized comparison workflow: ComparisonVerdict Literal type in evaluation_models.py; app/evaluation/comparison_runner.py with ComparisonCaseResult, ComparisonSummary, and ComparisonRunResult frozen dataclasses and run_comparison() runner; the runner composes G-2 score_output_quality() and H-0 evaluate_safety() to score both sides, computes per-case score deltas and safety status changes, classifies verdicts (improved/regressed/unchanged) using COMPARISON_DELTA_EPSILON, and aggregates a ComparisonSummary; 4 paired fixtures in tests/fixtures/comparison_cases/ covering improved, unchanged, regressed, and safety-change scenarios; 108 new tests. All 1759 unit and evaluation tests pass without live AWS calls.
 >
@@ -1064,4 +1064,65 @@ All datums carry an `Environment` dimension from `config.environment`.
 - **Fail-safe** — all boto3 exceptions in the service are caught and discarded; a CloudWatch outage cannot affect the evaluation pipeline
 - **Pure functions** — translator and builder have no I/O, no state, no AWS dependency; same inputs always produce the same outputs
 
-> **J-1 and J-2 remain not started.** See `PROJECT_SPEC.md §13`.
+> **J-1 complete. J-2 remains not started.** See `PROJECT_SPEC.md §13`.
+
+---
+
+## 24. Phase J-1 — Evaluation Result Artifacts + Reporting
+
+Phase J-1 adds a **local artifact and reporting layer** that persists completed evaluation run results to disk and generates concise human-readable summaries.  It is entirely offline — no AWS dependency, no live runtime changes.
+
+### Components
+
+| Component | Location | Description |
+|---|---|---|
+| **Artifact models** | `app/schemas/artifact_models.py` | Typed contracts: `ArtifactKind` Literal type, `ArtifactMetadata` (frozen Pydantic model — run_id, kind, created_at, artifact_dir, artifact_files), `ReportBundle` (groups metadata + optional report path) |
+| **Report generator** | `app/evaluation/report_generator.py` | Three pure functions: `generate_evaluation_run_report()`, `generate_safety_run_report()`, `generate_comparison_run_report()` — all return deterministic markdown strings; no I/O |
+| **Artifact writer** | `app/evaluation/artifact_writer.py` | Three writer functions: `write_evaluation_run()`, `write_safety_run()`, `write_comparison_run()`; each writes `summary.json` + `case_results.json` + optional `report.md` to a predictable subdirectory; returns a `ReportBundle`; raises `ArtifactWriteError` on filesystem failure |
+| **Tests** | `tests/test_artifact_models.py`, `tests/test_report_generator.py`, `tests/test_artifact_writer.py` | 122 new tests: model validation, report content, path construction, JSON correctness, determinism, error handling, no live AWS |
+
+### Output directory structure
+
+```
+{output_root}/
+  evaluation_runs/{run_id}/
+    summary.json        ← EvaluationRunSummary (F-2)
+    case_results.json   ← list[EvaluationResult] (F-2)
+    report.md           ← human-readable markdown summary
+
+  safety_runs/{suite_id}/
+    summary.json        ← SafetySuiteSummary (H-2)
+    case_results.json   ← list[SafetyCaseResult] (H-2)
+    report.md
+
+  comparison_runs/{run_id}/
+    summary.json        ← ComparisonSummary (I-2)
+    case_results.json   ← list[ComparisonCaseResult] (I-2)
+    report.md
+```
+
+### Report content
+
+Each markdown report answers the key human questions at a glance:
+
+| Report | Key sections |
+|---|---|
+| Evaluation run | Run ID + timestamp, pass/fail counts and rate, average score, failing case IDs with scores, per-metric averages |
+| Safety suite | Suite ID, pass/fail counts and rate, actual status distribution, failing cases with expected vs. actual status |
+| Comparison run | Run ID, improved/regressed/unchanged counts, baseline vs. optimized avg scores and delta, per-case verdict table, safety status distribution |
+
+### Serialization strategy
+
+- **Pydantic models** (EvaluationRunSummary, EvaluationResult): `.model_dump(mode="json")`
+- **SafetyCaseResult** (frozen dataclass with nested SafetyAssessment Pydantic model): manual field-by-field serializer; enum values as `.value` strings; nested model via `.model_dump(mode="json")`
+- **ComparisonCaseResult / ComparisonSummary** (frozen dataclasses): manual field-by-field serializers; tuples become lists; enum-like verdict Literal stays as string
+
+### Design properties
+
+- **Offline-first** — no boto3, no Bedrock client, no live AWS calls
+- **Deterministic** — same inputs always produce the same JSON content and report text
+- **Composable** — artifact writer calls report generator internally; callers interact with a single `write_*` function
+- **Safe failure** — `ArtifactWriteError` raised (not swallowed) on filesystem failure so callers can handle gracefully
+- **Thin contracts** — `ArtifactMetadata` and `ReportBundle` are metadata models only; no scoring logic
+- **Consistent structure** — three output subdirectories (`evaluation_runs/`, `safety_runs/`, `comparison_runs/`) under a configurable `output_root`
+- **No runtime pipeline impact** — no changes to agents, workflows, CLI, or live service wrappers

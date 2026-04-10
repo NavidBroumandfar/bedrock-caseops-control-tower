@@ -2,7 +2,7 @@
 
 **Version:** 0.2
 **Last Updated:** 2026-04-11
-**Status:** Phase 1 Complete — Phase 2 In Progress (Phase F complete, Phase G complete, Phase H complete, Phase I complete, Phase J-0 complete)
+**Status:** Phase 1 Complete — Phase 2 In Progress (Phase F complete, Phase G complete, Phase H complete, Phase I complete, Phase J-0 complete, Phase J-1 complete)
 
 ---
 
@@ -192,6 +192,7 @@ The MVP engineering scope is complete. Success criteria are tracked in two categ
 - [x] CLI accepts a document path and runs the full pipeline flow — `run` command implemented (E-1) and tested
 - [x] Local JSON output written and S3 archiving implemented — `output_writer.py` and `upload_case_output()` implemented (E-1)
 - [x] CloudWatch evaluation dashboard foundation implemented — J-0 complete: typed metric contracts, translation layer, thin metrics service wrapper, dashboard body builder, all offline-testable
+- [x] Local evaluation result artifacts and reporting implemented — J-1 complete: typed artifact/report contracts, local JSON artifact writer, markdown report generator, consistent output directory structure, 122 new tests, fully offline
 
 **Live AWS runtime validation (pending external resolution):**
 - [ ] A document can be submitted via CLI and produce a valid JSON output end-to-end against a live Bedrock Knowledge Base
@@ -222,7 +223,7 @@ The MVP engineering scope is complete. Success criteria are tracked in two categ
 
 #### Phase 1 Subphase Roadmap
 
- > **Current status:** Phase 1 complete — all subphases (A, B, C, D, E-0, E-1, E-2) implemented in code and test-complete. Phase 2 in progress — Phase F (Evaluation Foundation) complete; Phase G (Retrieval & Output Quality) complete; Phase H (Safety & Guardrails) complete; Phase I (Optimization) complete (I-0 Prompt Caching, I-1 Prompt Routing, I-2 Baseline vs. Optimized Comparison); Phase J-0 (CloudWatch Evaluation Dashboard) complete. J-1 and J-2 are next.
+ > **Current status:** Phase 1 complete — all subphases (A, B, C, D, E-0, E-1, E-2) implemented in code and test-complete. Phase 2 in progress — Phase F (Evaluation Foundation) complete; Phase G (Retrieval & Output Quality) complete; Phase H (Safety & Guardrails) complete; Phase I (Optimization) complete (I-0 Prompt Caching, I-1 Prompt Routing, I-2 Baseline vs. Optimized Comparison); Phase J-0 (CloudWatch Evaluation Dashboard) complete; Phase J-1 (Evaluation Result Artifacts + Reporting) complete. J-2 is next.
 >
 > **Live Bedrock runtime validation is pending:** All code is implemented correctly. Live AWS Knowledge Base end-to-end validation remains blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. This is an external blocker, not a code issue.
 
@@ -256,7 +257,7 @@ The MVP engineering scope is complete. Success criteria are tracked in two categ
 
 ### Phase 2 — v2: Evaluation and Optimization
 
-**Status:** In progress — Phase F complete, Phase G complete, Phase H complete, Phase I complete (I-0 through I-2), Phase J-0 complete.
+**Status:** In progress — Phase F complete, Phase G complete, Phase H complete, Phase I complete (I-0 through I-2), Phase J-0 complete, Phase J-1 complete.
 
 **Goal:** Make the system measurably better and observable — through structured evaluation, safety controls, optimization, and production-grade reporting.
 
@@ -288,7 +289,7 @@ The MVP engineering scope is complete. Success criteria are tracked in two categ
 
 - **Phase J — Observability & Reporting**
   - J-0 CloudWatch evaluation dashboard ✅
-  - J-1 Evaluation result artifacts + reporting
+  - J-1 Evaluation result artifacts + reporting ✅
   - J-2 v2 hardening + optimization checkpoint
 
 ---

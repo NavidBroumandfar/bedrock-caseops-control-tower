@@ -250,7 +250,7 @@ pip install -r requirements.txt
 python -m pytest tests/ -v
 ```
 
-All 1872 tests pass without live AWS, covering intake, retrieval, analysis, validation, escalation, output writing, CLI commands, structured logging, CloudWatch service, config loading, the full Phase F evaluation layer (schemas, dataset loader, scorer, runner), Phase G-0 retrieval quality metrics (retrieval scorer, fixture loading, dataset alignment), Phase G-1 citation quality checks (citation scorer, citation expectations, fixture loading, dataset alignment), Phase G-2 output quality scoring (composite scorer, five-dimension result, fixture integration, architectural separation), Phase H-0 safety contracts and deterministic policy evaluator (safety_models, safety_policy — six policy rules), Phase H-1 Bedrock Guardrails integration (guardrail_models, guardrails_service, guardrails_adapter — intervention and non-intervention paths), Phase H-2 adversarial and edge-case safety evaluation suite (safety_suite runner, 10 adversarial fixtures, status-priority and combined-scenario coverage), Phase I-0 prompt caching integration (PromptCachingConfig, apply_prompt_caching, service wiring — config defaults/overrides/validation, disabled and enabled request-shaping, no-regression with caching off), Phase I-1 prompt routing strategy (PromptRoutingConfig, resolve_model_id, service wiring — config defaults/overrides/invalid-flag/immutability, disabled and enabled routing paths, analysis and validation route resolution, priority chain, service integration, no-regression with routing off), Phase I-2 baseline vs. optimized comparison workflow (ComparisonVerdict type, ComparisonCaseResult/ComparisonSummary/ComparisonRunResult dataclasses, run_comparison runner composing G-2 + H-0, 4 paired fixtures covering improved/unchanged/regressed/safety-change, delta correctness, missing-case handling, determinism, no live AWS), and Phase J-0 CloudWatch evaluation dashboard (EvaluationDashboardConfig config loading/validation, EvaluationMetricDatum contract with unit and value validation, CloudWatchMetricsService/NoOpMetricsService with injectable client, build_metrics_service factory, evaluation_run_summary_to_metrics/comparison_summary_to_metrics/safety_distribution_to_metrics translation functions, build_evaluation_dashboard dashboard body builder, dashboard_body_to_json serialiser — all offline, no live AWS).
+All 2005 tests pass without live AWS, covering intake, retrieval, analysis, validation, escalation, output writing, CLI commands, structured logging, CloudWatch service, config loading, the full Phase F evaluation layer (schemas, dataset loader, scorer, runner), Phase G-0 retrieval quality metrics (retrieval scorer, fixture loading, dataset alignment), Phase G-1 citation quality checks (citation scorer, citation expectations, fixture loading, dataset alignment), Phase G-2 output quality scoring (composite scorer, five-dimension result, fixture integration, architectural separation), Phase H-0 safety contracts and deterministic policy evaluator (safety_models, safety_policy — six policy rules), Phase H-1 Bedrock Guardrails integration (guardrail_models, guardrails_service, guardrails_adapter — intervention and non-intervention paths), Phase H-2 adversarial and edge-case safety evaluation suite (safety_suite runner, 10 adversarial fixtures, status-priority and combined-scenario coverage), Phase I-0 prompt caching integration (PromptCachingConfig, apply_prompt_caching, service wiring — config defaults/overrides/validation, disabled and enabled request-shaping, no-regression with caching off), Phase I-1 prompt routing strategy (PromptRoutingConfig, resolve_model_id, service wiring — config defaults/overrides/invalid-flag/immutability, disabled and enabled routing paths, analysis and validation route resolution, priority chain, service integration, no-regression with routing off), Phase I-2 baseline vs. optimized comparison workflow (ComparisonVerdict type, ComparisonCaseResult/ComparisonSummary/ComparisonRunResult dataclasses, run_comparison runner composing G-2 + H-0, 4 paired fixtures covering improved/unchanged/regressed/safety-change, delta correctness, missing-case handling, determinism, no live AWS), Phase J-0 CloudWatch evaluation dashboard (EvaluationDashboardConfig config loading/validation, EvaluationMetricDatum contract with unit and value validation, CloudWatchMetricsService/NoOpMetricsService with injectable client, build_metrics_service factory, evaluation_run_summary_to_metrics/comparison_summary_to_metrics/safety_distribution_to_metrics translation functions, build_evaluation_dashboard dashboard body builder, dashboard_body_to_json serialiser — all offline, no live AWS), and Phase J-1 evaluation result artifacts and reporting (ArtifactMetadata/ReportBundle typed contracts, write_evaluation_run/write_safety_run/write_comparison_run artifact writers, generate_evaluation_run_report/generate_safety_run_report/generate_comparison_run_report markdown generators — all offline, local-first, no live AWS).
 
 ### Step 2: Explore sample inputs
 
@@ -359,7 +359,7 @@ This evaluation layer is fully local and offline — it is independent of live A
 - `tests/fixtures/comparison_cases/` — 4 paired fixtures (cases/, expected/, baseline/, optimized/) covering: improved (optimized hits all expected facts/keywords), unchanged (identical outputs), regressed (optimized introduces unsupported claims), and safety-change (unchanged quality verdict, safety status changes from ESCALATE → ALLOW)
 - 108 new tests covering: typed model contracts, verdict classification, score delta correctness, improved/regressed/unchanged cases, missing baseline/optimized handling, aggregate summary accuracy, deterministic repeated runs, and no live AWS dependency
 
-**Phase I is now complete.** All 1759 unit and evaluation tests pass without live AWS calls.
+**Phase I is now complete.** All unit and evaluation tests pass without live AWS calls.
 
 **Phase J-0 (CloudWatch Evaluation Dashboard) is complete** — the repository now includes:
 
@@ -370,7 +370,20 @@ This evaluation layer is fully local and offline — it is independent of live A
 - `app/evaluation/dashboard_builder.py` — pure dashboard body builder producing a valid CloudWatch dashboard JSON dict (title widget + four metric widgets); no live AWS required; ready for `put_dashboard` when credentials are available
 - `.env.example` — `# ── Evaluation Dashboard / CloudWatch Metrics (J-0)` section with all four variables
 
-The J-0 layer is fully offline-testable without live AWS credentials.  J-1 (result artifact generation) and J-2 (v2 hardening checkpoint) remain not started.
+The J-0 layer is fully offline-testable without live AWS credentials.
+
+**Phase J-1 (Evaluation Result Artifacts + Reporting) is complete** — the repository now includes:
+
+- `ArtifactMetadata` and `ReportBundle` typed contracts (`app/schemas/artifact_models.py`)
+- `write_evaluation_run()`, `write_safety_run()`, `write_comparison_run()` local artifact writers (`app/evaluation/artifact_writer.py`) — each writes `summary.json` + `case_results.json` + optional `report.md` to a predictable subdirectory under `output_root`
+- `generate_evaluation_run_report()`, `generate_safety_run_report()`, `generate_comparison_run_report()` pure markdown report generators (`app/evaluation/report_generator.py`)
+- Consistent output structure: `outputs/evaluation_runs/`, `outputs/safety_runs/`, `outputs/comparison_runs/`
+
+J-2 (v2 hardening checkpoint) remains not started.
+
+**Phase J-1 is now complete** — see the J-1 section above for details.
+
+**Phase J-2 (v2 hardening checkpoint)** remains not started.
 
 **Live Bedrock runtime validation** remains pending due to AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. This is an external blocker, not a code issue.
 

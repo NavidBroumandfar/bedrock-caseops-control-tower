@@ -122,9 +122,9 @@ These are design contracts followed across all implementation work. They apply t
 
 ## Current Implementation Phase
 
-**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G — Retrieval & Output Quality COMPLETE | Phase H — Safety & Guardrails COMPLETE | Phase I — Optimization COMPLETE (I-0 Prompt Caching, I-1 Prompt Routing, I-2 Baseline vs. Optimized Comparison) | Phase J-0 — CloudWatch Evaluation Dashboard COMPLETE**
+**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G — Retrieval & Output Quality COMPLETE | Phase H — Safety & Guardrails COMPLETE | Phase I — Optimization COMPLETE (I-0 Prompt Caching, I-1 Prompt Routing, I-2 Baseline vs. Optimized Comparison) | Phase J-0 — CloudWatch Evaluation Dashboard COMPLETE | Phase J-1 — Evaluation Result Artifacts + Reporting COMPLETE**
 
-> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 1872 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. All Phase F, G, H, I, and J-0 layers are fully independent of this blocker.
+> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 2005 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. All Phase F, G, H, I, J-0, and J-1 layers are fully independent of this blocker.
 
 The repository is portfolio-ready, test-complete, and demo-friendly for the full MVP and Phase F evaluation scope.
 
@@ -251,10 +251,18 @@ The repository is portfolio-ready, test-complete, and demo-friendly for the full
   - `tests/test_cloudwatch_metrics_service.py` — 31 tests: NoOp behavior, factory routing, put_metric_data payload, dimensions presence/absence, multiple datums, exception swallowing, negative values, no live AWS
   - `tests/test_metrics_translator.py` — 37 tests: eval summary (11), comparison summary (13), safety distribution (13)
   - `tests/test_dashboard_builder.py` — 37 tests: structure, grid constraints, widget properties, namespace/dimension propagation, JSON serialisability, determinism
-  - 1872 total tests pass
+  - 1872 total tests pass at J-0 completion
+- **J-1** — Evaluation result artifacts + reporting:
+  - `app/schemas/artifact_models.py` — `ArtifactKind` Literal type, `ArtifactMetadata` frozen Pydantic model (run_id, kind, created_at, artifact_dir, artifact_files), `ReportBundle` (groups metadata + optional report path)
+  - `app/evaluation/report_generator.py` — three pure markdown report generators: `generate_evaluation_run_report()`, `generate_safety_run_report()`, `generate_comparison_run_report()`; no I/O; deterministic
+  - `app/evaluation/artifact_writer.py` — three writer functions: `write_evaluation_run()`, `write_safety_run()`, `write_comparison_run()`; each writes `summary.json` + `case_results.json` + optional `report.md`; consistent output structure under `output_root`; `ArtifactWriteError` for filesystem failures; no live AWS
+  - Output structure: `{output_root}/evaluation_runs/{run_id}/`, `{output_root}/safety_runs/{suite_id}/`, `{output_root}/comparison_runs/{run_id}/`
+  - `tests/test_artifact_models.py` — 28 tests: ArtifactKind, ArtifactMetadata validation/immutability, ReportBundle, structural isolation
+  - `tests/test_report_generator.py` — 54 tests: eval/safety/comparison report content, determinism, section presence, structural isolation
+  - `tests/test_artifact_writer.py` — 40 tests: directory creation, JSON file presence and content, generate_report flag, error handling, serialization correctness, no live AWS
+  - 2005 total tests pass
 
 ### Next step
-- **Phase J-1** — Evaluation result artifact generation; see `PROJECT_SPEC.md §13`
 - **Phase J-2** — v2 hardening + optimization checkpoint; see `PROJECT_SPEC.md §13`
 
 ### Phase 2 roadmap
@@ -267,13 +275,12 @@ Phase 2 follows the same lettered-subphase naming convention as Phase 1 (A–E):
 | **G** | Retrieval & Output Quality | ✅ Complete | G-0 retrieval metrics ✅, G-1 citation quality ✅, G-2 output scoring ✅ |
 | **H** | Safety & Guardrails | ✅ Complete | H-0 safety contracts ✅, H-1 Bedrock Guardrails integration ✅, H-2 adversarial suite ✅ |
 | **I** | Optimization | ✅ Complete | I-0 prompt caching ✅, I-1 prompt routing ✅, I-2 baseline vs. optimized comparison ✅ |
-| **J** | Observability & Reporting | In progress | J-0 CloudWatch dashboard ✅, J-1 result artifacts, J-2 v2 hardening checkpoint |
+| **J** | Observability & Reporting | In progress | J-0 CloudWatch dashboard ✅, J-1 result artifacts ✅, J-2 v2 hardening checkpoint |
 
 See `PROJECT_SPEC.md §13` for the full Phase 2 subphase breakdown.
 
 ### Not yet implemented
 - Live Bedrock validation (blocked by AWS-side throttling — not a code issue)
-- Phase J-1: Evaluation result artifact generation
 - Phase J-2: v2 hardening + optimization checkpoint
 
 Reference: `ARCHITECTURE.md §5–9` for component flows. `PROJECT_SPEC.md §13` for the full subphase roadmap.
