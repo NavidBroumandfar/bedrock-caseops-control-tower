@@ -1,9 +1,9 @@
 """
-J-1 typed contracts for local evaluation artifact metadata and report bundles.
+J-1/J-2 typed contracts for local evaluation artifact metadata and report bundles.
 
 These models describe the shape of persisted evaluation artifacts written by the
-J-1 artifact writer.  They are metadata contracts, not scoring contracts — all
-evaluation and scoring logic lives in app/evaluation/.
+J-1 artifact writer and J-2 checkpoint writer.  They are metadata contracts, not
+scoring contracts — all evaluation and scoring logic lives in app/evaluation/.
 
 ArtifactKind     — Literal type discriminating the evaluation run type.
 ArtifactMetadata — Metadata about one persisted artifact bundle on disk.
@@ -17,8 +17,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
-# The three supported evaluation run types in J-1.
-ArtifactKind = Literal["evaluation_run", "safety_run", "comparison_run"]
+# Supported artifact kinds: J-1 evaluation runs + J-2 checkpoint.
+ArtifactKind = Literal["evaluation_run", "safety_run", "comparison_run", "checkpoint"]
 
 
 class ArtifactMetadata(BaseModel):

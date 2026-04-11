@@ -3,9 +3,9 @@
 **Version:** 0.2
 **Last Updated:** 2026-04-11
 
-> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G (Retrieval & Output Quality) complete. Phase H (Safety & Guardrails) complete. Phase I (Optimization) complete — I-0 (Prompt Caching), I-1 (Prompt Routing), I-2 (Baseline vs. Optimized Comparison). Phase J-0 (CloudWatch Evaluation Dashboard) complete. Phase J-1 (Evaluation Result Artifacts + Reporting) complete.**
+> **Phase 1 (v1 MVP) complete. Phase F (Evaluation Foundation) complete. Phase G (Retrieval & Output Quality) complete. Phase H (Safety & Guardrails) complete. Phase I (Optimization) complete — I-0 (Prompt Caching), I-1 (Prompt Routing), I-2 (Baseline vs. Optimized Comparison). Phase J-0 (CloudWatch Evaluation Dashboard) complete. Phase J-1 (Evaluation Result Artifacts + Reporting) complete. Phase J-2 (v2 Hardening Checkpoint) complete. Phase 2 engineering scope is complete.**
 >
-> **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Phase F adds a fully local, offline evaluation layer: typed evaluation contracts and schemas (F-0), a curated evaluation dataset with 7 cases and reference expected outputs (F-1), and an offline evaluation harness with dataset loader, deterministic scorer, and scoring runner (F-2). Phase G-0 adds offline retrieval quality metrics: three deterministic metrics scored against F-1 retrieval expectations, with fixture-based candidate input and 55 new tests. Phase G-1 adds offline citation quality metrics: four deterministic metrics scored against CitationExpectation references, with five candidate output fixtures and 64 new tests. Phase G-2 adds a composite output-quality scorer that composes F-2 and G-1 sub-scores plus three final-output-only checks (summary_nonempty, recommendations_present_when_expected, unsupported_claims_clean), with 46 new tests. Phase H-0 adds typed safety contracts (SafetyIssue, SafetyAssessment, FailurePolicy) and a local deterministic safety policy evaluator (evaluate_safety, evaluate_safety_from_raw) with six policy rules and 144 new tests. Phase H-1 adds the Bedrock Guardrails integration foundation: a normalized GuardrailAssessmentResult contract (guardrail_models.py), a thin GuardrailsService wrapper for the ApplyGuardrail API (guardrails_service.py), a Guardrails → H-0 safety adapter (guardrails_adapter.py), GuardrailsConfig config block, and two new safety_models enum extensions (GUARDRAILS source, GUARDRAIL_INTERVENTION code), with 134 new tests. Phase H-2 adds the adversarial and edge-case safety evaluation suite: 10 curated fixtures covering schema failures, unsupported claims, missing citations, low confidence, empty retrieval, escalation-required, Guardrails intervention, combined blocking+escalation priority, and clean passing cases; plus a narrow safety suite runner (safety_suite.py) with SafetyCaseFixture, SafetyCaseResult, SafetySuiteSummary dataclasses and run_safety_suite() batch executor; 91 new tests. Phase I-0 adds prompt caching integration: PromptCachingConfig dataclass and loader (config.py), apply_prompt_caching() pure function (prompt_cache.py), optional caching_config wiring in BedrockAnalysisService and BedrockValidationService, .env.example section, and 63 new tests covering config defaults/overrides/validation/immutability, disabled and enabled request-shaping, service integration, and no-live-AWS confirmation. Phase I-1 adds prompt routing: PromptRoutingConfig dataclass and loader (config.py), pure resolve_model_id() routing function (prompt_router.py), optional routing_config wiring in both Bedrock services (resolution at construction time via "analysis" and "validation" routes), .env.example section, and 63 new tests covering config defaults/overrides/case-insensitivity/invalid-flag/immutability, disabled and enabled routing paths, analysis and validation route resolution, priority chain (route override → routing default → caller fallback), service integration, no-regression with routing off, and no live AWS dependency. Phase I-2 adds the baseline vs. optimized comparison workflow: ComparisonVerdict Literal type in evaluation_models.py; app/evaluation/comparison_runner.py with ComparisonCaseResult, ComparisonSummary, and ComparisonRunResult frozen dataclasses and run_comparison() runner; the runner composes G-2 score_output_quality() and H-0 evaluate_safety() to score both sides, computes per-case score deltas and safety status changes, classifies verdicts (improved/regressed/unchanged) using COMPARISON_DELTA_EPSILON, and aggregates a ComparisonSummary; 4 paired fixtures in tests/fixtures/comparison_cases/ covering improved, unchanged, regressed, and safety-change scenarios; 108 new tests. All 1759 unit and evaluation tests pass without live AWS calls.
+> **Implementation Status:** All MVP engineering phases are implemented in code: Phase A (intake), Phase B (retrieval), Phase C (analysis + validation), Phase D (orchestration + escalation), Phase E-0 (structured logging + CloudWatch), Phase E-1 (CLI end-to-end flow + S3 output archiving), and Phase E-2 (test hardening, sample cases, config hardening, demo readiness). Phase F adds a fully local, offline evaluation layer: typed evaluation contracts and schemas (F-0), a curated evaluation dataset with 7 cases and reference expected outputs (F-1), and an offline evaluation harness with dataset loader, deterministic scorer, and scoring runner (F-2). Phase G-0 adds offline retrieval quality metrics: three deterministic metrics scored against F-1 retrieval expectations, with fixture-based candidate input and 55 new tests. Phase G-1 adds offline citation quality metrics: four deterministic metrics scored against CitationExpectation references, with five candidate output fixtures and 64 new tests. Phase G-2 adds a composite output-quality scorer that composes F-2 and G-1 sub-scores plus three final-output-only checks (summary_nonempty, recommendations_present_when_expected, unsupported_claims_clean), with 46 new tests. Phase H-0 adds typed safety contracts (SafetyIssue, SafetyAssessment, FailurePolicy) and a local deterministic safety policy evaluator (evaluate_safety, evaluate_safety_from_raw) with six policy rules and 144 new tests. Phase H-1 adds the Bedrock Guardrails integration foundation: a normalized GuardrailAssessmentResult contract (guardrail_models.py), a thin GuardrailsService wrapper for the ApplyGuardrail API (guardrails_service.py), a Guardrails → H-0 safety adapter (guardrails_adapter.py), GuardrailsConfig config block, and two new safety_models enum extensions (GUARDRAILS source, GUARDRAIL_INTERVENTION code), with 134 new tests. Phase H-2 adds the adversarial and edge-case safety evaluation suite: 10 curated fixtures covering schema failures, unsupported claims, missing citations, low confidence, empty retrieval, escalation-required, Guardrails intervention, combined blocking+escalation priority, and clean passing cases; plus a narrow safety suite runner (safety_suite.py) with SafetyCaseFixture, SafetyCaseResult, SafetySuiteSummary dataclasses and run_safety_suite() batch executor; 91 new tests. Phase I-0 adds prompt caching integration: PromptCachingConfig dataclass and loader (config.py), apply_prompt_caching() pure function (prompt_cache.py), optional caching_config wiring in BedrockAnalysisService and BedrockValidationService, .env.example section, and 63 new tests covering config defaults/overrides/validation/immutability, disabled and enabled request-shaping, service integration, and no-live-AWS confirmation. Phase I-1 adds prompt routing: PromptRoutingConfig dataclass and loader (config.py), pure resolve_model_id() routing function (prompt_router.py), optional routing_config wiring in both Bedrock services (resolution at construction time via "analysis" and "validation" routes), .env.example section, and 63 new tests covering config defaults/overrides/case-insensitivity/invalid-flag/immutability, disabled and enabled routing paths, analysis and validation route resolution, priority chain (route override → routing default → caller fallback), service integration, no-regression with routing off, and no live AWS dependency. Phase I-2 adds the baseline vs. optimized comparison workflow: ComparisonVerdict Literal type in evaluation_models.py; app/evaluation/comparison_runner.py with ComparisonCaseResult, ComparisonSummary, and ComparisonRunResult frozen dataclasses and run_comparison() runner; the runner composes G-2 score_output_quality() and H-0 evaluate_safety() to score both sides, computes per-case score deltas and safety status changes, classifies verdicts (improved/regressed/unchanged) using COMPARISON_DELTA_EPSILON, and aggregates a ComparisonSummary; 4 paired fixtures in tests/fixtures/comparison_cases/ covering improved, unchanged, regressed, and safety-change scenarios; 108 new tests. Phase J-2 adds the v2 hardening checkpoint: Phase2CheckpointResult/Phase2ReadinessBlock typed contracts (checkpoint_models.py) with a model-level consistency guard preventing misrepresentation of the external blocker state; CheckpointInputs frozen dataclass and build_checkpoint() runner (checkpoint_runner.py) composing all Phase 2 layer readiness indicators into one typed checkpoint summary; generate_checkpoint_report() pure markdown generator and write_checkpoint() artifact writer (checkpoint_writer.py) producing outputs/checkpoints/{id}/checkpoint.json + report.md; ArtifactKind extended with "checkpoint"; 114 new tests. All 2119 unit and evaluation tests pass without live AWS calls.
 >
 > **Live Bedrock runtime validation is pending:** Live AWS Knowledge Base end-to-end validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. The architecture and all implementation are complete and correct — this is not a code issue. Live validation will be completed when the AWS-side blocker is resolved. The Phase F evaluation layer is fully independent of this blocker.
 
@@ -758,7 +758,7 @@ SafetySuiteSummary
 - **Deterministic** — same fixture directory always produces the same results in the same order
 - **Narrow** — `safety_suite.py` is a dedicated H-2 runner, not a replacement for the F-2 batch evaluation runner
 
-> **Phase H complete. Phase I (I-0, I-1, I-2) complete. Phase J-0 (CloudWatch Evaluation Dashboard) complete.** J-1 and J-2 remain not started. See `PROJECT_SPEC.md §13`.
+> **Phase H complete. Phase I (I-0, I-1, I-2) complete. Phase J-0 (CloudWatch Evaluation Dashboard) complete. Phase J-1 complete. Phase J-2 complete.** Phase 2 is complete in engineering scope. See `PROJECT_SPEC.md §13`.
 
 ---
 
@@ -1064,7 +1064,7 @@ All datums carry an `Environment` dimension from `config.environment`.
 - **Fail-safe** — all boto3 exceptions in the service are caught and discarded; a CloudWatch outage cannot affect the evaluation pipeline
 - **Pure functions** — translator and builder have no I/O, no state, no AWS dependency; same inputs always produce the same outputs
 
-> **J-1 complete. J-2 remains not started.** See `PROJECT_SPEC.md §13`.
+> **J-1 complete. J-2 complete.** See `PROJECT_SPEC.md §13`.
 
 ---
 
@@ -1126,3 +1126,51 @@ Each markdown report answers the key human questions at a glance:
 - **Thin contracts** — `ArtifactMetadata` and `ReportBundle` are metadata models only; no scoring logic
 - **Consistent structure** — three output subdirectories (`evaluation_runs/`, `safety_runs/`, `comparison_runs/`) under a configurable `output_root`
 - **No runtime pipeline impact** — no changes to agents, workflows, CLI, or live service wrappers
+
+---
+
+## 25. Phase J-2 — v2 Hardening + Optimization Checkpoint
+
+Phase J-2 adds the **final Phase 2 consolidation checkpoint**: a narrow typed contract, a composition runner, and a local artifact writer that together produce an honest, review-ready summary of Phase 2 completeness.
+
+It is a cross-phase composition layer — it does not re-score anything or add new product features.
+
+### Components
+
+| Component | Location | Description |
+|---|---|---|
+| **Checkpoint schemas** | `app/schemas/checkpoint_models.py` | Typed contracts: `Phase2CheckpointStatus` Literal type, `Phase2ReadinessBlock` per-layer readiness model, `Phase2CheckpointResult` root checkpoint contract with model-level consistency guard |
+| **Checkpoint runner** | `app/evaluation/checkpoint_runner.py` | `CheckpointInputs` frozen dataclass; `build_checkpoint()` function that assembles layer readiness indicators into a typed `Phase2CheckpointResult`; layer subphase metadata; status derivation logic |
+| **Checkpoint writer** | `app/evaluation/checkpoint_writer.py` | `generate_checkpoint_report()` pure markdown generator (no I/O); `write_checkpoint()` artifact writer; `CheckpointWriteError` for filesystem failures |
+| **ArtifactKind extension** | `app/schemas/artifact_models.py` | `"checkpoint"` added to the `ArtifactKind` Literal type so J-2 artifacts are consistently classifiable |
+| **Tests** | `tests/test_checkpoint_models.py`, `tests/test_checkpoint_runner.py` | 114 new tests: contract validation, consistency guards, runner defaults/custom inputs, determinism, report content, writer path/content/error handling, no live AWS |
+
+### Checkpoint output structure
+
+```
+{output_root}/checkpoints/{checkpoint_id}/
+  checkpoint.json   ← Phase2CheckpointResult serialized
+  report.md         ← human-readable Phase 2 checkpoint summary
+```
+
+### Consistency guard
+
+`Phase2CheckpointResult` enforces an honest checkpoint via a Pydantic `model_validator`:
+
+```
+live_aws_validated=False + status='complete'      → ValueError (must use 'complete_blocked')
+engineering_complete=False + status='complete'    → ValueError
+engineering_complete=False + status='complete_blocked' → ValueError
+```
+
+This prevents any future code path from silently misrepresenting the external AWS blocker.
+
+### Design properties
+
+- **Composition, not duplication** — runner reads readiness flags from `CheckpointInputs`; does not re-score existing evaluations
+- **Offline-first** — no boto3, no Bedrock client, no live AWS calls
+- **Honest by construction** — consistency guard enforces correct status for the external-blocker case
+- **Deterministic** — same inputs + same checkpoint_id always produce the same status and completed_phases
+- **No runtime pipeline impact** — no changes to agents, workflows, CLI, or live service wrappers
+
+> **Phase 2 complete. Phase J-2 is the final Phase 2 subphase.** Phase 3 (v3: optional customization experiments) remains future work. See `PROJECT_SPEC.md §13`.

@@ -122,11 +122,11 @@ These are design contracts followed across all implementation work. They apply t
 
 ## Current Implementation Phase
 
-**Phase 1 — v1 MVP COMPLETE | Phase F — Evaluation Foundation COMPLETE | Phase G — Retrieval & Output Quality COMPLETE | Phase H — Safety & Guardrails COMPLETE | Phase I — Optimization COMPLETE (I-0 Prompt Caching, I-1 Prompt Routing, I-2 Baseline vs. Optimized Comparison) | Phase J-0 — CloudWatch Evaluation Dashboard COMPLETE | Phase J-1 — Evaluation Result Artifacts + Reporting COMPLETE**
+**Phase 1 — v1 MVP COMPLETE | Phase 2 — v2 COMPLETE (F, G, H, I, J-0, J-1, J-2 all complete)**
 
-> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 2005 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. All Phase F, G, H, I, J-0, and J-1 layers are fully independent of this blocker.
+> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 2119 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. All Phase F, G, H, I, J-0, J-1, and J-2 layers are fully independent of this blocker.
 
-The repository is portfolio-ready, test-complete, and demo-friendly for the full MVP and Phase F evaluation scope.
+The repository is portfolio-ready, test-complete, and demo-friendly for the full MVP and Phase 2 evaluation scope.
 
 ### Completed
 - **A-0** — repo foundation, source-of-truth docs, project scaffold
@@ -253,7 +253,7 @@ The repository is portfolio-ready, test-complete, and demo-friendly for the full
   - `tests/test_dashboard_builder.py` — 37 tests: structure, grid constraints, widget properties, namespace/dimension propagation, JSON serialisability, determinism
   - 1872 total tests pass at J-0 completion
 - **J-1** — Evaluation result artifacts + reporting:
-  - `app/schemas/artifact_models.py` — `ArtifactKind` Literal type, `ArtifactMetadata` frozen Pydantic model (run_id, kind, created_at, artifact_dir, artifact_files), `ReportBundle` (groups metadata + optional report path)
+  - `app/schemas/artifact_models.py` — `ArtifactKind` Literal type (extended in J-2 to include `"checkpoint"`), `ArtifactMetadata` frozen Pydantic model (run_id, kind, created_at, artifact_dir, artifact_files), `ReportBundle` (groups metadata + optional report path)
   - `app/evaluation/report_generator.py` — three pure markdown report generators: `generate_evaluation_run_report()`, `generate_safety_run_report()`, `generate_comparison_run_report()`; no I/O; deterministic
   - `app/evaluation/artifact_writer.py` — three writer functions: `write_evaluation_run()`, `write_safety_run()`, `write_comparison_run()`; each writes `summary.json` + `case_results.json` + optional `report.md`; consistent output structure under `output_root`; `ArtifactWriteError` for filesystem failures; no live AWS
   - Output structure: `{output_root}/evaluation_runs/{run_id}/`, `{output_root}/safety_runs/{suite_id}/`, `{output_root}/comparison_runs/{run_id}/`
@@ -261,9 +261,17 @@ The repository is portfolio-ready, test-complete, and demo-friendly for the full
   - `tests/test_report_generator.py` — 54 tests: eval/safety/comparison report content, determinism, section presence, structural isolation
   - `tests/test_artifact_writer.py` — 40 tests: directory creation, JSON file presence and content, generate_report flag, error handling, serialization correctness, no live AWS
   - 2005 total tests pass
+- **J-2** — v2 hardening + optimization checkpoint:
+  - `app/schemas/checkpoint_models.py` — `Phase2CheckpointStatus` Literal type, `Phase2ReadinessBlock` per-layer readiness model (frozen Pydantic), `Phase2CheckpointResult` root checkpoint contract; model-level consistency guard prevents misrepresenting external blocker as "complete"
+  - `app/evaluation/checkpoint_runner.py` — `CheckpointInputs` frozen dataclass; `build_checkpoint()` runner that assembles layer readiness flags into a typed checkpoint; per-layer subphase metadata; status derivation (complete / complete_blocked / incomplete)
+  - `app/evaluation/checkpoint_writer.py` — `generate_checkpoint_report()` pure markdown generator; `write_checkpoint()` artifact writer; `CheckpointWriteError` for filesystem failures; output: `{output_root}/checkpoints/{checkpoint_id}/checkpoint.json` + `report.md`
+  - `app/schemas/artifact_models.py` — `ArtifactKind` extended with `"checkpoint"` (J-2 hardening fix)
+  - `tests/test_checkpoint_models.py` — 57 tests: contract validation, field validators, consistency guard, immutability, serialization, ArtifactKind extension
+  - `tests/test_checkpoint_runner.py` — 57 tests: CheckpointInputs defaults/custom, build_checkpoint defaults/custom/determinism, report content, writer path/content/error handling, no live AWS
+  - 2119 total tests pass
 
 ### Next step
-- **Phase J-2** — v2 hardening + optimization checkpoint; see `PROJECT_SPEC.md §13`
+- **Phase 2 is complete.** Phase 3 (v3: optional customization experiments — Bedrock Flows, model customization, prompt versioning) remains future optional work. See `PROJECT_SPEC.md §13`.
 
 ### Phase 2 roadmap
 
@@ -275,13 +283,13 @@ Phase 2 follows the same lettered-subphase naming convention as Phase 1 (A–E):
 | **G** | Retrieval & Output Quality | ✅ Complete | G-0 retrieval metrics ✅, G-1 citation quality ✅, G-2 output scoring ✅ |
 | **H** | Safety & Guardrails | ✅ Complete | H-0 safety contracts ✅, H-1 Bedrock Guardrails integration ✅, H-2 adversarial suite ✅ |
 | **I** | Optimization | ✅ Complete | I-0 prompt caching ✅, I-1 prompt routing ✅, I-2 baseline vs. optimized comparison ✅ |
-| **J** | Observability & Reporting | In progress | J-0 CloudWatch dashboard ✅, J-1 result artifacts ✅, J-2 v2 hardening checkpoint |
+| **J** | Observability & Reporting | ✅ Complete | J-0 CloudWatch dashboard ✅, J-1 result artifacts ✅, J-2 v2 hardening checkpoint ✅ |
 
 See `PROJECT_SPEC.md §13` for the full Phase 2 subphase breakdown.
 
 ### Not yet implemented
 - Live Bedrock validation (blocked by AWS-side throttling — not a code issue)
-- Phase J-2: v2 hardening + optimization checkpoint
+- Phase 3 (v3): optional customization experiments — Bedrock Flows, model customization, prompt versioning (future work)
 
 Reference: `ARCHITECTURE.md §5–9` for component flows. `PROJECT_SPEC.md §13` for the full subphase roadmap.
 
