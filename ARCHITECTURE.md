@@ -413,7 +413,11 @@ Failures to emit to CloudWatch are silently swallowed — they never break the p
 | `CASEOPS_CLOUDWATCH_LOG_GROUP` | `/caseops/pipeline` | CloudWatch log group name |
 | `CASEOPS_CLOUDWATCH_LOG_STREAM_PREFIX` | `caseops-session` | Stream name prefix |
 
-### Metrics (CloudWatch) — planned v2
+### Metrics (CloudWatch)
+
+**Evaluation-layer metrics** (implemented — Phase J-0): evaluation quality scores, safety distribution, baseline vs. optimized comparison deltas — emitted via `cloudwatch_metrics_service.py` using the `put_metric_data` API. See Section 23 for the full J-0 architecture.
+
+**Pipeline operational metrics** (optional future work — not yet implemented):
 - `pipeline.documents_processed` — count
 - `pipeline.escalations_triggered` — count
 - `pipeline.confidence_score` — distribution
@@ -513,7 +517,7 @@ Overall score is the mean of the three metric scores.  Pass/fail uses `RETRIEVAL
 - **Reuses existing contracts** — `RetrievalResult`, `EvidenceChunk`, `RetrievalExpectation`, and `DimensionScore` are all existing types from the repo
 - **Extensible** — additional metrics (e.g. relevance-score distribution) can be added as new `_score_*` helpers without changing the public API
 
-> **v2 implementation roadmap:** Phase F (Evaluation Foundation), Phase G (Retrieval & Output Quality — G-0, G-1, G-2), Phase H (Safety & Guardrails — H-0, H-1, H-2), and Phase I (Optimization — I-0, I-1, I-2) are complete. Phase J (Observability & Reporting) is next. See `PROJECT_SPEC.md §13` for the full breakdown.
+> **v2 implementation roadmap:** Phase F (Evaluation Foundation), Phase G (Retrieval & Output Quality — G-0, G-1, G-2), Phase H (Safety & Guardrails — H-0, H-1, H-2), Phase I (Optimization — I-0, I-1, I-2), and Phase J (Observability & Reporting — J-0, J-1, J-2) are all complete. Phase 2 engineering scope is done. See `PROJECT_SPEC.md §13` for the full breakdown.
 
 ---
 
@@ -586,7 +590,7 @@ Overall score = mean of all five component scores. Pass/fail: `summary_nonempty`
 - **Local and deterministic** — scoring is rule-based; same inputs always produce the same scores
 - **Typed result** — `OutputQualityScoringResult` is a Pydantic model in `evaluation_models.py`; reuses `DimensionScore` for the three final-output checks
 
-> **v2 implementation roadmap:** Phase G is complete. Phase H (Safety & Guardrails — H-0, H-1, H-2) is complete. Phase I (Optimization — I-0, I-1, I-2) is complete. Phase J (Observability & Reporting) is next. See `PROJECT_SPEC.md §13` for the full breakdown.
+> **v2 implementation roadmap:** Phase G is complete. Phase H (Safety & Guardrails — H-0, H-1, H-2) is complete. Phase I (Optimization — I-0, I-1, I-2) is complete. Phase J (Observability & Reporting — J-0, J-1, J-2) is complete. Phase 2 engineering scope is done. See `PROJECT_SPEC.md §13` for the full breakdown.
 
 ---
 
@@ -813,7 +817,7 @@ client.converse(system=system_blocks, messages=[...])
 | `CASEOPS_MIN_CACHEABLE_TOKENS` | `1024` | Minimum token count (informational; Bedrock enforces server-side) |
 | `CASEOPS_MAX_CACHE_CHECKPOINTS` | `1` | Max cachePoint markers per request (1–4; I-0 uses 1) |
 
-> **Phase I complete (I-0, I-1, I-2).** Phase J (Observability & Reporting) is next. See `PROJECT_SPEC.md §13`.
+> **Phase I complete (I-0, I-1, I-2). Phase J complete (J-0, J-1, J-2). Phase 2 engineering scope is done.** See `PROJECT_SPEC.md §13`.
 
 ---
 
@@ -880,7 +884,7 @@ _call_converse(...) uses self._model_id as before
 | `CASEOPS_ROUTING_ANALYSIS_MODEL_ID` | `""` | Model ID used exclusively for analysis calls when routing is enabled |
 | `CASEOPS_ROUTING_VALIDATION_MODEL_ID` | `""` | Model ID used exclusively for validation calls when routing is enabled |
 
-> **Phase I complete.** Phase J (Observability & Reporting) is next. See `PROJECT_SPEC.md §13`.
+> **Phase I complete. Phase J complete (J-0, J-1, J-2). Phase 2 engineering scope is done.** See `PROJECT_SPEC.md §13`.
 
 ---
 

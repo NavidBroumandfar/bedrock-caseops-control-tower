@@ -288,7 +288,7 @@ The MVP engineering scope is complete. Success criteria are tracked in two categ
   - I-1 Prompt routing strategy ✅
   - I-2 Baseline vs. optimized comparison workflow ✅
 
-- **Phase J — Observability & Reporting**
+- **Phase J — Observability & Reporting** ✅
   - J-0 CloudWatch evaluation dashboard ✅
   - J-1 Evaluation result artifacts + reporting ✅
   - J-2 v2 hardening + optimization checkpoint ✅
