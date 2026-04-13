@@ -6,15 +6,15 @@
 [![Tests](https://img.shields.io/badge/Tests-2%2C119%20passing-2EA043?style=flat-square)](./tests/)
 [![Status](https://img.shields.io/badge/Status-Portfolio%20%2F%20Non--Production-E67E22?style=flat-square)]()
 
-> An AWS-native, production-style multi-agent system for reviewing technical and regulatory documents using grounded retrieval, specialist agent reasoning, and citation-backed escalation-ready outputs.
+> An AWS-native, supervisor-orchestrated multi-agent pipeline for high-stakes document review — grounded retrieval, evidence-backed analysis, self-validating outputs, and structured escalation, traceable from source document to final recommendation.
 
 ---
 
 ## What This Project Does
 
-Operational and technical teams regularly process large volumes of documents — incident reports, regulatory advisories, recall notices — where the stakes of missing something are high. Manual review is slow, inconsistent, and does not scale. Existing automation often lacks grounding: it summarizes without verifying, classifies without explaining, and escalates without a traceable rationale.
+Operational and technical teams regularly process large volumes of high-stakes documents — FDA warning letters, CISA advisories, incident reports, recall notices — where the cost of a missed classification, an unsupported recommendation, or an untraced escalation is real. Manual review does not scale. Existing AI automation often makes things worse: it summarizes without verifying, classifies without explaining, and escalates without a rationale that anyone can audit.
 
-This project addresses that gap by combining retrieval-augmented generation (RAG) with a structured multi-agent pipeline that separates concerns across specialized agents, validates its own outputs, and produces auditable, citation-backed results.
+This project addresses that gap with a deliberately structured multi-agent pipeline: specialized agents for retrieval, analysis, validation, and escalation, each with a defined scope and responsibility. No agent summarizes without citing evidence. No output leaves without a confidence score. Every escalation carries a traceable rationale. The result is document review that is not just automated — it is auditable.
 
 ---
 
@@ -173,18 +173,18 @@ bedrock-caseops-control-tower/
 
 ---
 
-## Why This Is a Strong Applied AI Portfolio Project
+## What This Demonstrates
 
-This project demonstrates a set of skills that are difficult to show with toy examples:
+This project tackles a set of applied AI engineering problems that are hard to show with toy examples:
 
-- **Agentic system design** — not just calling an LLM, but coordinating specialized agents with defined responsibilities
-- **Grounded retrieval** — outputs tied to verifiable sources, not open-ended generation
-- **Output validation** — a critic agent that audits the pipeline's own outputs
-- **Production data modeling** — Pydantic schemas, structured JSON, citation tracking
-- **AWS-native implementation** — real use of Bedrock, Knowledge Bases, S3, Lambda, and CloudWatch
-- **Operational focus** — built around a realistic use case (regulatory / incident review) with escalation logic
-- **Evaluation and observability** — structured offline evaluation harness, safety contracts, Bedrock Guardrails integration, prompt optimization, and a CloudWatch evaluation dashboard
-- **Clean architecture** — modular, testable, and readable without being overengineered
+- **Agentic system design** — a supervisor-coordinated multi-agent hierarchy, not a single prompt chain; each agent has a defined scope and cannot exceed it
+- **Grounded retrieval** — every claim is tied to a specific Knowledge Base chunk; the Analysis Agent cannot introduce content that was not retrieved
+- **Self-validating outputs** — a dedicated Validation Agent audits every analysis for unsupported claims, missing citations, and confidence drift before the output is accepted
+- **Structured escalation** — escalation is rule-driven and explainable: severity, confidence threshold, unsupported claims, and explicit recommendations all feed into a deterministic escalation decision
+- **Production-grade data modeling** — Pydantic schemas enforce contract boundaries between every agent; structured JSON with full citation tracking throughout
+- **AWS-native implementation** — real Bedrock, Knowledge Bases, S3, Lambda, and CloudWatch, not mocked cloud stubs
+- **Evaluation and observability** — offline evaluation harness across retrieval quality, citation quality, and output quality; deterministic safety contracts; Bedrock Guardrails integration; CloudWatch evaluation dashboard; adversarial and edge-case test coverage
+- **Clean, readable architecture** — modular, testable, and decoupled without being over-engineered
 
 ---
 
@@ -366,7 +366,7 @@ The handoff point between these systems is the formal **Gold export payload** �
 
 ## Let's Connect
 
-If you're exploring this project, interested in agentic AI systems and AWS Bedrock architecture, or open to discussing applied AI and cloud engineering roles — feel free to reach out.
+If you're exploring this project, working on agentic AI systems or AWS Bedrock architecture, or open to discussing applied AI and cloud engineering roles — I'd be glad to connect.
 
 &nbsp;
 
@@ -378,4 +378,4 @@ If you're exploring this project, interested in agentic AI systems and AWS Bedro
 
 ---
 
-*This project was developed with AI-assisted workflows. Architecture, agent design, schema contracts, evaluation logic, and safety policy definitions remained intentional throughout; AI tooling supported the implementation workflow as part of a modern development practice.*
+This project was developed with AI-assisted workflows. The system architecture, agent design, schema contracts, evaluation framework, and safety boundaries were intentionally designed and directed by the author, with AI tooling used to support and accelerate implementation as part of a modern engineering workflow.
