@@ -201,8 +201,9 @@ def run(
 
     # ── step 4: build pipeline dependencies ───────────────────────────────────
     try:
+        runtime_config = _load_pipeline_runtime_config()
         retrieval_provider, analysis_agent, validation_agent, tool_executor = (
-            _build_pipeline_deps()
+            _build_pipeline_deps(runtime_config=runtime_config)
         )
     except Exception as exc:
         click.echo(f"[error] Pipeline initialisation failed: {exc}", err=True)
@@ -222,6 +223,7 @@ def run(
             tool_executor=tool_executor,
             logger=logger,
             session_id=session_id,
+            max_attempts=runtime_config.max_agent_retries,
         )
     except PipelineWorkflowError as exc:
         click.echo(f"[error] Pipeline failed: {exc}", err=True)
@@ -404,7 +406,14 @@ def _build_logger(session_id: str, config: LoggingConfig) -> PipelineLogger:
     )
 
 
-def _build_pipeline_deps():  # type: ignore[return]
+def _load_pipeline_runtime_config():
+    """Load pipeline config for the CLI runtime."""
+    from app.utils.config import load_pipeline_config
+
+    return load_pipeline_config()
+
+
+def _build_pipeline_deps(*, runtime_config=None):  # type: ignore[return]
     """
     Build and wire all pipeline service dependencies.
 
@@ -422,23 +431,48 @@ def _build_pipeline_deps():  # type: ignore[return]
         BedrockValidationService,
     )
     from app.services.kb_service import BedrockKBService, RetrievalServiceError
+    from app.utils.config import (
+        load_pipeline_config,
+        load_prompt_caching_config,
+        load_prompt_routing_config,
+    )
+
+    runtime_config = runtime_config or load_pipeline_config()
+    caching_config = load_prompt_caching_config()
+    routing_config = load_prompt_routing_config()
 
     try:
-        retrieval_provider = BedrockKBService()
+        retrieval_provider = BedrockKBService(
+            kb_id=runtime_config.bedrock_kb_id,
+            region=runtime_config.aws_region,
+            max_results=runtime_config.retrieval_max_results,
+        )
     except RetrievalServiceError as exc:
         raise RuntimeError(
             f"Knowledge Base configuration error: {exc}\n"
             "Ensure BEDROCK_KB_ID is set in your environment or .env file."
         ) from exc
 
-    analysis_service = BedrockAnalysisService()
-    validation_service = BedrockValidationService()
+    analysis_service = BedrockAnalysisService(
+        model_id=runtime_config.bedrock_model_id,
+        region=runtime_config.aws_region,
+        caching_config=caching_config,
+        routing_config=routing_config,
+    )
+    validation_service = BedrockValidationService(
+        model_id=runtime_config.bedrock_model_id,
+        region=runtime_config.aws_region,
+        caching_config=caching_config,
+        routing_config=routing_config,
+    )
 
     return (
         retrieval_provider,
         AnalysisAgent(provider=analysis_service),
         ValidationAgent(provider=validation_service),
-        ToolExecutorAgent(),
+        ToolExecutorAgent(
+            escalation_confidence_threshold=runtime_config.escalation_confidence_threshold
+        ),
     )
 
 

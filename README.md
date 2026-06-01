@@ -3,7 +3,7 @@
 [![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![AWS Bedrock](https://img.shields.io/badge/Platform-AWS%20Bedrock-FF9900?style=flat-square&logo=amazonaws&logoColor=white)](https://aws.amazon.com/bedrock/)
 [![Architecture](https://img.shields.io/badge/Architecture-Multi--Agent%20RAG-6B7FD7?style=flat-square)]()
-[![Tests](https://img.shields.io/badge/Tests-2%2C123%20passing-2EA043?style=flat-square)](./tests/)
+[![Tests](https://img.shields.io/badge/Tests-2%2C133%20passing-2EA043?style=flat-square)](./tests/)
 [![Status](https://img.shields.io/badge/Status-Portfolio%20%2F%20Non--Production-E67E22?style=flat-square)]()
 
 > A Bedrock-powered custom Python multi-agent RAG pipeline for high-stakes document review — grounded retrieval, evidence-backed analysis, validation, and structured escalation, traceable from source document to final recommendation.
@@ -312,7 +312,7 @@ python3 -m pip install -r requirements.txt
 python3 -m pytest tests/ -v
 ```
 
-The offline suite passes without live AWS and covers intake, retrieval contracts, analysis, validation, escalation, output writing, CLI commands, structured logging, optional CloudWatch paths, evaluation scoring, deterministic safety contracts, prompt caching/routing modules, comparison workflows, and local reporting.
+The offline suite passes without live AWS and covers intake, retrieval contracts, analysis, validation, escalation, output writing, CLI commands, structured logging, optional CloudWatch paths, evaluation scoring, deterministic safety contracts, runtime prompt caching/routing wiring, comparison workflows, and local reporting.
 
 ### Step 2: Explore sample inputs
 
@@ -378,7 +378,7 @@ On success, the CLI prints a structured summary and writes a JSON output to `out
 
 **Phase 1 — Core Multi-Agent MVP:** Implemented and offline-validated. The custom Python pipeline includes document intake, grounded retrieval via Bedrock Knowledge Bases, analysis and validation agents, escalation logic, structured JSON output with chunk-level citations, CLI interface, and optional CloudWatch observability.
 
-**Phase 2 — Evaluation, Safety, Optimization, and Observability:** Implemented as testable modules. This phase added a structured offline evaluation harness, deterministic safety contracts, Guardrails configuration and adapters, adversarial and edge-case evaluation, prompt caching and routing modules, baseline vs. optimized comparison workflows, a CloudWatch evaluation dashboard definition, and local evaluation artifact reporting.
+**Phase 2 — Evaluation, Safety, Optimization, and Observability:** Implemented as testable modules with runtime config wiring for prompt caching, prompt routing, retry count, and escalation threshold. This phase added a structured offline evaluation harness, deterministic safety contracts, Guardrails configuration and adapters, adversarial and edge-case evaluation, prompt caching and routing modules, baseline vs. optimized comparison workflows, a CloudWatch evaluation dashboard definition, and local evaluation artifact reporting.
 
 **Current state:** The repository is an offline-validated custom Bedrock-powered orchestration system. Live end-to-end validation against a provisioned Bedrock Knowledge Base remains pending, and there is not yet a Lambda handler, infrastructure-as-code, CI workflow, or native Bedrock Agent deployment.
 

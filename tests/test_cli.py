@@ -52,9 +52,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 from click.testing import CliRunner
 
-from app.cli import cli
+from app.cli import _build_pipeline_deps, cli
 from app.schemas.intake_models import IntakeRecord, IntakeResult
 from app.schemas.output_models import CaseOutput, Citation
+from app.utils.config import PipelineConfig
 
 
 # ── shared test builders ───────────────────────────────────────────────────────
@@ -505,6 +506,96 @@ def test_run_passes_session_id_to_pipeline(tmp_path: Path) -> None:
 
     call_kwargs = mock_pipeline.call_args.kwargs
     assert call_kwargs.get("session_id") == _SESSION_ID
+
+
+def test_run_passes_configured_max_attempts_to_pipeline(tmp_path: Path) -> None:
+    """MAX_AGENT_RETRIES from env must reach the pipeline retry policy."""
+    runner = _make_runner()
+    output = _make_case_output()
+    output_file = tmp_path / f"{_DOC_ID}.json"
+    mock_logger = MagicMock()
+    mock_logger.log_file_path = None
+    mock_logger.session_id = _SESSION_ID
+
+    with runner.isolated_filesystem():
+        Path("advisory.txt").write_text("content", encoding="utf-8")
+        with (
+            patch(_PATCH_RUN_INTAKE, return_value=_make_intake_result()),
+            patch(_PATCH_BUILD_DEPS, return_value=(MagicMock(), MagicMock(), MagicMock(), MagicMock())),
+            patch(_PATCH_BUILD_LOGGER, return_value=mock_logger),
+            patch(_PATCH_RUN_PIPELINE, return_value=output) as mock_pipeline,
+            patch(_PATCH_WRITE_OUTPUT, return_value=output_file),
+            patch(_PATCH_BUILD_S3, return_value=None),
+        ):
+            result = runner.invoke(
+                cli,
+                ["run", "advisory.txt", "--source-type", "FDA", "--document-date", "2026-03-30"],
+                env={"MAX_AGENT_RETRIES": "4"},
+                catch_exceptions=False,
+            )
+
+    assert result.exit_code == 0
+    assert mock_pipeline.call_args.kwargs["max_attempts"] == 4
+
+
+def test_build_pipeline_deps_wires_runtime_configs(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pipeline dependency build must pass env-backed configs into runtime services."""
+    runtime_config = PipelineConfig(
+        retrieval_max_results=7,
+        escalation_confidence_threshold=0.72,
+        max_agent_retries=4,
+        bedrock_model_id="anthropic.base-model",
+        bedrock_kb_id="kb-configured",
+        aws_region="us-west-2",
+        s3_document_bucket="",
+        s3_output_bucket="",
+    )
+    monkeypatch.setenv("CASEOPS_ENABLE_PROMPT_CACHING", "true")
+    monkeypatch.setenv("CASEOPS_CACHE_SYSTEM_PROMPT", "true")
+    monkeypatch.setenv("CASEOPS_ENABLE_PROMPT_ROUTING", "true")
+    monkeypatch.setenv("CASEOPS_ROUTING_ANALYSIS_MODEL_ID", "anthropic.analysis-model")
+    monkeypatch.setenv("CASEOPS_ROUTING_VALIDATION_MODEL_ID", "anthropic.validation-model")
+
+    mock_retrieval = MagicMock()
+    mock_analysis_service = MagicMock()
+    mock_validation_service = MagicMock()
+
+    with (
+        patch("app.services.kb_service.BedrockKBService", return_value=mock_retrieval) as mock_kb,
+        patch(
+            "app.services.bedrock_service.BedrockAnalysisService",
+            return_value=mock_analysis_service,
+        ) as mock_analysis,
+        patch(
+            "app.services.bedrock_service.BedrockValidationService",
+            return_value=mock_validation_service,
+        ) as mock_validation,
+    ):
+        retrieval_provider, analysis_agent, validation_agent, tool_executor = (
+            _build_pipeline_deps(runtime_config=runtime_config)
+        )
+
+    assert retrieval_provider is mock_retrieval
+    assert analysis_agent._provider is mock_analysis_service
+    assert validation_agent._provider is mock_validation_service
+
+    mock_kb.assert_called_once_with(
+        kb_id="kb-configured",
+        region="us-west-2",
+        max_results=7,
+    )
+
+    analysis_kwargs = mock_analysis.call_args.kwargs
+    validation_kwargs = mock_validation.call_args.kwargs
+    assert analysis_kwargs["model_id"] == "anthropic.base-model"
+    assert validation_kwargs["model_id"] == "anthropic.base-model"
+    assert analysis_kwargs["region"] == "us-west-2"
+    assert validation_kwargs["region"] == "us-west-2"
+    assert analysis_kwargs["caching_config"].enable_prompt_caching is True
+    assert validation_kwargs["caching_config"].enable_prompt_caching is True
+    assert analysis_kwargs["routing_config"].analysis_model_id == "anthropic.analysis-model"
+    assert validation_kwargs["routing_config"].validation_model_id == "anthropic.validation-model"
+    assert tool_executor._escalation_confidence_threshold == pytest.approx(0.72)
 
 
 # ── run command — no live AWS ─────────────────────────────────────────────────

@@ -25,7 +25,7 @@ Empty retrieval path:
   to the low-confidence escalation path.
 
 Retry policy:
-  Analysis and validation steps are each retried up to _MAX_ATTEMPTS times on
+  Analysis and validation steps are each retried up to max_attempts times on
   BedrockServiceError — the service-layer type that covers malformed JSON,
   missing required keys, and Pydantic schema validation failures from the model.
   Precondition failures (AnalysisAgentError, ValidationAgentError) and other
@@ -75,6 +75,7 @@ def run_supervisor(
     analysis_agent: AnalysisAgent,
     validation_agent: ValidationAgent,
     logger: AnyLogger | None = None,
+    max_attempts: int | None = None,
 ) -> SupervisorResult:
     """
     Orchestrate retrieval → analysis → validation and return a typed SupervisorResult.
@@ -85,10 +86,16 @@ def run_supervisor(
 
     `logger` is optional.  When omitted a NoOpLogger is used.
 
+    `max_attempts` controls retry behavior for analysis and validation
+    BedrockServiceError failures.  When omitted, the historical default is
+    used.  Values below 1 are rejected because zero attempts would skip the
+    step entirely.
+
     Returns a SupervisorResult on both the success path and the empty-retrieval
     path.  Raises SupervisorWorkflowError if any pipeline step fails.
     """
     _logger: AnyLogger = logger or NoOpLogger()
+    resolved_max_attempts = _resolve_max_attempts(max_attempts)
     document_id = intake.document_id
 
     # ── step 1: retrieval ─────────────────────────────────────────────────────
@@ -160,6 +167,7 @@ def run_supervisor(
         step="analysis",
         document_id=document_id,
         logger=_logger,
+        max_attempts=resolved_max_attempts,
     )
 
     _logger.info(
@@ -189,6 +197,7 @@ def run_supervisor(
         step="validation",
         document_id=document_id,
         logger=_logger,
+        max_attempts=resolved_max_attempts,
     )
 
     _logger.info(
@@ -231,9 +240,10 @@ def _run_with_retry(
     step: str,
     document_id: str,
     logger: AnyLogger,
+    max_attempts: int = _MAX_ATTEMPTS,
 ) -> Any:
     """
-    Invoke `call()` up to _MAX_ATTEMPTS times, retrying on BedrockServiceError.
+    Invoke `call()` up to max_attempts times, retrying on BedrockServiceError.
 
     BedrockServiceError is the service-layer type for structured-output failures
     (malformed JSON, missing keys, schema validation errors) as well as transient
@@ -244,22 +254,24 @@ def _run_with_retry(
     exceptions are not retried — they indicate a logic error, not a parse
     transient, and repeating the call would not change the outcome.
     """
-    for attempt in range(1, _MAX_ATTEMPTS + 1):
+    resolved_max_attempts = _resolve_max_attempts(max_attempts)
+
+    for attempt in range(1, resolved_max_attempts + 1):
         try:
             return call()
         except BedrockServiceError as exc:
-            if attempt < _MAX_ATTEMPTS:
+            if attempt < resolved_max_attempts:
                 logger.warning(
                     agent="supervisor",
                     event=f"{step}_retry",
                     document_id=document_id,
                     data={
                         "attempt": attempt,
-                        "max_attempts": _MAX_ATTEMPTS,
+                        "max_attempts": resolved_max_attempts,
                         "error": str(exc),
                     },
                 )
-            if attempt == _MAX_ATTEMPTS:
+            if attempt == resolved_max_attempts:
                 logger.error(
                     agent="supervisor",
                     event=f"{step}_failed",
@@ -271,10 +283,10 @@ def _run_with_retry(
                     },
                 )
                 raise SupervisorWorkflowError(
-                    f"[{step}] Pipeline step failed after {_MAX_ATTEMPTS} attempts "
+                    f"[{step}] Pipeline step failed after {resolved_max_attempts} attempts "
                     f"(document_id={document_id!r}): {exc}"
                 ) from exc
-            # attempt < _MAX_ATTEMPTS: continue to retry
+            # attempt < resolved_max_attempts: continue to retry
         except Exception as exc:
             # Non-retryable: wrap and surface immediately without retry.
             logger.error(
@@ -287,3 +299,14 @@ def _run_with_retry(
                 f"[{step}] Pipeline step failed "
                 f"(document_id={document_id!r}): {exc}"
             ) from exc
+
+
+def _resolve_max_attempts(max_attempts: int | None) -> int:
+    """Resolve and validate the supervisor retry ceiling."""
+    if max_attempts is None:
+        return _MAX_ATTEMPTS
+    if not isinstance(max_attempts, int) or max_attempts < 1:
+        raise SupervisorWorkflowError(
+            f"max_attempts must be a positive integer, got: {max_attempts!r}"
+        )
+    return max_attempts

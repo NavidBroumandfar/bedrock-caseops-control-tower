@@ -7,7 +7,7 @@ evidence to output citations, and returns a typed CaseOutput.
 Public surface:
   ToolExecutorAgent           — the agent class; callers use run()
   ESCALATION_CONFIDENCE_THRESHOLD — the confidence threshold for escalation
-                                    (module-level constant; config-driven in E-phase)
+                                    (module-level default)
 
 Architecture contract:
   Input  — SupervisorResult (D-0 typed handoff)
@@ -19,7 +19,7 @@ Architecture contract:
 
 Escalation rules (any of the following triggers escalation_required = True):
   1. severity == "Critical"
-  2. confidence_score < ESCALATION_CONFIDENCE_THRESHOLD (0.60)
+  2. confidence_score < configured escalation confidence threshold
   3. len(unsupported_claims) > 0
   4. any recommendation contains "escalate" (case-insensitive)
 
@@ -67,13 +67,27 @@ class ToolExecutorAgent:
     """
     Tool Executor Agent: assembles the final CaseOutput from a SupervisorResult.
 
-    The agent is stateless and has no injected dependencies — all logic is
-    deterministic given the SupervisorResult input.  No AWS calls are made.
+    The agent has no service dependencies — all logic is deterministic given
+    the SupervisorResult input and configured threshold.  No AWS calls are made.
 
     Usage:
         agent = ToolExecutorAgent()
         output = agent.run(supervisor_result)
     """
+
+    def __init__(
+        self,
+        *,
+        escalation_confidence_threshold: float = ESCALATION_CONFIDENCE_THRESHOLD,
+    ) -> None:
+        if not isinstance(escalation_confidence_threshold, (int, float)) or not (
+            0.0 <= escalation_confidence_threshold <= 1.0
+        ):
+            raise ValueError(
+                "escalation_confidence_threshold must be between 0.0 and 1.0, "
+                f"got: {escalation_confidence_threshold!r}"
+            )
+        self._escalation_confidence_threshold = float(escalation_confidence_threshold)
 
     def run(self, supervisor_result: SupervisorResult) -> CaseOutput:
         """
@@ -111,6 +125,7 @@ class ToolExecutorAgent:
             confidence_score=confidence_score,
             unsupported_claims=unsupported_claims,
             recommendations=analysis.recommendations,
+            escalation_confidence_threshold=self._escalation_confidence_threshold,
         )
 
         return CaseOutput(
@@ -185,6 +200,7 @@ def _determine_escalation(
     confidence_score: float,
     unsupported_claims: list[str],
     recommendations: list[str],
+    escalation_confidence_threshold: float = ESCALATION_CONFIDENCE_THRESHOLD,
 ) -> tuple[bool, str | None]:
     """
     Apply escalation rules and return (escalation_required, escalation_reason).
@@ -197,10 +213,10 @@ def _determine_escalation(
     if severity == "Critical":
         reasons.append("severity is Critical")
 
-    if confidence_score < ESCALATION_CONFIDENCE_THRESHOLD:
+    if confidence_score < escalation_confidence_threshold:
         reasons.append(
             f"confidence_score {confidence_score:.2f} is below threshold "
-            f"{ESCALATION_CONFIDENCE_THRESHOLD:.2f}"
+            f"{escalation_confidence_threshold:.2f}"
         )
 
     if len(unsupported_claims) > 0:

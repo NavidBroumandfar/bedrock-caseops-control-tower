@@ -66,6 +66,8 @@ Exit criteria:
 
 Goal: make existing config modules affect the actual CLI runtime.
 
+Status: completed on 2026-06-01 for prompt caching, prompt routing, retry count, and escalation threshold wiring.
+
 Steps:
 
 1. Load `PromptCachingConfig` and pass it into `BedrockAnalysisService` and `BedrockValidationService`.
@@ -224,11 +226,12 @@ Exit criteria:
 
 ## Near-Term Checklist
 
-- [ ] Add `.env` loading to the CLI.
-- [ ] Wire prompt routing and prompt caching into `_build_pipeline_deps()`.
-- [ ] Make escalation threshold configurable.
-- [ ] Add `doctor` or `check-config` CLI command.
-- [ ] Update README AWS service claims.
+- [x] Add `.env` loading to the CLI.
+- [x] Wire prompt routing and prompt caching into `_build_pipeline_deps()`.
+- [x] Make escalation threshold configurable.
+- [x] Make retry count configurable.
+- [x] Add `doctor` or `check-config` CLI command.
+- [x] Update README AWS service claims.
 - [ ] Add live Bedrock smoke test script.
 - [ ] Capture one successful live KB retrieval result.
 - [ ] Add claim-level citation fields.

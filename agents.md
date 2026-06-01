@@ -71,15 +71,15 @@ The current implementation keeps orchestration in the application. That is a val
 - Agents use typed Pydantic contracts instead of passing unstructured dictionaries.
 - Workflow layers do not instantiate AWS clients directly; service dependencies are injected.
 - Empty retrieval is handled conservatively and escalated.
-- Offline test coverage is strong: 2,119 passing tests were verified during the audit.
+- Offline test coverage is strong: 2,133 passing tests were verified after Phase 2 runtime config wiring.
 - Evaluation, safety, prompt routing, prompt caching, and reporting layers exist as testable modules.
+- Prompt routing, prompt caching, retry count, and escalation threshold are wired into the CLI runtime path.
 
 ## Current Gaps
 
 - Live AWS end-to-end execution has not been validated in this environment.
 - `.env` is documented but not loaded automatically by the CLI.
-- Prompt routing, prompt caching, and Guardrails configuration exist but are not wired into `_build_pipeline_deps()`.
-- Escalation threshold and retry count are still hard-coded in runtime modules.
+- Guardrails configuration exists but is not wired into `_build_pipeline_deps()`.
 - Citations are currently chunk-level citations attached to the final output, not claim-level citations attached to each summary claim or recommendation.
 - Guardrails and deterministic safety policy are implemented as evaluation/foundation layers, not as enforced runtime gates in the CLI path.
 - No Lambda handler, infrastructure-as-code, CI workflow, or native Bedrock Agent deployment exists yet.

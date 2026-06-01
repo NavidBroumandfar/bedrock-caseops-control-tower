@@ -335,6 +335,30 @@ def test_pipeline_max_agent_retries_is_int(monkeypatch: pytest.MonkeyPatch) -> N
     assert isinstance(cfg.max_agent_retries, int)
 
 
+def test_pipeline_invalid_retrieval_max_results_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("RETRIEVAL_MAX_RESULTS", "0")
+    with pytest.raises(ValueError, match="RETRIEVAL_MAX_RESULTS"):
+        load_pipeline_config()
+
+
+def test_pipeline_invalid_escalation_threshold_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ESCALATION_CONFIDENCE_THRESHOLD", "1.5")
+    with pytest.raises(ValueError, match="ESCALATION_CONFIDENCE_THRESHOLD"):
+        load_pipeline_config()
+
+
+def test_pipeline_invalid_max_agent_retries_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MAX_AGENT_RETRIES", "not-an-int")
+    with pytest.raises(ValueError, match="MAX_AGENT_RETRIES"):
+        load_pipeline_config()
+
+
 def test_pipeline_config_is_frozen() -> None:
     """PipelineConfig must be a frozen dataclass — it must not allow mutation."""
     cfg = load_pipeline_config()

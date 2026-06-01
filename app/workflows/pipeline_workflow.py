@@ -72,6 +72,7 @@ def run_pipeline(
     tool_executor: ToolExecutorAgent,
     logger: AnyLogger | None = None,
     session_id: str | None = None,
+    max_attempts: int | None = None,
 ) -> CaseOutput:
     """
     Orchestrate the full pipeline from intake handoff to final CaseOutput.
@@ -94,6 +95,10 @@ def run_pipeline(
     a PipelineLogger with a known session_id), it is used as-is so that the
     logger session_id and the output session_id are consistent.  When omitted
     a new session_id is generated internally.
+
+    `max_attempts` controls the supervisor retry ceiling for analysis and
+    validation BedrockServiceError failures.  When omitted, the supervisor
+    uses its default retry policy.
 
     Returns a typed CaseOutput on both the success path and the empty-retrieval
     path.  Raises PipelineWorkflowError if any pipeline step fails, always
@@ -130,6 +135,7 @@ def run_pipeline(
             analysis_agent=analysis_agent,
             validation_agent=validation_agent,
             logger=_logger,
+            max_attempts=max_attempts,
         )
     except SupervisorWorkflowError as exc:
         _logger.error(

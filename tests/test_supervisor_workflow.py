@@ -686,6 +686,32 @@ def test_analysis_retried_once_on_bedrock_service_error(
     assert provider.analyze.call_count == 2
 
 
+def test_analysis_uses_configured_max_attempts(
+    intake: IntakeResult,
+    retrieval_provider: FakeRetrievalProvider,
+    validation_agent: ValidationAgent,
+) -> None:
+    """A caller-supplied retry ceiling must control BedrockServiceError retries."""
+    provider = MagicMock()
+    provider.analyze.side_effect = [
+        BedrockServiceError("Parse failure 1"),
+        BedrockServiceError("Parse failure 2"),
+        _make_analysis_output(),
+    ]
+    agent = AnalysisAgent(provider=provider)
+
+    result = run_supervisor(
+        intake,
+        retrieval_provider=retrieval_provider,
+        analysis_agent=agent,
+        validation_agent=validation_agent,
+        max_attempts=3,
+    )
+
+    assert isinstance(result.analysis, AnalysisOutput)
+    assert provider.analyze.call_count == 3
+
+
 def test_validation_retried_once_on_bedrock_service_error(
     intake: IntakeResult,
     retrieval_provider: FakeRetrievalProvider,
@@ -769,6 +795,27 @@ def test_analysis_max_attempts_message_contains_attempt_count(
             analysis_agent=agent,
             validation_agent=validation_agent,
         )
+
+
+def test_invalid_max_attempts_exits_before_analysis(
+    intake: IntakeResult,
+    retrieval_provider: FakeRetrievalProvider,
+    validation_agent: ValidationAgent,
+) -> None:
+    """max_attempts must reject values that would skip the retry loop."""
+    provider = MagicMock()
+    agent = AnalysisAgent(provider=provider)
+
+    with pytest.raises(SupervisorWorkflowError, match="max_attempts"):
+        run_supervisor(
+            intake,
+            retrieval_provider=retrieval_provider,
+            analysis_agent=agent,
+            validation_agent=validation_agent,
+            max_attempts=0,
+        )
+
+    provider.analyze.assert_not_called()
 
 
 def test_non_retryable_analysis_failure_not_retried(

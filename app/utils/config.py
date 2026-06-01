@@ -113,11 +113,11 @@ def load_pipeline_config() -> PipelineConfig:
       S3_OUTPUT_BUCKET
     """
     return PipelineConfig(
-        retrieval_max_results=int(os.getenv("RETRIEVAL_MAX_RESULTS", "5")),
-        escalation_confidence_threshold=float(
-            os.getenv("ESCALATION_CONFIDENCE_THRESHOLD", "0.60")
+        retrieval_max_results=_read_positive_int_env("RETRIEVAL_MAX_RESULTS", "5"),
+        escalation_confidence_threshold=_read_probability_env(
+            "ESCALATION_CONFIDENCE_THRESHOLD", "0.60"
         ),
-        max_agent_retries=int(os.getenv("MAX_AGENT_RETRIES", "2")),
+        max_agent_retries=_read_positive_int_env("MAX_AGENT_RETRIES", "2"),
         bedrock_model_id=os.getenv(
             "BEDROCK_MODEL_ID", "anthropic.claude-3-haiku-20240307-v1:0"
         ),
@@ -126,6 +126,30 @@ def load_pipeline_config() -> PipelineConfig:
         s3_document_bucket=os.getenv("S3_DOCUMENT_BUCKET", ""),
         s3_output_bucket=os.getenv("S3_OUTPUT_BUCKET", ""),
     )
+
+
+def _read_positive_int_env(name: str, default: str) -> int:
+    raw = os.getenv(name, default)
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be a positive integer, got: {raw!r}") from exc
+    if value < 1:
+        raise ValueError(f"{name} must be a positive integer, got: {value!r}")
+    return value
+
+
+def _read_probability_env(name: str, default: str) -> float:
+    raw = os.getenv(name, default)
+    try:
+        value = float(raw)
+    except ValueError as exc:
+        raise ValueError(
+            f"{name} must be a number between 0.0 and 1.0, got: {raw!r}"
+        ) from exc
+    if not (0.0 <= value <= 1.0):
+        raise ValueError(f"{name} must be between 0.0 and 1.0, got: {value!r}")
+    return value
 
 
 # ── prompt caching config (I-0) ──────────────────────────────────────────────

@@ -406,6 +406,36 @@ def test_confidence_just_below_threshold_triggers_escalation(agent: ToolExecutor
     assert output.escalation_required is True
 
 
+def test_custom_confidence_threshold_triggers_escalation() -> None:
+    agent = ToolExecutorAgent(escalation_confidence_threshold=0.90)
+    result = _make_supervisor_result(
+        confidence_score=0.85,
+        severity="Low",
+        unsupported_claims=[],
+        recommendations=["Review documentation."],
+    )
+    output = agent.run(result)
+    assert output.escalation_required is True
+    assert "0.90" in (output.escalation_reason or "")
+
+
+def test_custom_confidence_threshold_preserves_boundary_rule() -> None:
+    agent = ToolExecutorAgent(escalation_confidence_threshold=0.75)
+    result = _make_supervisor_result(
+        confidence_score=0.75,
+        severity="Low",
+        unsupported_claims=[],
+        recommendations=["Review documentation."],
+    )
+    output = agent.run(result)
+    assert output.escalation_required is False
+
+
+def test_invalid_custom_confidence_threshold_raises() -> None:
+    with pytest.raises(ValueError, match="escalation_confidence_threshold"):
+        ToolExecutorAgent(escalation_confidence_threshold=1.5)
+
+
 # ── escalation: unsupported claims ───────────────────────────────────────────
 
 
