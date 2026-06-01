@@ -9,19 +9,19 @@ Commands:
 Usage examples:
 
   # Register a document without running the pipeline:
-  python -m app.cli intake path/to/advisory.txt \\
+  python3 -m app.cli intake path/to/advisory.txt \\
       --source-type FDA --document-date 2026-03-30
 
   # Run the full pipeline end-to-end:
-  python -m app.cli run path/to/advisory.txt \\
+  python3 -m app.cli run path/to/advisory.txt \\
       --source-type FDA --document-date 2026-03-30
 
   # With optional submitter note (used as KB retrieval query):
-  python -m app.cli run path/to/advisory.txt \\
+  python3 -m app.cli run path/to/advisory.txt \\
       --source-type CISA --document-date 2026-03-30 \\
       --submitter-note "Critical ICS vulnerability — immediate review required"
 
-  python -m app.cli --help
+  python3 -m app.cli --help
 
 Environment variables (see .env.example):
   S3_DOCUMENT_BUCKET        — enable S3 upload during intake (optional)
@@ -39,6 +39,7 @@ import sys
 from pathlib import Path
 
 import click
+from dotenv import find_dotenv, load_dotenv
 from pydantic import ValidationError
 
 from app.schemas.intake_models import IntakeMetadata
@@ -49,10 +50,29 @@ from app.utils.logging_utils import LoggingConfig, PipelineLogger
 from app.utils.output_writer import OutputWriteError, write_case_output
 from app.workflows.pipeline_workflow import PipelineWorkflowError, run_pipeline
 
+_LIVE_RUN_REQUIRED_ENV = ("BEDROCK_KB_ID", "BEDROCK_MODEL_ID", "AWS_REGION")
+
 
 @click.group()
-def cli() -> None:
+@click.pass_context
+def cli(ctx: click.Context) -> None:
     """Bedrock CaseOps Multi-Agent Control Tower — CLI."""
+    ctx.ensure_object(dict)
+    ctx.obj["env_path"] = _load_env_file()
+
+
+def _load_env_file() -> Path | None:
+    """
+    Load the nearest .env file from the current working directory tree.
+
+    Existing environment variables win over .env values so CI, shells, and
+    deployment environments can override local defaults explicitly.
+    """
+    env_path = find_dotenv(usecwd=True)
+    if not env_path:
+        return None
+    load_dotenv(env_path, override=False)
+    return Path(env_path)
 
 
 # ── intake command ─────────────────────────────────────────────────────────────
@@ -233,7 +253,124 @@ def run(
     _print_pipeline_summary(output, output_path, logger, s3_archive_location)
 
 
+# ── doctor / check-config commands ────────────────────────────────────────────
+
+
+@cli.command()
+@click.pass_context
+def doctor(ctx: click.Context) -> None:
+    """Check local runtime configuration without making AWS calls."""
+    _run_config_diagnostic(ctx)
+
+
+@cli.command("check-config")
+@click.pass_context
+def check_config(ctx: click.Context) -> None:
+    """Alias for doctor."""
+    _run_config_diagnostic(ctx)
+
+
 # ── private helpers ────────────────────────────────────────────────────────────
+
+
+def _run_config_diagnostic(ctx: click.Context) -> None:
+    """Print a local configuration diagnostic and exit non-zero on errors."""
+    env_path = (ctx.obj or {}).get("env_path")
+    errors: list[str] = []
+
+    click.echo("CaseOps configuration check")
+    if env_path:
+        click.echo(f"[ok] .env loaded: {env_path}")
+    else:
+        click.echo("[info] .env loaded: no .env file found")
+
+    click.echo("")
+    click.echo("Required for live pipeline:")
+    missing_required = []
+    for name in _LIVE_RUN_REQUIRED_ENV:
+        value = os.getenv(name, "").strip()
+        if value:
+            click.echo(f"[ok] {name}: {_display_config_value(name, value)}")
+        else:
+            missing_required.append(name)
+            click.echo(f"[missing] {name}")
+
+    if missing_required:
+        errors.append(
+            "Missing required live-run variables: "
+            + ", ".join(missing_required)
+        )
+
+    config_errors = _validate_runtime_config_values()
+    errors.extend(config_errors)
+
+    click.echo("")
+    click.echo("Optional local/runtime settings:")
+    _print_optional_config("AWS_PROFILE", fallback="default credential chain")
+    _print_optional_config("S3_DOCUMENT_BUCKET", fallback="local-only intake")
+    _print_optional_config("S3_OUTPUT_BUCKET", fallback="local-only output")
+    click.echo(f"[info] OUTPUT_DIR: {os.getenv('OUTPUT_DIR', 'outputs')}")
+
+    if config_errors:
+        click.echo("")
+        click.echo("Config value errors:")
+        for error in config_errors:
+            click.echo(f"[error] {error}")
+
+    click.echo("")
+    if errors:
+        click.echo("[fail] Configuration is incomplete for a live pipeline run.")
+        for error in errors:
+            click.echo(f"       {error}")
+        sys.exit(1)
+
+    click.echo("[ok] Required live-run configuration is present.")
+
+
+def _display_config_value(name: str, value: str) -> str:
+    """Return a diagnostic-safe display value for a configuration variable."""
+    if name in {"AWS_REGION", "BEDROCK_MODEL_ID"}:
+        return value
+    return "set"
+
+
+def _print_optional_config(name: str, *, fallback: str) -> None:
+    value = os.getenv(name, "").strip()
+    if value:
+        click.echo(f"[ok] {name}: {_display_config_value(name, value)}")
+    else:
+        click.echo(f"[info] {name}: not set ({fallback})")
+
+
+def _validate_runtime_config_values() -> list[str]:
+    """Validate local scalar config values that commonly break startup."""
+    errors: list[str] = []
+    _validate_positive_int_env("RETRIEVAL_MAX_RESULTS", "5", errors)
+    _validate_positive_int_env("MAX_AGENT_RETRIES", "2", errors)
+    _validate_probability_env("ESCALATION_CONFIDENCE_THRESHOLD", "0.60", errors)
+    return errors
+
+
+def _validate_positive_int_env(name: str, default: str, errors: list[str]) -> None:
+    raw = os.getenv(name, default).strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        errors.append(f"{name} must be a positive integer, got {raw!r}.")
+        return
+    if value < 1:
+        errors.append(f"{name} must be a positive integer, got {value!r}.")
+
+
+def _validate_probability_env(name: str, default: str, errors: list[str]) -> None:
+    raw = os.getenv(name, default).strip()
+    try:
+        value = float(raw)
+    except ValueError:
+        errors.append(f"{name} must be a number between 0.0 and 1.0, got {raw!r}.")
+        return
+    if not (0.0 <= value <= 1.0):
+        errors.append(f"{name} must be between 0.0 and 1.0, got {value!r}.")
 
 
 def _build_s3_service() -> "S3Service | None":

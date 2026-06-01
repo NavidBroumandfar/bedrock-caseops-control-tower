@@ -3,10 +3,10 @@
 [![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![AWS Bedrock](https://img.shields.io/badge/Platform-AWS%20Bedrock-FF9900?style=flat-square&logo=amazonaws&logoColor=white)](https://aws.amazon.com/bedrock/)
 [![Architecture](https://img.shields.io/badge/Architecture-Multi--Agent%20RAG-6B7FD7?style=flat-square)]()
-[![Tests](https://img.shields.io/badge/Tests-2%2C119%20passing-2EA043?style=flat-square)](./tests/)
+[![Tests](https://img.shields.io/badge/Tests-2%2C123%20passing-2EA043?style=flat-square)](./tests/)
 [![Status](https://img.shields.io/badge/Status-Portfolio%20%2F%20Non--Production-E67E22?style=flat-square)]()
 
-> An AWS-native, supervisor-orchestrated multi-agent pipeline for high-stakes document review — grounded retrieval, evidence-backed analysis, self-validating outputs, and structured escalation, traceable from source document to final recommendation.
+> A Bedrock-powered custom Python multi-agent RAG pipeline for high-stakes document review — grounded retrieval, evidence-backed analysis, validation, and structured escalation, traceable from source document to final recommendation.
 
 ---
 
@@ -14,13 +14,13 @@
 
 Operational and technical teams regularly process large volumes of high-stakes documents — FDA warning letters, CISA advisories, incident reports, recall notices — where the cost of a missed classification, an unsupported recommendation, or an untraced escalation is real. Manual review does not scale. Existing AI automation often makes things worse: it summarizes without verifying, classifies without explaining, and escalates without a rationale that anyone can audit.
 
-This project addresses that gap with a deliberately structured multi-agent pipeline: specialized agents for retrieval, analysis, validation, and escalation, each with a defined scope and responsibility. No agent summarizes without citing evidence. No output leaves without a confidence score. Every escalation carries a traceable rationale. The result is document review that is not just automated — it is auditable.
+This project addresses that gap with a deliberately structured multi-agent pipeline: specialized Python components for retrieval, analysis, validation, and escalation, each with a defined scope and responsibility. Outputs carry retrieved-evidence citations, validation confidence, and escalation rationale so review results are auditable rather than just automated.
 
 ---
 
 ## Positioning
 
-This is the **downstream AWS-native reasoning layer** of the Bedrock CaseOps system. This repo owns grounded retrieval, multi-agent orchestration, output validation, escalation logic, and structured case-support outputs. Upstream document preparation belongs to the Databricks repo.
+This is the **downstream Bedrock-powered reasoning layer** of the Bedrock CaseOps system. This repo owns grounded retrieval, custom Python orchestration, output validation, escalation logic, and structured case-support outputs. Upstream document preparation belongs to the Databricks repo.
 
 | Concern | This Repo | Databricks Lakehouse |
 |---|---|---|
@@ -30,7 +30,7 @@ This is the **downstream AWS-native reasoning layer** of the Bedrock CaseOps sys
 | Governed AI-ready asset preparation | No | Yes |
 | Gold export payload delivery | Consumes | Yes |
 | Grounded retrieval via Knowledge Base | Yes | No |
-| Multi-agent orchestration and reasoning | Yes | No |
+| Custom Python multi-agent orchestration and reasoning | Yes | No |
 | Output validation and confidence scoring | Yes | No |
 | Escalation logic and structured outputs | Yes | No |
 | Evaluation, safety, and observability | Yes | No |
@@ -56,38 +56,41 @@ This design gives every output a traceable chain of custody from raw document to
 ## Architecture Summary
 
 ```
+CLI
+      │
+      ▼
 Document Intake
       │
-      ▼
-   S3 Storage
+      ├── optional S3 document archive
       │
       ▼
-Bedrock Knowledge Base (indexed from S3)
+Retrieval Workflow → Bedrock Knowledge Base
       │
       ▼
-Supervisor / Planner Agent
+Supervisor Workflow
       │
-      ├──► Retrieval Agent     → evidence chunks + citations
-      ├──► Analysis Agent      → classification + recommendations
-      ├──► Validation Agent    → output audit + confidence scoring
-      └──► Tool Executor       → structured JSON output + escalation flag
+      ├──► Analysis Agent      → Bedrock Converse
+      ├──► Validation Agent    → Bedrock Converse
+      └──► Tool Executor Agent → structured JSON output + escalation flag
       │
       ▼
-   CloudWatch Logs + Outputs
+Local outputs + optional S3 archive + optional CloudWatch logs
 ```
+
+The agents in this repository are application-level Python classes and workflows. The current implementation does **not** define native Amazon Bedrock Agents, agent aliases, action groups, Lambda handlers, or `invoke_agent` calls. See [agents.md](agents.md) for the current agent inventory and [ROADMAP.md](ROADMAP.md) for the planned evolution.
 
 ---
 
-## AWS Stack
+## AWS Service Usage
 
 | Service | Role |
 |---|---|
-| **Amazon S3** | Raw document storage and output archiving |
+| **Amazon S3** | Optional raw document upload and optional final output archiving |
 | **Amazon Bedrock** | Foundation model inference (Claude via Converse API) |
 | **Amazon Bedrock Knowledge Bases** | Managed vector store and retrieval |
-| **Amazon Bedrock Agents** | Agent orchestration and tool use |
-| **AWS Lambda** | Serverless execution of agent workflows |
-| **Amazon CloudWatch** | Logging, metrics, and observability |
+| **Amazon CloudWatch** | Optional structured logging and evaluation metrics when enabled |
+
+Not implemented today: native Amazon Bedrock Agents, AWS Lambda deployment, infrastructure-as-code, and CI workflow assets. The current runtime is a CLI-driven custom Python orchestration layer that calls Bedrock services directly through boto3-backed service classes.
 
 ---
 
@@ -96,12 +99,12 @@ Supervisor / Planner Agent
 | In Scope | Out of Scope |
 |---|---|
 | Document intake with metadata validation | Full CI/CD pipeline |
-| S3 document storage | Frontend or web UI |
+| Optional S3 document storage and output archiving | Frontend or web UI |
 | Bedrock Knowledge Base retrieval | Auth and multi-user management |
-| Multi-agent orchestration | Model fine-tuning |
+| Custom Python multi-agent orchestration | Model fine-tuning |
 | Structured JSON output with citations | Enterprise deployment infrastructure |
 | Severity classification and escalation logic | Multi-region support |
-| CloudWatch logging | Document format conversion (assumes clean text input) |
+| Optional CloudWatch logging | Document format conversion (assumes clean text input) |
 | CLI interface | |
 
 ---
@@ -127,7 +130,10 @@ bedrock-caseops-control-tower/
 │   └── assets/              # README assets
 ├── outputs/             # Runtime-generated outputs (gitignored)
 ├── .env.example
+├── Makefile
 ├── requirements.txt
+├── agents.md
+├── ROADMAP.md
 ├── PROJECT_SPEC.md
 ├── ARCHITECTURE.md
 └── README.md
@@ -137,14 +143,14 @@ bedrock-caseops-control-tower/
 
 ## Example End-to-End Workflow
 
-1. An operator runs the CLI with a document path (e.g., an FDA warning letter in PDF or text format)
-2. The intake pipeline validates metadata, assigns a document ID, and stores the file in S3
-3. The Supervisor Agent receives the document reference and initiates the pipeline
-4. The Retrieval Agent queries the Bedrock Knowledge Base and returns grounded evidence chunks with source citations
-5. The Analysis Agent classifies severity (Critical / High / Medium / Low), assigns a category, and generates recommendations — using only the retrieved evidence
+1. An operator runs the CLI with a document path (e.g., an FDA warning letter in text or markdown format)
+2. The intake pipeline validates metadata, assigns a document ID, and optionally stores the file in S3 when `S3_DOCUMENT_BUCKET` is configured
+3. The supervisor workflow receives the document reference and initiates the pipeline
+4. The retrieval workflow queries the Bedrock Knowledge Base and returns grounded evidence chunks with source citations
+5. The Analysis Agent classifies severity (Critical / High / Medium / Low), assigns a category, and generates recommendations using retrieved evidence
 6. The Validation Agent audits the analysis output for unsupported claims and assigns a confidence score
-7. The Tool Executor formats the final structured JSON output, applies escalation logic if warranted, and writes results to S3 and local outputs
-8. All agent steps are logged to CloudWatch with session and document IDs for full traceability
+7. The Tool Executor Agent formats the final structured JSON output, applies escalation logic if warranted, and writes local output with optional S3 archiving
+8. Pipeline steps are logged locally and optionally emitted to CloudWatch when `CASEOPS_ENABLE_CLOUDWATCH=true`
 
 ---
 
@@ -177,13 +183,13 @@ bedrock-caseops-control-tower/
 
 This project tackles a set of applied AI engineering problems that are hard to show with toy examples:
 
-- **Agentic system design** — a supervisor-coordinated multi-agent hierarchy, not a single prompt chain; each agent has a defined scope and cannot exceed it
-- **Grounded retrieval** — every claim is tied to a specific Knowledge Base chunk; the Analysis Agent cannot introduce content that was not retrieved
+- **Agentic system design** — a supervisor-coordinated custom Python multi-agent hierarchy, not a single prompt chain; each agent has a defined scope and typed contract
+- **Grounded retrieval** — generated outputs carry chunk-level Knowledge Base citations; claim-level citation is a planned improvement
 - **Self-validating outputs** — a dedicated Validation Agent audits every analysis for unsupported claims, missing citations, and confidence drift before the output is accepted
 - **Structured escalation** — escalation is rule-driven and explainable: severity, confidence threshold, unsupported claims, and explicit recommendations all feed into a deterministic escalation decision
 - **Production-grade data modeling** — Pydantic schemas enforce contract boundaries between every agent; structured JSON with full citation tracking throughout
-- **AWS-native implementation** — real Bedrock, Knowledge Bases, S3, Lambda, and CloudWatch, not mocked cloud stubs
-- **Evaluation and observability** — offline evaluation harness across retrieval quality, citation quality, and output quality; deterministic safety contracts; Bedrock Guardrails integration; CloudWatch evaluation dashboard; adversarial and edge-case test coverage
+- **Bedrock service integration** — Bedrock Converse, Bedrock Knowledge Bases, optional S3, and optional CloudWatch integrations through explicit service boundaries
+- **Evaluation and observability** — offline evaluation harness across retrieval quality, citation quality, and output quality; deterministic safety contracts; Guardrails configuration and tests; CloudWatch evaluation dashboard support; adversarial and edge-case test coverage
 - **Clean, readable architecture** — modular, testable, and decoupled without being over-engineered
 
 ---
@@ -205,6 +211,15 @@ No confidential or proprietary data is used anywhere in this project.
 
 ### Prerequisites
 
+Create and activate a local virtual environment:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install --upgrade pip
+python3 -m pip install -r requirements.txt
+```
+
 Copy `.env.example` to `.env` and fill in your values:
 
 ```bash
@@ -219,14 +234,23 @@ BEDROCK_MODEL_ID=anthropic.claude-3-haiku-20240307-v1:0
 AWS_REGION=us-east-1
 ```
 
+The CLI loads `.env` automatically from the current working directory tree. Existing shell environment variables take precedence over `.env` values.
+
 S3 variables are optional per step:
 - `S3_DOCUMENT_BUCKET` — enables S3 upload of the raw document and intake artifact; if absent, intake runs in local-only mode.
 - `S3_OUTPUT_BUCKET` — enables S3 archiving of the final JSON output to `s3://{bucket}/outputs/{document_id}/case_output.json`; if absent, output is written locally only.
 
+Check local configuration without making AWS calls:
+
+```bash
+python3 -m app.cli doctor
+python3 -m app.cli check-config
+```
+
 ### Run the full end-to-end pipeline
 
 ```bash
-python -m app.cli run path/to/advisory.txt \
+python3 -m app.cli run path/to/advisory.txt \
     --source-type FDA \
     --document-date 2026-03-30
 ```
@@ -234,7 +258,7 @@ python -m app.cli run path/to/advisory.txt \
 With an optional submitter note (used as the KB retrieval query):
 
 ```bash
-python -m app.cli run path/to/advisory.txt \
+python3 -m app.cli run path/to/advisory.txt \
     --source-type CISA \
     --document-date 2026-03-30 \
     --submitter-note "Critical ICS vulnerability — immediate review required"
@@ -247,7 +271,7 @@ On success, the CLI prints a structured summary and writes the final JSON output
 ### Register a document without running the pipeline
 
 ```bash
-python -m app.cli intake path/to/advisory.txt \
+python3 -m app.cli intake path/to/advisory.txt \
     --source-type FDA \
     --document-date 2026-03-30
 ```
@@ -255,14 +279,25 @@ python -m app.cli intake path/to/advisory.txt \
 ### Show available commands
 
 ```bash
-python -m app.cli --help
-python -m app.cli run --help
-python -m app.cli intake --help
+python3 -m app.cli --help
+python3 -m app.cli doctor
+python3 -m app.cli run --help
+python3 -m app.cli intake --help
+```
+
+Common shortcuts are available through `make`:
+
+```bash
+make test
+make cli-help
+make doctor
+make intake-sample
+make live-smoke
 ```
 
 ### Live AWS status
 
-Live Bedrock / Knowledge Base validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling in the target account. The full pipeline code is complete and correct; the `run` command will surface a clear failure message when AWS calls cannot be completed. All 2,119 tests pass without live AWS calls.
+Live Bedrock / Knowledge Base validation has not been completed in this workspace. The `run` command will surface a clear failure message when required config, AWS credentials, model access, or Knowledge Base retrieval are unavailable. The offline test suite validates the custom Python runtime without live AWS calls.
 
 ---
 
@@ -273,11 +308,11 @@ The full pipeline flow can be exercised locally without live AWS credentials usi
 ### Step 1: Run the test suite
 
 ```bash
-pip install -r requirements.txt
-python -m pytest tests/ -v
+python3 -m pip install -r requirements.txt
+python3 -m pytest tests/ -v
 ```
 
-All 2,119 tests pass without live AWS, covering the complete pipeline across both engineering phases: intake, retrieval, analysis, validation, escalation, output writing, CLI commands, structured logging, and CloudWatch observability (Phase 1); plus the full evaluation and observability layer — offline scoring across retrieval quality, citation quality, and output quality dimensions; deterministic safety contracts and Bedrock Guardrails integration; adversarial and edge-case evaluation; prompt caching and routing optimization; baseline vs. optimized comparison workflows; CloudWatch evaluation dashboard; local evaluation artifact reporting; and the Phase 2 hardening checkpoint (Phase 2).
+The offline suite passes without live AWS and covers intake, retrieval contracts, analysis, validation, escalation, output writing, CLI commands, structured logging, optional CloudWatch paths, evaluation scoring, deterministic safety contracts, prompt caching/routing modules, comparison workflows, and local reporting.
 
 ### Step 2: Explore sample inputs
 
@@ -309,7 +344,7 @@ These fixtures are controlled reference outputs — **not** live AWS outputs. Se
 The `intake` command validates and registers a document without requiring any AWS services:
 
 ```bash
-python -m app.cli intake data/sample_documents/fda_warning_letter_01.md \
+python3 -m app.cli intake data/sample_documents/fda_warning_letter_01.md \
     --source-type FDA \
     --document-date 2026-03-30
 ```
@@ -327,7 +362,7 @@ Expected output:
 When AWS credentials, a provisioned Knowledge Base, and a Bedrock model are available:
 
 ```bash
-python -m app.cli run data/sample_documents/fda_warning_letter_01.md \
+python3 -m app.cli run data/sample_documents/fda_warning_letter_01.md \
     --source-type FDA \
     --document-date 2026-03-30 \
     --submitter-note "FDA warning letter — quality system deficiencies"
@@ -335,19 +370,19 @@ python -m app.cli run data/sample_documents/fda_warning_letter_01.md \
 
 On success, the CLI prints a structured summary and writes a JSON output to `outputs/{document_id}.json`.
 
-> **Live AWS status:** Live Bedrock / Knowledge Base validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling. The `run` command will fail with a clear `[error]` and `[hint]` message when live AWS calls cannot complete.
+> **Live AWS status:** Live Bedrock / Knowledge Base validation is pending. Use `python3 -m app.cli doctor` first to confirm required local config before attempting a live run.
 
 ---
 
 ## Project Status
 
-**Phase 1 — Core Multi-Agent MVP:** Complete. The full pipeline is implemented and test-complete: document intake, grounded retrieval via Bedrock Knowledge Bases, multi-agent analysis and validation, escalation logic, structured JSON output with citations, CLI interface, and CloudWatch observability.
+**Phase 1 — Core Multi-Agent MVP:** Implemented and offline-validated. The custom Python pipeline includes document intake, grounded retrieval via Bedrock Knowledge Bases, analysis and validation agents, escalation logic, structured JSON output with chunk-level citations, CLI interface, and optional CloudWatch observability.
 
-**Phase 2 — Evaluation, Safety, Optimization, and Observability:** Complete. This phase added a structured offline evaluation harness (retrieval quality metrics, citation quality scoring, composite output quality scoring), deterministic safety contracts with Bedrock Guardrails integration, an adversarial and edge-case evaluation suite, prompt caching and routing optimization layers, baseline vs. optimized comparison workflows, a CloudWatch evaluation dashboard, and local evaluation artifact reporting with a final hardening checkpoint.
+**Phase 2 — Evaluation, Safety, Optimization, and Observability:** Implemented as testable modules. This phase added a structured offline evaluation harness, deterministic safety contracts, Guardrails configuration and adapters, adversarial and edge-case evaluation, prompt caching and routing modules, baseline vs. optimized comparison workflows, a CloudWatch evaluation dashboard definition, and local evaluation artifact reporting.
 
-**Current state:** All 2,119 tests pass without live AWS calls. The architecture and implementation are complete. Live end-to-end validation against a provisioned Bedrock Knowledge Base remains pending due to an AWS-side Titan Text Embeddings V2 throttling constraint in the target account — this is an external runtime blocker, not a code issue.
+**Current state:** The repository is an offline-validated custom Bedrock-powered orchestration system. Live end-to-end validation against a provisioned Bedrock Knowledge Base remains pending, and there is not yet a Lambda handler, infrastructure-as-code, CI workflow, or native Bedrock Agent deployment.
 
-For the full implementation history, phased roadmap, and detailed architecture decisions, see [PROJECT_SPEC.md](PROJECT_SPEC.md) and [ARCHITECTURE.md](ARCHITECTURE.md).
+For the current agent inventory and implementation gaps, see [agents.md](agents.md). For the phased roadmap, see [ROADMAP.md](ROADMAP.md). Older detailed design notes live in [PROJECT_SPEC.md](PROJECT_SPEC.md) and [ARCHITECTURE.md](ARCHITECTURE.md); where they conflict with the current status, prefer `agents.md` and `ROADMAP.md`.
 
 ---
 

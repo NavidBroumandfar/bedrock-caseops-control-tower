@@ -584,6 +584,77 @@ def test_intake_success_prints_registration(tmp_path: Path) -> None:
     assert _DOC_ID in result.output
 
 
+# ── doctor / check-config commands ────────────────────────────────────────────
+
+
+def test_doctor_loads_dotenv_and_exits_zero_when_required_config_present() -> None:
+    runner = _make_runner()
+
+    with runner.isolated_filesystem():
+        Path(".env").write_text(
+            "\n".join(
+                [
+                    "BEDROCK_KB_ID=kb-test",
+                    "BEDROCK_MODEL_ID=anthropic.test-model",
+                    "AWS_REGION=us-east-1",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        with patch.dict(os.environ, {}, clear=True):
+            result = runner.invoke(cli, ["doctor"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert ".env loaded" in result.output
+    assert "[ok] BEDROCK_KB_ID" in result.output
+    assert "[ok] Required live-run configuration is present." in result.output
+
+
+def test_doctor_exits_nonzero_when_required_live_config_missing() -> None:
+    runner = _make_runner()
+
+    with runner.isolated_filesystem():
+        with patch.dict(os.environ, {}, clear=True):
+            result = runner.invoke(cli, ["doctor"])
+
+    assert result.exit_code != 0
+    assert "[missing] BEDROCK_KB_ID" in result.output
+    assert "Missing required live-run variables" in result.output
+
+
+def test_check_config_alias_uses_doctor_diagnostic() -> None:
+    runner = _make_runner()
+    env = {
+        "BEDROCK_KB_ID": "kb-test",
+        "BEDROCK_MODEL_ID": "anthropic.test-model",
+        "AWS_REGION": "us-east-1",
+    }
+
+    with runner.isolated_filesystem():
+        with patch.dict(os.environ, env, clear=True):
+            result = runner.invoke(cli, ["check-config"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert "CaseOps configuration check" in result.output
+
+
+def test_doctor_reports_invalid_runtime_scalar_config() -> None:
+    runner = _make_runner()
+    env = {
+        "BEDROCK_KB_ID": "kb-test",
+        "BEDROCK_MODEL_ID": "anthropic.test-model",
+        "AWS_REGION": "us-east-1",
+        "RETRIEVAL_MAX_RESULTS": "0",
+    }
+
+    with runner.isolated_filesystem():
+        with patch.dict(os.environ, env, clear=True):
+            result = runner.invoke(cli, ["doctor"])
+
+    assert result.exit_code != 0
+    assert "RETRIEVAL_MAX_RESULTS must be a positive integer" in result.output
+
+
 # ── run command — S3 output archiving ────────────────────────────────────────
 
 _PATCH_ARCHIVE_S3 = "app.cli._archive_output_to_s3"
