@@ -129,9 +129,9 @@
   <path d="M376 445 C404 472 414 486 424 495" class="line"/>
 
   <g>
-    <rect x="80" y="560" width="1040" height="44" rx="22" fill="#0b1220" stroke="#334155"/>
-    <circle cx="112" cy="582" r="12" fill="url(#aws)"/>
-    <text x="112" y="587" text-anchor="middle" class="small">AWS</text>
-    <text x="144" y="587" class="caption">Bedrock Converse API, Knowledge Bases, S3, Lambda, CloudWatch, Pydantic schemas, offline evaluation, and GitHub Actions CI</text>
+    <rect x="80" y="598" width="1040" height="44" rx="22" fill="#0b1220" stroke="#334155"/>
+    <circle cx="112" cy="620" r="12" fill="url(#aws)"/>
+    <text x="112" y="625" text-anchor="middle" class="small">AWS</text>
+    <text x="144" y="625" class="caption">Bedrock Converse API, Knowledge Bases, S3, Lambda, CloudWatch, Pydantic schemas, offline evaluation, and GitHub Actions CI</text>
   </g>
 </svg>
