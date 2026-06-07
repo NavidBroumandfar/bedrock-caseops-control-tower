@@ -10,6 +10,10 @@
 
 > A Bedrock-powered custom Python multi-agent RAG pipeline for high-stakes document review — grounded retrieval, evidence-backed analysis, validation, and structured escalation, traceable from source document to final recommendation.
 
+![Bedrock CaseOps architecture flow](docs/assets/caseops-architecture-flow.svg)
+
+**At a glance:** the project accepts a document through the CLI or Lambda, retrieves grounded evidence from a Bedrock Knowledge Base, runs analysis and validation through Bedrock Converse, applies deterministic safety and escalation gates, and emits structured `CaseOutput` JSON with citations.
+
 ---
 
 ## What This Project Does
