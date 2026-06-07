@@ -78,12 +78,12 @@ from app.agents.tool_executor_agent import (
     _determine_escalation,
     _map_chunks_to_citations,
 )
-from app.schemas.analysis_models import AnalysisOutput, SeverityLevel
+from app.schemas.analysis_models import AnalysisOutput, GroundedClaim, SeverityLevel
 from app.schemas.intake_models import IntakeRecord, IntakeResult
 from app.schemas.output_models import CaseOutput, Citation
 from app.schemas.retrieval_models import EvidenceChunk, RetrievalResult
 from app.schemas.supervisor_models import SupervisorResult
-from app.schemas.validation_models import ValidationOutput
+from app.schemas.validation_models import ClaimValidation, ValidationOutput
 
 
 # ── shared builders ───────────────────────────────────────────────────────────
@@ -133,16 +133,38 @@ def _make_analysis(
     severity: SeverityLevel = "High",
     recommendations: list[str] | None = None,
 ) -> AnalysisOutput:
+    resolved_recommendations = (
+        recommendations
+        if recommendations is not None
+        else [
+            "Initiate CAPA for cleaning validation gaps.",
+            "Notify compliance team within 48 hours.",
+        ]
+    )
+    grounded_claims = [
+        GroundedClaim(
+            claim_id="finding-1",
+            claim_type="finding",
+            text="Facility failed to maintain written procedures for equipment cleaning.",
+            supporting_chunk_ids=["chunk-001"],
+        )
+    ]
+    if resolved_recommendations:
+        grounded_claims.append(
+            GroundedClaim(
+                claim_id="recommendation-1",
+                claim_type="recommendation",
+                text=resolved_recommendations[0],
+                supporting_chunk_ids=["chunk-001"],
+            )
+        )
     return AnalysisOutput(
         document_id=document_id,
         severity=severity,
         category="Regulatory / Manufacturing Deficiency",
         summary="Facility failed to maintain written procedures for equipment cleaning.",
-        recommendations=recommendations
-        or [
-            "Initiate CAPA for cleaning validation gaps.",
-            "Notify compliance team within 48 hours.",
-        ],
+        recommendations=resolved_recommendations,
+        grounded_claims=grounded_claims,
     )
 
 
@@ -156,6 +178,20 @@ def _make_validation(
         confidence_score=confidence_score,
         unsupported_claims=unsupported_claims or [],
         validation_status="pass",
+        claim_validations=[
+            ClaimValidation(
+                claim_id="finding-1",
+                supported=True,
+                supporting_chunk_ids=["chunk-001"],
+                unsupported_reason=None,
+            ),
+            ClaimValidation(
+                claim_id="recommendation-1",
+                supported=True,
+                supporting_chunk_ids=["chunk-001"],
+                unsupported_reason=None,
+            ),
+        ],
     )
 
 
@@ -280,6 +316,14 @@ def test_success_recommendations_from_analysis(agent: ToolExecutorAgent, success
     assert output.recommendations == success_result.analysis.recommendations  # type: ignore[union-attr]
 
 
+def test_success_grounded_claims_from_analysis(
+    agent: ToolExecutorAgent,
+    success_result: SupervisorResult,
+) -> None:
+    output = agent.run(success_result)
+    assert output.grounded_claims == success_result.analysis.grounded_claims  # type: ignore[union-attr]
+
+
 def test_success_confidence_from_validation(agent: ToolExecutorAgent, success_result: SupervisorResult) -> None:
     output = agent.run(success_result)
     assert output.confidence_score == success_result.validation.confidence_score  # type: ignore[union-attr]
@@ -288,6 +332,14 @@ def test_success_confidence_from_validation(agent: ToolExecutorAgent, success_re
 def test_success_unsupported_claims_from_validation(agent: ToolExecutorAgent, success_result: SupervisorResult) -> None:
     output = agent.run(success_result)
     assert output.unsupported_claims == success_result.validation.unsupported_claims  # type: ignore[union-attr]
+
+
+def test_success_claim_validations_from_validation(
+    agent: ToolExecutorAgent,
+    success_result: SupervisorResult,
+) -> None:
+    output = agent.run(success_result)
+    assert output.claim_validations == success_result.validation.claim_validations  # type: ignore[union-attr]
 
 
 def test_success_validated_by_is_agent_version(agent: ToolExecutorAgent, success_result: SupervisorResult) -> None:
@@ -317,6 +369,14 @@ def test_citations_source_id_preserved(agent: ToolExecutorAgent) -> None:
     output = agent.run(result)
     for i, citation in enumerate(output.citations):
         assert citation.source_id == chunks[i].source_id
+
+
+def test_citations_chunk_id_preserved(agent: ToolExecutorAgent) -> None:
+    chunks = _make_chunks(2)
+    result = _make_supervisor_result(chunks=chunks)
+    output = agent.run(result)
+    for i, citation in enumerate(output.citations):
+        assert citation.chunk_id == chunks[i].chunk_id
 
 
 def test_citations_source_label_preserved(agent: ToolExecutorAgent) -> None:

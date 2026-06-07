@@ -1,9 +1,11 @@
 ![Bedrock CaseOps Control Tower](docs/assets/bedrock-caseops-banner.svg)
 
-[![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![AWS Bedrock](https://img.shields.io/badge/Platform-AWS%20Bedrock-FF9900?style=flat-square&logo=amazonaws&logoColor=white)](https://aws.amazon.com/bedrock/)
 [![Architecture](https://img.shields.io/badge/Architecture-Multi--Agent%20RAG-6B7FD7?style=flat-square)]()
-[![Tests](https://img.shields.io/badge/Tests-2%2C133%20passing-2EA043?style=flat-square)](./tests/)
+[![Tests](https://img.shields.io/badge/Tests-2%2C238%20passing-2EA043?style=flat-square)](./tests/)
+[![CI](https://github.com/NavidBroumandfar/bedrock-caseops-control-tower/actions/workflows/tests.yml/badge.svg)](https://github.com/NavidBroumandfar/bedrock-caseops-control-tower/actions/workflows/tests.yml)
+[![License](https://img.shields.io/badge/License-MIT-2EA043?style=flat-square)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Portfolio%20%2F%20Non--Production-E67E22?style=flat-square)]()
 
 > A Bedrock-powered custom Python multi-agent RAG pipeline for high-stakes document review — grounded retrieval, evidence-backed analysis, validation, and structured escalation, traceable from source document to final recommendation.
@@ -56,7 +58,7 @@ This design gives every output a traceable chain of custody from raw document to
 ## Architecture Summary
 
 ```
-CLI
+CLI / Lambda
       │
       ▼
 Document Intake
@@ -77,7 +79,7 @@ Supervisor Workflow
 Local outputs + optional S3 archive + optional CloudWatch logs
 ```
 
-The agents in this repository are application-level Python classes and workflows. The current implementation does **not** define native Amazon Bedrock Agents, agent aliases, action groups, Lambda handlers, or `invoke_agent` calls. See [agents.md](agents.md) for the current agent inventory and [ROADMAP.md](ROADMAP.md) for the planned evolution.
+The agents in this repository are application-level Python classes and workflows. The current implementation does **not** define native Amazon Bedrock Agents, agent aliases, action groups, or `invoke_agent` calls. A Lambda handler and AWS SAM deployment foundation are available for the custom pipeline. See [agents.md](agents.md) for the current agent inventory and [ROADMAP.md](ROADMAP.md) for the planned evolution.
 
 ---
 
@@ -85,12 +87,27 @@ The agents in this repository are application-level Python classes and workflows
 
 | Service | Role |
 |---|---|
-| **Amazon S3** | Optional raw document upload and optional final output archiving |
-| **Amazon Bedrock** | Foundation model inference (Claude via Converse API) |
+| **Amazon S3** | Optional raw document upload and optional final output archiving; SAM deployment creates document and output buckets |
+| **Amazon Bedrock** | Foundation model inference through the Converse API |
 | **Amazon Bedrock Knowledge Bases** | Managed vector store and retrieval |
 | **Amazon CloudWatch** | Optional structured logging and evaluation metrics when enabled |
 
-Not implemented today: native Amazon Bedrock Agents, AWS Lambda deployment, infrastructure-as-code, and CI workflow assets. The current runtime is a CLI-driven custom Python orchestration layer that calls Bedrock services directly through boto3-backed service classes.
+Implemented deployment foundation: Lambda-compatible handler, AWS SAM template, narrow IAM policy statements, deployment guide, sample Lambda events, and pull-request test CI. Dev, staging, and production infrastructure have been live-validated, including one production synthetic canary. Not implemented today: native Amazon Bedrock Agents or a real production traffic launch. The current runtime remains a custom Python orchestration layer that calls Bedrock services directly through boto3-backed service classes.
+
+Architecture decision: the mainline project will stay on custom Bedrock-powered Python orchestration. Native Bedrock Agents are deferred to a future proof of concept only if a concrete requirement calls for them. See [ADR 0001](docs/adr/0001-keep-custom-bedrock-orchestration.md).
+
+## Public Release Posture
+
+This repository is public-safe as a reference implementation. It does not
+include AWS credentials, a committed `.env`, private Lambda response payloads,
+generated S3 artifacts, or account-specific validation logs. Live validation
+evidence is published in sanitized form.
+
+Another user can reuse the runtime, tests, SAM template, and deployment helpers
+in their own AWS account. They must bring their own Bedrock model access,
+Bedrock Knowledge Base, indexed source documents, and optional Guardrail. See
+[docs/public-release.md](docs/public-release.md),
+[docs/aws-bootstrap.md](docs/aws-bootstrap.md), and [SECURITY.md](SECURITY.md).
 
 ---
 
@@ -105,7 +122,7 @@ Not implemented today: native Amazon Bedrock Agents, AWS Lambda deployment, infr
 | Structured JSON output with citations | Enterprise deployment infrastructure |
 | Severity classification and escalation logic | Multi-region support |
 | Optional CloudWatch logging | Document format conversion (assumes clean text input) |
-| CLI interface | |
+| CLI interface and Lambda deployment foundation | |
 
 ---
 
@@ -130,8 +147,13 @@ bedrock-caseops-control-tower/
 │   └── assets/              # README assets
 ├── outputs/             # Runtime-generated outputs (gitignored)
 ├── .env.example
+├── CODE_OF_CONDUCT.md
+├── CONTRIBUTING.md
+├── LICENSE
 ├── Makefile
+├── pyproject.toml
 ├── requirements.txt
+├── SECURITY.md
 ├── agents.md
 ├── ROADMAP.md
 ├── PROJECT_SPEC.md
@@ -184,7 +206,7 @@ bedrock-caseops-control-tower/
 This project tackles a set of applied AI engineering problems that are hard to show with toy examples:
 
 - **Agentic system design** — a supervisor-coordinated custom Python multi-agent hierarchy, not a single prompt chain; each agent has a defined scope and typed contract
-- **Grounded retrieval** — generated outputs carry chunk-level Knowledge Base citations; claim-level citation is a planned improvement
+- **Grounded retrieval** — generated outputs carry Knowledge Base citations plus claim-level grounded-claim and validation metadata
 - **Self-validating outputs** — a dedicated Validation Agent audits every analysis for unsupported claims, missing citations, and confidence drift before the output is accepted
 - **Structured escalation** — escalation is rule-driven and explainable: severity, confidence threshold, unsupported claims, and explicit recommendations all feed into a deterministic escalation decision
 - **Production-grade data modeling** — Pydantic schemas enforce contract boundaries between every agent; structured JSON with full citation tracking throughout
@@ -295,9 +317,12 @@ make intake-sample
 make live-smoke
 ```
 
+For AWS account preparation, see [docs/aws-bootstrap.md](docs/aws-bootstrap.md).
+For Lambda/SAM deployment, see [docs/deployment.md](docs/deployment.md).
+
 ### Live AWS status
 
-Live Bedrock / Knowledge Base validation has not been completed in this workspace. The `run` command will surface a clear failure message when required config, AWS credentials, model access, or Knowledge Base retrieval are unavailable. The offline test suite validates the custom Python runtime without live AWS calls.
+Live Bedrock / Knowledge Base validation completed on 2026-06-06. Dev and staging Lambda validation completed on 2026-06-07. One production synthetic canary completed successfully, and `production_traffic_launched=false` remains the final release state. Public validation evidence is sanitized. The `run` command will surface a clear failure message when required config, AWS credentials, model access, Guardrails, or Knowledge Base retrieval are unavailable. The offline test suite validates the custom Python runtime without live AWS calls.
 
 ---
 
@@ -339,7 +364,21 @@ data/expected_outputs/
 
 These fixtures are controlled reference outputs — **not** live AWS outputs. See `data/expected_outputs/README.md` for details.
 
-### Step 4: Run the intake command locally (no AWS needed)
+### Step 4: Run local evaluation workflows
+
+Evaluation commands score saved `CaseOutput` JSON files and write artifacts under `outputs/`:
+
+```bash
+python3 -m app.cli eval safety
+python3 -m app.cli eval dashboard
+python3 -m app.cli eval compare \
+    --baseline-dir outputs/baseline_candidates \
+    --optimized-dir outputs/optimized_candidates
+```
+
+For the candidate directory convention and baseline-vs-optimized workflow, see [docs/evaluation-workflow.md](docs/evaluation-workflow.md).
+
+### Step 5: Run the intake command locally (no AWS needed)
 
 The `intake` command validates and registers a document without requiring any AWS services:
 
@@ -357,7 +396,7 @@ Expected output:
      storage      : local only
 ```
 
-### Step 5: Run the full pipeline (requires live AWS)
+### Step 6: Run the full pipeline (requires live AWS)
 
 When AWS credentials, a provisioned Knowledge Base, and a Bedrock model are available:
 
@@ -370,19 +409,31 @@ python3 -m app.cli run data/sample_documents/fda_warning_letter_01.md \
 
 On success, the CLI prints a structured summary and writes a JSON output to `outputs/{document_id}.json`.
 
-> **Live AWS status:** Live Bedrock / Knowledge Base validation is pending. Use `python3 -m app.cli doctor` first to confirm required local config before attempting a live run.
+> **Live AWS status:** Dev and staging live validation completed on 2026-06-07. Production infrastructure was deployed and one synthetic production canary passed. Real production traffic has not been launched; `production_traffic_launched=false` is the final recorded state. See [docs/live-validation.md](docs/live-validation.md) for sanitized evidence and caveats.
 
 ---
 
 ## Project Status
 
-**Phase 1 — Core Multi-Agent MVP:** Implemented and offline-validated. The custom Python pipeline includes document intake, grounded retrieval via Bedrock Knowledge Bases, analysis and validation agents, escalation logic, structured JSON output with chunk-level citations, CLI interface, and optional CloudWatch observability.
+**Phase 1 — Core Multi-Agent MVP:** Implemented and offline-validated. The custom Python pipeline includes document intake, grounded retrieval via Bedrock Knowledge Bases, analysis and validation agents, escalation logic, structured JSON output with citations, CLI interface, and optional CloudWatch observability.
 
 **Phase 2 — Evaluation, Safety, Optimization, and Observability:** Implemented as testable modules with runtime config wiring for prompt caching, prompt routing, retry count, and escalation threshold. This phase added a structured offline evaluation harness, deterministic safety contracts, Guardrails configuration and adapters, adversarial and edge-case evaluation, prompt caching and routing modules, baseline vs. optimized comparison workflows, a CloudWatch evaluation dashboard definition, and local evaluation artifact reporting.
 
-**Current state:** The repository is an offline-validated custom Bedrock-powered orchestration system. Live end-to-end validation against a provisioned Bedrock Knowledge Base remains pending, and there is not yet a Lambda handler, infrastructure-as-code, CI workflow, or native Bedrock Agent deployment.
+**Phase 6 — Evaluation as an Operator Workflow:** Implemented. The CLI now exposes `eval run`, `eval safety`, `eval compare`, and `eval dashboard`; artifacts are written under `outputs/`; optional CloudWatch metric publication is controlled by `CASEOPS_ENABLE_EVALUATION_METRICS`.
 
-For the current agent inventory and implementation gaps, see [agents.md](agents.md). For the phased roadmap, see [ROADMAP.md](ROADMAP.md). Older detailed design notes live in [PROJECT_SPEC.md](PROJECT_SPEC.md) and [ARCHITECTURE.md](ARCHITECTURE.md); where they conflict with the current status, prefer `agents.md` and `ROADMAP.md`.
+**Phase 7 — Deployment Foundation:** Implemented and live-validated. The repository now includes a Lambda-compatible handler, AWS SAM template, narrow IAM policy definitions, dev/staging deployment docs, sample invocation events, CloudWatch monitoring resources, and GitHub Actions PR test CI.
+
+**Phase 8 — Native Bedrock Agents Decision:** Accepted. The project remains custom Bedrock-powered Python orchestration; native Bedrock Agents are deferred to a future proof of concept only if needed. See [ADR 0001](docs/adr/0001-keep-custom-bedrock-orchestration.md).
+
+**Phase 10 — Production Readiness and Operationalization:** Completed. Repeatable dev/staging deployment helpers, operational validation checks, staging Knowledge Base isolation, live Guardrails allow/block validation, CloudWatch metric filters/alarms, and a production-readiness release gate are in place.
+
+**Phase 16 — Production Synthetic Canary:** Completed. The production stack, production Knowledge Base, production Guardrail, production output bucket, Lambda response, S3 archive, Lambda logs, structured pipeline logs, and runtime safety status were verified with exactly one synthetic canary. Public docs intentionally redact account-specific resource identifiers.
+
+**Phase 17 — Final Handoff and Project Freeze:** Completed. The project is considered complete for portfolio and handoff purposes. Real production traffic launch is intentionally out of scope unless a future operator explicitly chooses to run it.
+
+**Current state:** The repository is a live-validated custom Bedrock-powered orchestration system with repeatable Lambda deployment, production readiness validation, and one successful production synthetic canary. Native Bedrock Agent deployment and real production traffic launch are intentionally not implemented in the mainline architecture.
+
+For the current agent inventory and implementation gaps, see [agents.md](agents.md). For the phased roadmap, see [ROADMAP.md](ROADMAP.md). For the final freeze state, see [docs/project-closeout.md](docs/project-closeout.md). For public reuse and security posture, see [docs/public-release.md](docs/public-release.md) and [SECURITY.md](SECURITY.md). Older detailed design notes live in [PROJECT_SPEC.md](PROJECT_SPEC.md) and [ARCHITECTURE.md](ARCHITECTURE.md); where they conflict with the current status, prefer `agents.md`, `ROADMAP.md`, `docs/project-closeout.md`, and `docs/public-release.md`.
 
 ---
 
@@ -407,9 +458,6 @@ If you're exploring this project, working on agentic AI systems or AWS Bedrock a
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Navid%20Broumandfar-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/navid-broomandfar/)
 [![GitHub](https://img.shields.io/badge/GitHub-NavidBroumandfar-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/NavidBroumandfar)
-[![Email](https://img.shields.io/badge/Email-Contact-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:broomandnavid@gmail.com)
-
-&nbsp;
 
 ---
 

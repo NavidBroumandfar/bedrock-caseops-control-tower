@@ -2,7 +2,8 @@
 G-1 citation quality scorer.
 
 Scores one candidate CaseOutput against one CitationExpectation using four
-deterministic, offline metrics.  No live AWS calls are made.
+baseline deterministic metrics plus an optional Phase 4 claim-level coverage
+metric when grounded_claims are present.  No live AWS calls are made.
 
 Metrics:
   citation_presence               — 1.0 if citations are present when required (or not required);
@@ -16,8 +17,11 @@ Metrics:
   citation_excerpt_nonempty       — 1.0 if all citation excerpts are non-empty / non-whitespace;
                                     0.0 if any excerpt is empty or whitespace-only after stripping;
                                     1.0 when no citations are present and citations were not required
+  claim_level_citation_coverage   — when candidate.grounded_claims is populated, fraction of
+                                    claims whose supporting_chunk_ids are present in citation
+                                    chunk_id fields; omitted for legacy outputs without claims
 
-Overall citation score is the mean of the four metric scores.
+Overall citation score is the mean of the emitted metric scores.
 
 Pass/fail rule (see CITATION_PASS_THRESHOLD):
   citation_presence must have passed=True
@@ -34,6 +38,7 @@ Dimension name constants:
   DIM_SOURCE_LABELS   — "citation_source_label_alignment"
   DIM_EXCERPT_TERMS   — "citation_excerpt_evidence_coverage"
   DIM_NONEMPTY        — "citation_excerpt_nonempty"
+  DIM_CLAIM_COVERAGE  — "claim_level_citation_coverage"
 """
 
 from __future__ import annotations
@@ -51,9 +56,10 @@ DIM_PRESENCE = "citation_presence"
 DIM_SOURCE_LABELS = "citation_source_label_alignment"
 DIM_EXCERPT_TERMS = "citation_excerpt_evidence_coverage"
 DIM_NONEMPTY = "citation_excerpt_nonempty"
+DIM_CLAIM_COVERAGE = "claim_level_citation_coverage"
 
 # Hard-gate dimensions: both must individually pass for the result to pass.
-_HARD_GATE_DIMS = {DIM_PRESENCE, DIM_NONEMPTY}
+_HARD_GATE_DIMS = {DIM_PRESENCE, DIM_NONEMPTY, DIM_CLAIM_COVERAGE}
 
 
 def _normalize_label(label: str) -> str:
@@ -185,6 +191,31 @@ def _score_excerpt_nonempty(
     )
 
 
+def _score_claim_level_citation_coverage(candidate: CaseOutput) -> DimensionScore:
+    claims = candidate.grounded_claims
+    citation_chunk_ids = {
+        citation.chunk_id
+        for citation in candidate.citations
+        if citation.chunk_id is not None
+    }
+    covered = [
+        claim
+        for claim in claims
+        if set(claim.supporting_chunk_ids).issubset(citation_chunk_ids)
+    ]
+    score = len(covered) / len(claims)
+    return DimensionScore(
+        metric_name=DIM_CLAIM_COVERAGE,
+        score=score,
+        max_score=1.0,
+        passed=score >= 1.0,
+        rationale=(
+            f"{len(covered)}/{len(claims)} grounded claims have supporting_chunk_ids "
+            "present in citation chunk_id fields"
+        ),
+    )
+
+
 @dataclass(frozen=True)
 class CitationScoringResult:
     """
@@ -232,6 +263,8 @@ def score_citations(
         _score_excerpt_evidence_coverage(candidate, expectation),
         _score_excerpt_nonempty(candidate, expectation),
     ]
+    if candidate.grounded_claims:
+        dims.append(_score_claim_level_citation_coverage(candidate))
 
     overall = sum(d.score for d in dims) / len(dims)
 

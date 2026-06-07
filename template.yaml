@@ -1,0 +1,445 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Bedrock CaseOps Control Tower deployment foundation.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: dev
+    AllowedPattern: "^[a-z0-9-]+$"
+    Description: Environment suffix used for names and metric dimensions.
+
+  BedrockKbId:
+    Type: String
+    Description: Existing Amazon Bedrock Knowledge Base ID used for retrieval.
+
+  BedrockModelId:
+    Type: String
+    Default: anthropic.claude-3-haiku-20240307-v1:0
+    Description: Bedrock model ID passed to the pipeline services.
+
+  BedrockModelArn:
+    Type: String
+    Default: ""
+    Description: Optional explicit model or inference-profile ARN for IAM. Leave empty for a foundation-model ARN built from BedrockModelId.
+
+  RetrievalMaxResults:
+    Type: Number
+    Default: 5
+    MinValue: 1
+    Description: Number of Knowledge Base chunks to retrieve.
+
+  MaxAgentRetries:
+    Type: Number
+    Default: 2
+    MinValue: 1
+    Description: Retry ceiling for Bedrock analysis/validation failures.
+
+  EscalationConfidenceThreshold:
+    Type: String
+    Default: "0.60"
+    AllowedPattern: "^(0(\\.\\d+)?|1(\\.0+)?)$"
+    Description: Validation confidence threshold below which output escalates.
+
+  EnableSourceTypeFilter:
+    Type: String
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: Add source_type metadata filter to Knowledge Base retrieval.
+
+  EnableGuardrails:
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: Enable runtime Bedrock Guardrails checks.
+
+  GuardrailId:
+    Type: String
+    Default: ""
+    Description: Bedrock Guardrail ID. Required when EnableGuardrails is true.
+
+  GuardrailVersion:
+    Type: String
+    Default: "1"
+    Description: Bedrock Guardrail version used when Guardrails are enabled.
+
+  EnableCloudWatchPipelineLogs:
+    Type: String
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: Enable structured pipeline logs in the custom CaseOps log group.
+
+  EnableEvaluationMetrics:
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: Permit CloudWatch metric publishing for evaluation workflows.
+
+  MetricsNamespace:
+    Type: String
+    Default: CaseOps/Evaluation
+    Description: CloudWatch Metrics namespace for evaluation metrics.
+
+  LambdaMemorySize:
+    Type: Number
+    Default: 1024
+    MinValue: 128
+    MaxValue: 10240
+    Description: Lambda memory size in MB.
+
+  LambdaTimeoutSeconds:
+    Type: Number
+    Default: 900
+    MinValue: 30
+    MaxValue: 900
+    Description: Lambda timeout in seconds.
+
+  LambdaDurationAlarmThresholdMs:
+    Type: Number
+    Default: 750000
+    MinValue: 1000
+    Description: Alarm threshold for maximum Lambda duration in milliseconds.
+
+  LogRetentionDays:
+    Type: Number
+    Default: 30
+    Description: CloudWatch Logs retention in days.
+
+Conditions:
+  UseExplicitModelArn: !Not [!Equals [!Ref BedrockModelArn, ""]]
+  GuardrailsEnabled: !Equals [!Ref EnableGuardrails, "true"]
+
+Resources:
+  CaseOpsDocumentBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Application
+          Value: bedrock-caseops-control-tower
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  CaseOpsOutputBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Application
+          Value: bedrock-caseops-control-tower
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  CaseOpsLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/caseops-pipeline-${EnvironmentName}
+      RetentionInDays: !Ref LogRetentionDays
+
+  CaseOpsPipelineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /caseops/pipeline/${EnvironmentName}
+      RetentionInDays: !Ref LogRetentionDays
+
+  CaseOpsFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: caseops-cloudwatch-logs
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: LambdaServiceLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/caseops-pipeline-${EnvironmentName}:*
+              - Sid: CaseOpsStructuredLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/caseops/pipeline/${EnvironmentName}
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/caseops/pipeline/${EnvironmentName}:*
+
+        - PolicyName: caseops-s3-read-write
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ReadInputDocuments
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub ${CaseOpsDocumentBucket.Arn}/*
+              - Sid: WriteRegisteredDocuments
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                Resource:
+                  - !Sub ${CaseOpsDocumentBucket.Arn}/documents/*
+                  - !Sub ${CaseOpsDocumentBucket.Arn}/artifacts/intake/*
+              - Sid: WriteCaseOutputs
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                Resource: !Sub ${CaseOpsOutputBucket.Arn}/outputs/*
+
+        - PolicyName: caseops-bedrock-runtime
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: InvokeConfiguredModel
+                Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: !If
+                  - UseExplicitModelArn
+                  - !Ref BedrockModelArn
+                  - !Sub arn:${AWS::Partition}:bedrock:${AWS::Region}::foundation-model/${BedrockModelId}
+              - Sid: RetrieveFromConfiguredKnowledgeBase
+                Effect: Allow
+                Action:
+                  - bedrock:Retrieve
+                Resource: !Sub arn:${AWS::Partition}:bedrock:${AWS::Region}:${AWS::AccountId}:knowledge-base/${BedrockKbId}
+              - !If
+                - GuardrailsEnabled
+                - Sid: ApplyConfiguredGuardrail
+                  Effect: Allow
+                  Action:
+                    - bedrock:ApplyGuardrail
+                  Resource: !Sub arn:${AWS::Partition}:bedrock:${AWS::Region}:${AWS::AccountId}:guardrail/${GuardrailId}
+                - !Ref AWS::NoValue
+
+        - PolicyName: caseops-cloudwatch-metrics
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: PublishEvaluationMetrics
+                Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    cloudwatch:namespace: !Ref MetricsNamespace
+
+  CaseOpsFunction:
+    Type: AWS::Serverless::Function
+    DependsOn:
+      - CaseOpsLambdaLogGroup
+      - CaseOpsPipelineLogGroup
+    Properties:
+      FunctionName: !Sub caseops-pipeline-${EnvironmentName}
+      CodeUri: .
+      Handler: app.lambda_handler.lambda_handler
+      Runtime: python3.12
+      Role: !GetAtt CaseOpsFunctionRole.Arn
+      MemorySize: !Ref LambdaMemorySize
+      Timeout: !Ref LambdaTimeoutSeconds
+      Environment:
+        Variables:
+          BEDROCK_KB_ID: !Ref BedrockKbId
+          BEDROCK_MODEL_ID: !Ref BedrockModelId
+          RETRIEVAL_MAX_RESULTS: !Ref RetrievalMaxResults
+          MAX_AGENT_RETRIES: !Ref MaxAgentRetries
+          ESCALATION_CONFIDENCE_THRESHOLD: !Ref EscalationConfidenceThreshold
+          CASEOPS_ENABLE_SOURCE_TYPE_FILTER: !Ref EnableSourceTypeFilter
+          S3_DOCUMENT_BUCKET: !Ref CaseOpsDocumentBucket
+          S3_OUTPUT_BUCKET: !Ref CaseOpsOutputBucket
+          OUTPUT_DIR: /tmp/caseops/outputs
+          CASEOPS_LAMBDA_INPUT_DIR: /tmp/caseops/inputs
+          CASEOPS_ENABLE_LOCAL_FILE_LOG: "false"
+          CASEOPS_ENABLE_CLOUDWATCH: !Ref EnableCloudWatchPipelineLogs
+          CASEOPS_CLOUDWATCH_LOG_GROUP: !Sub /caseops/pipeline/${EnvironmentName}
+          CASEOPS_CLOUDWATCH_LOG_STREAM_PREFIX: caseops-session
+          CASEOPS_ENABLE_GUARDRAILS: !Ref EnableGuardrails
+          CASEOPS_GUARDRAIL_ID: !Ref GuardrailId
+          CASEOPS_GUARDRAIL_VERSION: !Ref GuardrailVersion
+          CASEOPS_ENABLE_EVALUATION_METRICS: !Ref EnableEvaluationMetrics
+          CASEOPS_METRICS_NAMESPACE: !Ref MetricsNamespace
+          CASEOPS_ENVIRONMENT: !Ref EnvironmentName
+
+  CaseOpsSafetyBlockMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref CaseOpsLambdaLogGroup
+      FilterPattern: '{ $.event = "safety_blocked" }'
+      MetricTransformations:
+        - MetricNamespace: !Ref MetricsNamespace
+          MetricName: !Sub CaseOpsSafetyBlocks-${EnvironmentName}
+          MetricValue: "1"
+
+  CaseOpsApplicationErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref CaseOpsLambdaLogGroup
+      FilterPattern: '{ $.event = "lambda_error" }'
+      MetricTransformations:
+        - MetricNamespace: !Ref MetricsNamespace
+          MetricName: !Sub CaseOpsApplicationErrors-${EnvironmentName}
+          MetricValue: "1"
+
+  CaseOpsArchiveFailureMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref CaseOpsLambdaLogGroup
+      FilterPattern: '{ $.event = "lambda_error" && $.error_type = "StorageError" }'
+      MetricTransformations:
+        - MetricNamespace: !Ref MetricsNamespace
+          MetricName: !Sub CaseOpsArchiveFailures-${EnvironmentName}
+          MetricValue: "1"
+
+  CaseOpsLambdaErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub caseops-pipeline-${EnvironmentName}-lambda-errors
+      AlarmDescription: !Sub Lambda service errors for CaseOps ${EnvironmentName}.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref CaseOpsFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  CaseOpsLambdaThrottlesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub caseops-pipeline-${EnvironmentName}-lambda-throttles
+      AlarmDescription: !Sub Lambda throttles for CaseOps ${EnvironmentName}.
+      Namespace: AWS/Lambda
+      MetricName: Throttles
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref CaseOpsFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  CaseOpsLambdaDurationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub caseops-pipeline-${EnvironmentName}-lambda-duration
+      AlarmDescription: !Sub Lambda duration threshold for CaseOps ${EnvironmentName}.
+      Namespace: AWS/Lambda
+      MetricName: Duration
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref CaseOpsFunction
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref LambdaDurationAlarmThresholdMs
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  CaseOpsApplicationErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub caseops-pipeline-${EnvironmentName}-application-errors
+      AlarmDescription: !Sub Application-level handled errors for CaseOps ${EnvironmentName}.
+      Namespace: !Ref MetricsNamespace
+      MetricName: !Sub CaseOpsApplicationErrors-${EnvironmentName}
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  CaseOpsArchiveFailuresAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub caseops-pipeline-${EnvironmentName}-archive-failures
+      AlarmDescription: !Sub S3 archive failures for CaseOps ${EnvironmentName}.
+      Namespace: !Ref MetricsNamespace
+      MetricName: !Sub CaseOpsArchiveFailures-${EnvironmentName}
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  CaseOpsSafetyBlocksAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub caseops-pipeline-${EnvironmentName}-safety-blocks
+      AlarmDescription: !Sub Safety blocks for CaseOps ${EnvironmentName}.
+      Namespace: !Ref MetricsNamespace
+      MetricName: !Sub CaseOpsSafetyBlocks-${EnvironmentName}
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+Outputs:
+  FunctionName:
+    Description: Deployed Lambda function name.
+    Value: !Ref CaseOpsFunction
+
+  FunctionArn:
+    Description: Deployed Lambda function ARN.
+    Value: !GetAtt CaseOpsFunction.Arn
+
+  DocumentBucketName:
+    Description: S3 bucket for source documents and intake artifacts.
+    Value: !Ref CaseOpsDocumentBucket
+
+  OutputBucketName:
+    Description: S3 bucket for final CaseOutput archives.
+    Value: !Ref CaseOpsOutputBucket
+
+  PipelineLogGroupName:
+    Description: Custom structured pipeline log group.
+    Value: !Ref CaseOpsPipelineLogGroup

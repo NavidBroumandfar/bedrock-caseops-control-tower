@@ -1,8 +1,8 @@
 # Project Specification — Bedrock CaseOps Multi-Agent Control Tower
 
-**Version:** 0.2
-**Last Updated:** 2026-04-11
-**Status:** Phase 1 Complete — Phase 2 Complete (F, G, H, I, J-0, J-1, J-2 complete; live AWS validation externally blocked)
+**Version:** 1.0
+**Last Updated:** 2026-06-07
+**Status:** Portfolio-ready custom Bedrock orchestration system; offline-tested, live-validated, and frozen before real production traffic launch.
 
 ---
 
@@ -58,7 +58,8 @@ An operator submits a technical or regulatory document (PDF, text, or markdown) 
 - Applied AI practitioners building document-review or case-ops systems
 - Hiring reviewers evaluating applied AI engineering portfolios
 
-The system is not targeting end-user consumers or enterprise deployment in the MVP.
+The system is not targeting end-user consumers or a hosted public service in
+the current portfolio release.
 
 ---
 
@@ -67,7 +68,7 @@ The system is not targeting end-user consumers or enterprise deployment in the M
 | Feature | Description |
 |---|---|
 | Document intake | Accept local file, assign document ID, validate metadata |
-| S3 storage | Upload raw documents to S3 with metadata tagging |
+| S3 storage | Optionally upload raw documents to S3 with metadata tagging |
 | Knowledge Base retrieval | Query Bedrock KB and return grounded evidence chunks with source citations |
 | Multi-agent orchestration | Supervisor coordinates retrieval, analysis, validation, and tool execution |
 | Severity classification | Assign Critical / High / Medium / Low based on retrieved evidence |
@@ -77,27 +78,27 @@ The system is not targeting end-user consumers or enterprise deployment in the M
 | Escalation logic | Flag cases meeting escalation criteria |
 | Structured JSON output | Output conforms to defined Pydantic schema |
 | Citation tracking | Every claim references a specific KB source chunk |
-| CloudWatch logging | All agent steps logged with session and document IDs |
+| CloudWatch logging | Agent steps logged with session and document IDs; CloudWatch emission is configurable |
 | CLI interface | Operator can run the full pipeline from the command line |
+| Lambda deployment | AWS SAM deploys a Lambda-compatible runtime with private S3 buckets and CloudWatch resources |
 
 ---
 
 ## 7. Out-of-Scope Items
 
-The following are explicitly excluded from the MVP to keep scope manageable:
+The following remain excluded from the public portfolio release:
 
-- Full CI/CD pipeline (GitHub Actions, CodePipeline)
+- Full release CI/CD pipeline beyond PR/push test automation
 - Web frontend or API server
 - Authentication and multi-user management
-- Bedrock Guardrails (implemented — Phase H)
-- Bedrock Evaluations (implemented — Phase F/G)
-- Prompt caching and prompt routing (implemented — Phase I)
 - Bedrock Flows (planned v3)
 - Model customization / fine-tuning (planned v3)
 - Bedrock Data Automation (planned v3)
-- Enterprise deployment infrastructure (VPC, IAM policies, service quotas)
+- Enterprise deployment infrastructure such as VPC design, org-specific IAM
+  boundaries, service quota management, and incident response runbooks
 - Multi-region support
 - Document format conversion (assumes clean text input for MVP)
+- Native Amazon Bedrock Agents, agent aliases, action groups, and `invoke_agent`
 
 ---
 
@@ -110,7 +111,8 @@ The following are explicitly excluded from the MVP to keep scope manageable:
 - System must reject malformed or oversized inputs with a descriptive error
 
 ### F2 — Storage
-- System must upload validated documents to a designated S3 bucket
+- System must upload validated documents to a designated S3 bucket when
+  `S3_DOCUMENT_BUCKET` is configured
 - S3 objects must include metadata tags (document_id, source_type, intake_timestamp)
 
 ### F3 — Retrieval
@@ -132,12 +134,12 @@ The following are explicitly excluded from the MVP to keep scope manageable:
 ### F6 — Output
 - Final output must conform to the CaseOutput Pydantic schema
 - Output must be written to the local outputs/ directory
-- Output must also be archived to S3
+- Output must also be archived to S3 when `S3_OUTPUT_BUCKET` is configured
 - Output must include all required fields: document_id, severity, category, summary, recommendations, citations, confidence_score, escalation_required, timestamp
 
 ### F7 — Logging
 - All agent steps must be logged with level, agent name, document ID, and session ID
-- Logs must be structured (JSON) and written to CloudWatch
+- Logs must be structured JSON and can be written to CloudWatch when enabled
 - Local log file must also be written under outputs/logs/
 
 ---
@@ -185,7 +187,7 @@ The following are explicitly excluded from the MVP to keep scope manageable:
 The MVP engineering scope is complete. Success criteria are tracked in two categories:
 
 **Engineering / repo completion (complete):**
-- [x] The codebase passes unit tests for intake, schema validation, and escalation logic without live AWS calls — 2119 tests pass
+- [x] The codebase passes unit tests for intake, schema validation, and escalation logic without live AWS calls — 2,238 tests pass
 - [x] Escalation is triggered correctly for a document meeting the escalation criteria — covered by unit tests
 - [x] The Validation Agent detects at least one unsupported claim in a synthetic adversarial test case — covered by unit tests
 - [x] All agent steps are logged with document and session IDs — structured logging implemented (E-0) and tested
@@ -195,11 +197,15 @@ The MVP engineering scope is complete. Success criteria are tracked in two categ
 - [x] Local evaluation result artifacts and reporting implemented — J-1 complete: typed artifact/report contracts, local JSON artifact writer, markdown report generator, consistent output directory structure, 122 new tests, fully offline
 - [x] v2 hardening checkpoint implemented — J-2 complete: Phase2CheckpointResult/Phase2ReadinessBlock typed contracts, CheckpointInputs dataclass, build_checkpoint runner, generate_checkpoint_report pure generator, write_checkpoint artifact writer, ArtifactKind extended, 114 new tests, fully offline
 
-**Live AWS runtime validation (pending external resolution):**
-- [ ] A document can be submitted via CLI and produce a valid JSON output end-to-end against a live Bedrock Knowledge Base
-- [ ] The output includes at least one citation referencing an actual KB source chunk from a live KB query
+**Live AWS runtime validation (complete with caveats):**
+- [x] A document can be submitted via CLI and produce a valid JSON output end-to-end against a live Bedrock Knowledge Base
+- [x] The output includes citations referencing actual KB source chunks from a live KB query
+- [x] Dev and staging Lambda deployments were invoked successfully
+- [x] Live Guardrails allow/block behavior was validated from Lambda
+- [x] Exactly one production synthetic canary passed
+- [x] Real production traffic remains intentionally disabled (`production_traffic_launched=false`)
 
-> **Blocker:** Live end-to-end validation is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. This is not a code issue. All pipeline logic is implemented and correct. Live validation will be completed when the AWS-side blocker is resolved.
+Public-safe evidence is recorded in `docs/live-validation.md`.
 
 ---
 
@@ -220,13 +226,17 @@ The MVP engineering scope is complete. Success criteria are tracked in two categ
 
 **Exit Criteria:** An operator can run `python -m app.cli run <file>` and produce a valid, grounded JSON output end-to-end.
 
-**Status:** Engineering scope complete (all subphases A–E-2 implemented and test-complete). Repository is portfolio-ready. Live Bedrock end-to-end validation remains pending due to AWS-side Titan Text Embeddings V2 throttling/runtime issues — this is an external blocker, not a code issue. Phase 2 phases F, G, H, and I are also complete.
+**Status:** Engineering scope complete, offline-tested, and live-validated. The
+repository is portfolio-ready. Real production traffic launch is intentionally
+out of scope for the current release.
 
 #### Phase 1 Subphase Roadmap
 
  > **Current status:** Phase 1 complete — all subphases (A, B, C, D, E-0, E-1, E-2) implemented in code and test-complete. Phase 2 complete — Phase F (Evaluation Foundation) complete; Phase G (Retrieval & Output Quality) complete; Phase H (Safety & Guardrails) complete; Phase I (Optimization) complete (I-0 Prompt Caching, I-1 Prompt Routing, I-2 Baseline vs. Optimized Comparison); Phase J-0 (CloudWatch Evaluation Dashboard) complete; Phase J-1 (Evaluation Result Artifacts + Reporting) complete; Phase J-2 (v2 hardening checkpoint) complete. All Phase 2 engineering scope is done.
 >
-> **Live Bedrock runtime validation is pending:** All code is implemented correctly. Live AWS Knowledge Base end-to-end validation remains blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. This is an external blocker, not a code issue.
+> **Live Bedrock runtime validation:** Completed for the CLI and Lambda paths.
+> Public docs intentionally redact account-specific IDs, ARNs, request IDs, log
+> streams, and generated artifact names.
 
 - **Phase A — Foundation & Intake** ✅
   - A-0 repo foundation + source-of-truth docs
@@ -258,13 +268,18 @@ The MVP engineering scope is complete. Success criteria are tracked in two categ
 
 ### Phase 2 — v2: Evaluation and Optimization
 
-**Status:** Complete — Phase F complete, Phase G complete, Phase H complete, Phase I complete (I-0 through I-2), Phase J-0 complete, Phase J-1 complete, Phase J-2 complete. Live AWS runtime validation remains externally blocked.
+**Status:** Complete — Phase F complete, Phase G complete, Phase H complete,
+Phase I complete (I-0 through I-2), Phase J-0 complete, Phase J-1 complete,
+Phase J-2 complete, and live AWS runtime validation complete with public-safe
+evidence.
 
 **Goal:** Make the system measurably better and observable — through structured evaluation, safety controls, optimization, and production-grade reporting.
 
 **Exit Criteria:** The system can evaluate its own outputs against a reference set, enforce safety policies, apply prompt optimizations, and report quality metrics to a CloudWatch dashboard.
 
-> **Note on Phase F independence:** The Phase F evaluation foundation (F-0 through F-2) is fully local and offline. It evaluates structured outputs against reference expectations without requiring live AWS runtime availability. Progress on Phase 2 is not blocked by the live Bedrock runtime issue that affects Phase 1 live validation.
+> **Note on Phase F independence:** The Phase F evaluation foundation (F-0
+> through F-2) is fully local and offline. It evaluates structured outputs
+> against reference expectations without requiring live AWS runtime availability.
 
 #### Phase 2 Subphase Roadmap
 

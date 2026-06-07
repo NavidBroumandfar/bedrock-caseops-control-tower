@@ -44,9 +44,8 @@ Separation rules:
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from app.evaluation.loader import load_citation_expectations, load_dataset
 from app.evaluation.output_quality_scorer import (
@@ -57,7 +56,7 @@ from app.evaluation.output_quality_scorer import (
 from app.evaluation.safety_policy import DEFAULT_POLICY, evaluate_safety
 from app.schemas.evaluation_models import CitationExpectation, ComparisonVerdict
 from app.schemas.output_models import CaseOutput
-from app.schemas.safety_models import FailurePolicy, SafetyStatus
+from app.schemas.safety_models import FailurePolicy
 
 # Minimum absolute score delta required for a verdict of "improved" or "regressed".
 # Deltas within this band are classified as "unchanged" to absorb floating-point noise.

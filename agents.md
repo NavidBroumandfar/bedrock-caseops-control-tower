@@ -1,6 +1,6 @@
 # Agents
 
-Last updated: 2026-06-01
+Last updated: 2026-06-07
 
 ## Purpose
 
@@ -18,7 +18,7 @@ It does not currently use native Amazon Bedrock Agents, agent aliases, action gr
 ## Current Runtime Shape
 
 ```text
-CLI
+CLI / Lambda
   |
   v
 Document Intake
@@ -63,7 +63,7 @@ Native Bedrock Agents would usually introduce:
 - `invoke_agent` calls
 - AWS-side orchestration state
 
-The current implementation keeps orchestration in the application. That is a valid and often simpler architecture for an MVP, but the README and architecture documents should describe it precisely as custom Bedrock-powered orchestration unless native Bedrock Agents are added.
+The current implementation keeps orchestration in the application. That is the accepted mainline architecture for this repository. See `docs/adr/0001-keep-custom-bedrock-orchestration.md` for the Phase 8 decision record.
 
 ## Current Strengths
 
@@ -71,18 +71,19 @@ The current implementation keeps orchestration in the application. That is a val
 - Agents use typed Pydantic contracts instead of passing unstructured dictionaries.
 - Workflow layers do not instantiate AWS clients directly; service dependencies are injected.
 - Empty retrieval is handled conservatively and escalated.
-- Offline test coverage is strong: 2,133 passing tests were verified after Phase 2 runtime config wiring.
+- Offline test coverage is strong: 2,238 passing tests were verified during public release hardening.
 - Evaluation, safety, prompt routing, prompt caching, and reporting layers exist as testable modules.
 - Prompt routing, prompt caching, retry count, and escalation threshold are wired into the CLI runtime path.
+- Lambda/SAM deployment assets exist for the custom orchestration runtime.
+- Dev, staging, and production infrastructure have been live-validated, including a production synthetic canary.
+- Runtime Guardrails and deterministic safety gates are enforced before normal output persistence.
+- Claim-level grounded claims and claim validations are present in `CaseOutput`.
 
 ## Current Gaps
 
-- Live AWS end-to-end execution has not been validated in this environment.
-- `.env` is documented but not loaded automatically by the CLI.
-- Guardrails configuration exists but is not wired into `_build_pipeline_deps()`.
-- Citations are currently chunk-level citations attached to the final output, not claim-level citations attached to each summary claim or recommendation.
-- Guardrails and deterministic safety policy are implemented as evaluation/foundation layers, not as enforced runtime gates in the CLI path.
-- No Lambda handler, infrastructure-as-code, CI workflow, or native Bedrock Agent deployment exists yet.
+- Real production traffic has not been launched; the production validation so far is one synthetic canary.
+- The production cutover readiness manifest referenced during Phase 16 was not present in the local workspace, although production resources were verified directly in AWS.
+- Native Bedrock Agent deployment is intentionally not implemented in the mainline architecture.
 
 ## Future Agent Design Rules
 
@@ -125,4 +126,4 @@ Bedrock Supervisor Agent
 Structured CaseOutput
 ```
 
-That migration should happen only after the current custom runtime is live-validated, because native Bedrock Agents will add deployment complexity and make debugging harder.
+That migration should happen only as a separate proof of concept after the current custom runtime is live-validated and deployed, because native Bedrock Agents add deployment complexity and change the debugging surface.

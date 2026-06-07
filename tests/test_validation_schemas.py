@@ -32,7 +32,10 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.validation_models import ValidationOutput, ValidationStatus
+from app.schemas.validation_models import (
+    ClaimValidation,
+    ValidationOutput,
+)
 
 
 # ── fixtures ───────────────────────────────────────────────────────────────────
@@ -45,6 +48,14 @@ def valid_output() -> ValidationOutput:
         confidence_score=0.87,
         unsupported_claims=[],
         validation_status="pass",
+        claim_validations=[
+            ClaimValidation(
+                claim_id="finding-1",
+                supported=True,
+                supporting_chunk_ids=["chunk-001"],
+                unsupported_reason=None,
+            )
+        ],
     )
 
 
@@ -56,6 +67,7 @@ def test_validation_output_valid_construction(valid_output: ValidationOutput) ->
     assert valid_output.confidence_score == pytest.approx(0.87)
     assert valid_output.unsupported_claims == []
     assert valid_output.validation_status == "pass"
+    assert len(valid_output.claim_validations) == 1
     assert valid_output.warning is None
 
 
@@ -64,6 +76,7 @@ def test_validation_output_all_required_fields_present(valid_output: ValidationO
     assert hasattr(valid_output, "confidence_score")
     assert hasattr(valid_output, "unsupported_claims")
     assert hasattr(valid_output, "validation_status")
+    assert hasattr(valid_output, "claim_validations")
     assert hasattr(valid_output, "warning")
 
 
@@ -80,6 +93,86 @@ def test_warning_preserved_when_provided() -> None:
         warning="Partial evidence support detected.",
     )
     assert output.warning == "Partial evidence support detected."
+
+
+def test_claim_validation_supported_requires_chunk_ids() -> None:
+    with pytest.raises(ValidationError, match="supporting chunk ID"):
+        ClaimValidation(
+            claim_id="finding-1",
+            supported=True,
+            supporting_chunk_ids=[],
+            unsupported_reason=None,
+        )
+
+
+def test_claim_validation_unsupported_requires_reason() -> None:
+    with pytest.raises(ValidationError, match="unsupported_reason"):
+        ClaimValidation(
+            claim_id="finding-1",
+            supported=False,
+            supporting_chunk_ids=[],
+            unsupported_reason=None,
+        )
+
+
+def test_claim_validation_unsupported_reason_preserved() -> None:
+    claim_validation = ClaimValidation(
+        claim_id="finding-1",
+        supported=False,
+        supporting_chunk_ids=[],
+        unsupported_reason="Cited chunk does not mention the deadline.",
+    )
+    assert (
+        claim_validation.unsupported_reason
+        == "Cited chunk does not mention the deadline."
+    )
+
+
+def test_claim_validation_rejects_blank_claim_id() -> None:
+    with pytest.raises(ValidationError, match="claim_id"):
+        ClaimValidation(
+            claim_id=" ",
+            supported=False,
+            supporting_chunk_ids=[],
+            unsupported_reason="No support.",
+        )
+
+
+def test_claim_validation_rejects_blank_supporting_chunk_id() -> None:
+    with pytest.raises(ValidationError, match="supporting_chunk_ids"):
+        ClaimValidation(
+            claim_id="finding-1",
+            supported=True,
+            supporting_chunk_ids=["chunk-001", ""],
+            unsupported_reason=None,
+        )
+
+
+def test_claim_validations_default_to_empty_list() -> None:
+    output = ValidationOutput(
+        document_id="doc-20260404-a1b2c3d4",
+        confidence_score=0.7,
+        unsupported_claims=[],
+        validation_status="warning",
+    )
+    assert output.claim_validations == []
+
+
+def test_duplicate_claim_validation_ids_rejected() -> None:
+    claim_validation = {
+        "claim_id": "finding-1",
+        "supported": True,
+        "supporting_chunk_ids": ["chunk-001"],
+        "unsupported_reason": None,
+    }
+    with pytest.raises(ValidationError, match="duplicate claim_id"):
+        ValidationOutput(
+            document_id="doc-20260404-a1b2c3d4",
+            confidence_score=0.9,
+            unsupported_claims=[],
+            validation_status="pass",
+            claim_validations=[claim_validation, claim_validation],
+        )
 
 
 # ── ValidationStatus: accepted values ────────────────────────────────────────
@@ -251,6 +344,7 @@ def test_model_dump_expected_keys(valid_output: ValidationOutput) -> None:
         "confidence_score",
         "unsupported_claims",
         "validation_status",
+        "claim_validations",
         "warning",
     }
     assert expected_keys == set(data.keys())
@@ -262,6 +356,10 @@ def test_model_dump_values_match(valid_output: ValidationOutput) -> None:
     assert data["confidence_score"] == pytest.approx(valid_output.confidence_score)
     assert data["unsupported_claims"] == valid_output.unsupported_claims
     assert data["validation_status"] == valid_output.validation_status
+    assert data["claim_validations"] == [
+        claim_validation.model_dump()
+        for claim_validation in valid_output.claim_validations
+    ]
     assert data["warning"] == valid_output.warning
 
 
@@ -272,6 +370,7 @@ def test_model_dump_json_round_trips(valid_output: ValidationOutput) -> None:
     assert parsed["confidence_score"] == pytest.approx(valid_output.confidence_score)
     assert isinstance(parsed["unsupported_claims"], list)
     assert parsed["validation_status"] == valid_output.validation_status
+    assert isinstance(parsed["claim_validations"], list)
 
 
 def test_validation_status_serializes_as_plain_string(valid_output: ValidationOutput) -> None:
@@ -326,7 +425,8 @@ def test_validation_output_fields_are_subset_of_case_output_shape(
 
     CaseOutput shape (from ARCHITECTURE.md §10):
       document_id, source_filename, source_type, severity, category, summary,
-      recommendations, citations, confidence_score, unsupported_claims,
+      recommendations, grounded_claims, citations, confidence_score, unsupported_claims,
+      claim_validations,
       escalation_required, escalation_reason, validated_by, session_id, timestamp
     """
     case_output_field_names = {
@@ -337,9 +437,11 @@ def test_validation_output_fields_are_subset_of_case_output_shape(
         "category",
         "summary",
         "recommendations",
+        "grounded_claims",
         "citations",
         "confidence_score",
         "unsupported_claims",
+        "claim_validations",
         "escalation_required",
         "escalation_reason",
         "validated_by",

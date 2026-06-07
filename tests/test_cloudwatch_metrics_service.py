@@ -16,7 +16,7 @@ Covers:
   - No live AWS calls in any test
 """
 
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock
 
 import pytest
 

@@ -34,7 +34,12 @@ from pathlib import Path
 import pytest
 
 from app.schemas.output_models import CaseOutput, Citation
-from app.utils.output_writer import OutputWriteError, write_case_output
+from app.schemas.safety_models import SafetyAssessment, SafetyStatus
+from app.utils.output_writer import (
+    OutputWriteError,
+    write_case_output,
+    write_safety_assessment,
+)
 
 
 # ── shared builders ────────────────────────────────────────────────────────────
@@ -192,6 +197,38 @@ def test_json_round_trips_to_valid_case_output(tmp_path: Path) -> None:
     parsed = CaseOutput.model_validate_json(raw)
     assert parsed.document_id == _DOC_ID
     assert parsed.session_id == _SESSION_ID
+
+
+def test_safety_assessment_file_is_created_next_to_output(tmp_path: Path) -> None:
+    assessment = SafetyAssessment(
+        document_id=_DOC_ID,
+        issues=[],
+        has_blocking_issue=False,
+        requires_escalation=False,
+        status=SafetyStatus.ALLOW,
+        notes="runtime deterministic safety assessment",
+        timestamp="2026-04-05T00:00:00+00:00",
+    )
+    result_path = write_safety_assessment(assessment, output_dir=tmp_path)
+    assert result_path.name == f"{_DOC_ID}.safety.json"
+    assert result_path.exists()
+
+
+def test_safety_assessment_json_round_trips(tmp_path: Path) -> None:
+    assessment = SafetyAssessment(
+        document_id=_DOC_ID,
+        issues=[],
+        has_blocking_issue=False,
+        requires_escalation=False,
+        status=SafetyStatus.ALLOW,
+        notes=None,
+        timestamp="2026-04-05T00:00:00+00:00",
+    )
+    write_safety_assessment(assessment, output_dir=tmp_path)
+    raw = (tmp_path / f"{_DOC_ID}.safety.json").read_text(encoding="utf-8")
+    parsed = SafetyAssessment.model_validate_json(raw)
+    assert parsed.document_id == _DOC_ID
+    assert parsed.status == SafetyStatus.ALLOW
 
 
 def test_citations_preserved_in_json(tmp_path: Path) -> None:

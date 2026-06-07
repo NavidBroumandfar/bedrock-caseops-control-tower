@@ -20,7 +20,6 @@ Coverage:
   - Adapter does not import AWS services or safety_policy
 """
 
-import pytest
 
 from app.evaluation.guardrails_adapter import (
     guardrail_result_to_assessment,

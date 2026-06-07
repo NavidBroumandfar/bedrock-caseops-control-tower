@@ -288,6 +288,7 @@ def evaluate_safety(
     candidate: CaseOutput,
     policy: FailurePolicy | None = None,
     retrieval_chunk_count: int | None = None,
+    additional_issues: list[SafetyIssue] | None = None,
     notes: str | None = None,
 ) -> SafetyAssessment:
     """
@@ -303,6 +304,9 @@ def evaluate_safety(
     retrieval_chunk_count : optional chunk count from an upstream RetrievalResult.
                             When provided, the empty-retrieval check is applied.
                             When None, the retrieval check is skipped entirely.
+    additional_issues     : optional issues raised by runtime integrations such
+                            as Bedrock Guardrails.  These are merged into the
+                            deterministic policy issues before status selection.
     notes                 : optional free-text observation attached to the assessment.
 
     Returns
@@ -318,6 +322,8 @@ def evaluate_safety(
     _check_retrieval_context(retrieval_chunk_count, policy, issues)
     _check_low_confidence(candidate, policy, issues)
     _check_escalation_required(candidate, policy, issues)
+    if additional_issues:
+        issues.extend(additional_issues)
 
     return _build_assessment(candidate.document_id, issues, policy, notes)
 
@@ -326,6 +332,7 @@ def evaluate_safety_from_raw(
     raw: Any,
     policy: FailurePolicy | None = None,
     retrieval_chunk_count: int | None = None,
+    additional_issues: list[SafetyIssue] | None = None,
     notes: str | None = None,
 ) -> SafetyAssessment:
     """
@@ -340,6 +347,7 @@ def evaluate_safety_from_raw(
     raw                   : any value (dict, None, malformed data, etc.).
     policy                : FailurePolicy; defaults to DEFAULT_POLICY.
     retrieval_chunk_count : passed through to evaluate_safety on a valid candidate.
+    additional_issues     : passed through to evaluate_safety on a valid candidate.
     notes                 : optional free-text observation.
 
     Returns
@@ -365,5 +373,6 @@ def evaluate_safety_from_raw(
         candidate,
         policy=policy,
         retrieval_chunk_count=retrieval_chunk_count,
+        additional_issues=additional_issues,
         notes=notes,
     )

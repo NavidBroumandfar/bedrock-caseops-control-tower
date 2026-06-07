@@ -56,7 +56,8 @@ def generate_checkpoint_report(result: Phase2CheckpointResult) -> str:
     lines.append("## Phase 2 Completion Summary")
     lines.append("")
     lines.append(f"**Engineering complete:** {'Yes' if result.engineering_complete else 'No'}  ")
-    lines.append(f"**Live AWS validated:** {'Yes' if result.live_aws_validated else 'No — see External Blockers below'}  ")
+    live_status = "Yes" if result.live_aws_validated else "No - see External Blockers below"
+    lines.append(f"**Live AWS validated:** {live_status}  ")
     lines.append(f"**Total offline tests passing:** {result.total_tests_offline}  ")
     lines.append("")
 
@@ -139,10 +140,9 @@ def generate_checkpoint_report(result: Phase2CheckpointResult) -> str:
         ),
         "complete_blocked": (
             "Phase 2 engineering scope is **complete**. "
-            "Live AWS end-to-end validation remains **externally blocked** "
-            "by AWS-side Titan Text Embeddings V2 throttling in the target account. "
-            "This is not a code issue. All pipeline logic is implemented and correct. "
-            "Live validation will be completed when the AWS-side blocker is resolved."
+            "Live AWS end-to-end validation remains blocked by an external "
+            "non-code issue listed above. The checkpoint is therefore not marked "
+            "complete until that external blocker is resolved."
         ),
         "incomplete": (
             "Phase 2 engineering scope is **not yet complete**. "

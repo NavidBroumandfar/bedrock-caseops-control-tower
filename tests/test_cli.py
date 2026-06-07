@@ -47,6 +47,7 @@ injected fakes via unittest.mock.patch.
 import json
 import os
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -55,6 +56,14 @@ from click.testing import CliRunner
 from app.cli import _build_pipeline_deps, cli
 from app.schemas.intake_models import IntakeRecord, IntakeResult
 from app.schemas.output_models import CaseOutput, Citation
+from app.schemas.safety_models import (
+    IssueSource,
+    SafetyAssessment,
+    SafetyIssue,
+    SafetyIssueCode,
+    SafetyIssueSeverity,
+    SafetyStatus,
+)
 from app.utils.config import PipelineConfig
 
 
@@ -63,6 +72,7 @@ from app.utils.config import PipelineConfig
 
 _DOC_ID = "doc-20260405-clitst1"
 _SESSION_ID = "sess-deadbeef"
+_REPO_ROOT = Path(__file__).parent.parent
 
 
 def _make_intake_record() -> IntakeRecord:
@@ -114,6 +124,29 @@ def _make_case_output(output_dir: str | None = None) -> CaseOutput:
     )
 
 
+def _make_safety_assessment(status: SafetyStatus = SafetyStatus.ALLOW) -> SafetyAssessment:
+    issues = []
+    if status == SafetyStatus.BLOCK:
+        issues = [
+            SafetyIssue(
+                issue_code=SafetyIssueCode.GUARDRAIL_INTERVENTION,
+                severity=SafetyIssueSeverity.ERROR,
+                message="Guardrail blocked generated output",
+                blocking=True,
+                source=IssueSource.GUARDRAILS,
+            )
+        ]
+    return SafetyAssessment(
+        document_id=_DOC_ID,
+        issues=issues,
+        has_blocking_issue=bool(issues),
+        requires_escalation=status in (SafetyStatus.ESCALATE, SafetyStatus.BLOCK),
+        status=status,
+        notes="runtime safety test",
+        timestamp="2026-04-05T00:00:00+00:00",
+    )
+
+
 def _make_runner() -> CliRunner:
     """Return a CliRunner for CLI invocation in tests."""
     return CliRunner()
@@ -128,6 +161,8 @@ _PATCH_WRITE_OUTPUT = "app.cli.write_case_output"
 _PATCH_BUILD_DEPS = "app.cli._build_pipeline_deps"
 _PATCH_BUILD_LOGGER = "app.cli._build_logger"
 _PATCH_BUILD_S3 = "app.cli._build_s3_service"
+_PATCH_RUN_CASE_OUTPUT_SAFETY = "app.cli._run_case_output_safety_check"
+_PATCH_RUN_OPERATOR_INPUT_SAFETY = "app.cli._run_operator_input_safety_check"
 
 
 # ── run command — argument validation ─────────────────────────────────────────
@@ -272,6 +307,12 @@ def test_run_success_summary_contains_severity(tmp_path: Path) -> None:
 def test_run_success_summary_contains_output_path(tmp_path: Path) -> None:
     result = _invoke_run_success(tmp_path)
     assert _DOC_ID in result.output
+
+
+def test_run_success_summary_contains_safety_status(tmp_path: Path) -> None:
+    result = _invoke_run_success(tmp_path)
+    assert "safety_status" in result.output
+    assert "allow" in result.output
 
 
 # ── run command — failure paths ────────────────────────────────────────────────
@@ -439,6 +480,76 @@ def test_run_output_write_error_prints_error_message(tmp_path: Path) -> None:
             )
     combined = result.output + (result.stderr or "")
     assert "error" in combined.lower()
+
+
+def test_run_blocked_output_safety_exits_before_writing_output(tmp_path: Path) -> None:
+    runner = _make_runner()
+    output = _make_case_output()
+    output_file = tmp_path / f"{_DOC_ID}.json"
+    safety_artifact = tmp_path / f"{_DOC_ID}.safety.json"
+    mock_logger = MagicMock()
+    mock_logger.log_file_path = None
+    mock_logger.session_id = _SESSION_ID
+    safety_result = SimpleNamespace(
+        assessment=_make_safety_assessment(SafetyStatus.BLOCK),
+        artifact_path=safety_artifact,
+    )
+
+    with runner.isolated_filesystem():
+        Path("advisory.txt").write_text("content", encoding="utf-8")
+        with (
+            patch(_PATCH_RUN_INTAKE, return_value=_make_intake_result()),
+            patch(_PATCH_RUN_OPERATOR_INPUT_SAFETY, return_value=None),
+            patch(_PATCH_BUILD_DEPS, return_value=(MagicMock(), MagicMock(), MagicMock(), MagicMock())),
+            patch(_PATCH_BUILD_LOGGER, return_value=mock_logger),
+            patch(_PATCH_RUN_PIPELINE, return_value=output),
+            patch(_PATCH_RUN_CASE_OUTPUT_SAFETY, return_value=safety_result),
+            patch(_PATCH_WRITE_OUTPUT, return_value=output_file) as mock_write,
+            patch(_PATCH_BUILD_S3, return_value=None),
+        ):
+            result = runner.invoke(
+                cli,
+                ["run", "advisory.txt", "--source-type", "FDA", "--document-date", "2026-03-30"],
+            )
+
+    assert result.exit_code != 0
+    mock_write.assert_not_called()
+    combined = result.output + (result.stderr or "")
+    assert "Generated output blocked" in combined
+    assert str(safety_artifact) in combined
+
+
+def test_run_blocked_operator_input_exits_before_pipeline(tmp_path: Path) -> None:
+    runner = _make_runner()
+    safety_artifact = tmp_path / f"{_DOC_ID}.safety.json"
+    mock_logger = MagicMock()
+    mock_logger.log_file_path = None
+    mock_logger.session_id = _SESSION_ID
+    safety_result = SimpleNamespace(
+        assessment=_make_safety_assessment(SafetyStatus.BLOCK),
+        artifact_path=safety_artifact,
+    )
+
+    with runner.isolated_filesystem():
+        Path("advisory.txt").write_text("content", encoding="utf-8")
+        with (
+            patch(_PATCH_RUN_INTAKE, return_value=_make_intake_result()),
+            patch(_PATCH_RUN_OPERATOR_INPUT_SAFETY, return_value=safety_result),
+            patch(_PATCH_BUILD_DEPS, return_value=(MagicMock(), MagicMock(), MagicMock(), MagicMock())) as mock_deps,
+            patch(_PATCH_BUILD_LOGGER, return_value=mock_logger),
+            patch(_PATCH_RUN_PIPELINE) as mock_pipeline,
+            patch(_PATCH_BUILD_S3, return_value=None),
+        ):
+            result = runner.invoke(
+                cli,
+                ["run", "advisory.txt", "--source-type", "FDA", "--document-date", "2026-03-30"],
+            )
+
+    assert result.exit_code != 0
+    mock_deps.assert_not_called()
+    mock_pipeline.assert_not_called()
+    combined = result.output + (result.stderr or "")
+    assert "Operator input blocked" in combined
 
 
 # ── run command — logger integration ──────────────────────────────────────────
@@ -654,7 +765,6 @@ def test_intake_invalid_source_type_exits_nonzero(tmp_path: Path) -> None:
 
 
 def test_intake_success_prints_registration(tmp_path: Path) -> None:
-    from app.schemas.intake_models import IntakeResult
 
     runner = _make_runner()
     mock_result = _make_intake_result()
@@ -1053,3 +1163,158 @@ def test_run_pipeline_error_prints_hint_about_aws_credentials() -> None:
     combined = result.output + (result.stderr or "")
     assert "hint" in combined.lower()
     assert result.exit_code != 0
+
+
+# ── eval command group ───────────────────────────────────────────────────────
+
+
+def test_eval_group_help_lists_operator_workflows() -> None:
+    runner = _make_runner()
+    result = runner.invoke(cli, ["eval", "--help"])
+    assert result.exit_code == 0
+    assert "run" in result.output
+    assert "safety" in result.output
+    assert "compare" in result.output
+    assert "dashboard" in result.output
+
+
+def test_eval_run_writes_artifacts_and_prints_summary(tmp_path: Path) -> None:
+    from app.schemas.evaluation_models import EvaluationRunSummary
+
+    runner = _make_runner()
+    candidates_dir = tmp_path / "candidates"
+    candidates_dir.mkdir()
+    (candidates_dir / "case-001.json").write_text("{}", encoding="utf-8")
+    output_root = tmp_path / "outputs"
+
+    summary = EvaluationRunSummary(
+        run_id="eval-cli-001",
+        total_cases=1,
+        passed_cases=1,
+        failed_cases=0,
+        average_score=0.91,
+        per_metric_averages={"severity_match": 1.0},
+        timestamp="2026-06-06T00:00:00+00:00",
+    )
+    run_result = SimpleNamespace(summary=summary, results=())
+    bundle = SimpleNamespace(
+        metadata=SimpleNamespace(
+            run_id="eval-cli-001",
+            artifact_dir="evaluation_runs/eval-cli-001",
+        ),
+        report_path="evaluation_runs/eval-cli-001/report.md",
+    )
+
+    with (
+        patch("app.evaluation.runner.run_evaluation", return_value=run_result) as mock_run,
+        patch("app.evaluation.artifact_writer.write_evaluation_run", return_value=bundle) as mock_write,
+        patch("app.evaluation.metrics_translator.evaluation_run_summary_to_metrics", return_value=[]),
+        patch("app.cli._publish_evaluation_metrics") as mock_publish,
+    ):
+        result = runner.invoke(
+            cli,
+            [
+                "eval",
+                "run",
+                "--candidates-dir",
+                str(candidates_dir),
+                "--output-root",
+                str(output_root),
+                "--run-id",
+                "eval-cli-001",
+            ],
+            catch_exceptions=False,
+        )
+
+    assert result.exit_code == 0
+    assert "[ok] Evaluation run complete." in result.output
+    assert "eval-cli-001" in result.output
+    assert mock_run.call_args.kwargs["run_id"] == "eval-cli-001"
+    assert mock_run.call_args.args[0]["case-001"] == candidates_dir / "case-001.json"
+    mock_write.assert_called_once()
+    mock_publish.assert_called_once()
+
+
+def test_eval_run_empty_candidates_dir_exits_nonzero(tmp_path: Path) -> None:
+    runner = _make_runner()
+    candidates_dir = tmp_path / "empty"
+    candidates_dir.mkdir()
+    result = runner.invoke(
+        cli,
+        ["eval", "run", "--candidates-dir", str(candidates_dir)],
+    )
+    assert result.exit_code != 0
+    assert "No candidate JSON files" in result.output
+
+
+def test_eval_safety_writes_artifacts_with_existing_fixtures(tmp_path: Path) -> None:
+    runner = _make_runner()
+    suite_dir = _REPO_ROOT / "tests" / "fixtures" / "safety_cases"
+    result = runner.invoke(
+        cli,
+        [
+            "eval",
+            "safety",
+            "--suite-dir",
+            str(suite_dir),
+            "--output-root",
+            str(tmp_path),
+            "--suite-id",
+            "safety-cli-001",
+            "--no-report",
+        ],
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0
+    assert "[ok] Safety evaluation complete." in result.output
+    assert (tmp_path / "safety_runs" / "safety-cli-001" / "summary.json").exists()
+    assert (tmp_path / "safety_runs" / "safety-cli-001" / "case_results.json").exists()
+
+
+def test_eval_compare_writes_artifacts_with_existing_fixtures(tmp_path: Path) -> None:
+    runner = _make_runner()
+    fixture_root = _REPO_ROOT / "tests" / "fixtures" / "comparison_cases"
+    result = runner.invoke(
+        cli,
+        [
+            "eval",
+            "compare",
+            "--baseline-dir",
+            str(fixture_root / "baseline"),
+            "--optimized-dir",
+            str(fixture_root / "optimized"),
+            "--dataset-dir",
+            str(fixture_root),
+            "--output-root",
+            str(tmp_path),
+            "--run-id",
+            "cmp-cli-001",
+            "--no-report",
+        ],
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0
+    assert "[ok] Comparison run complete." in result.output
+    assert (tmp_path / "comparison_runs" / "cmp-cli-001" / "summary.json").exists()
+    assert (tmp_path / "comparison_runs" / "cmp-cli-001" / "case_results.json").exists()
+
+
+def test_eval_dashboard_writes_dashboard_json(tmp_path: Path) -> None:
+    runner = _make_runner()
+    result = runner.invoke(
+        cli,
+        [
+            "eval",
+            "dashboard",
+            "--output-root",
+            str(tmp_path),
+            "--filename",
+            "caseops-dashboard.json",
+        ],
+        catch_exceptions=False,
+    )
+    dashboard_path = tmp_path / "evaluation_dashboard" / "caseops-dashboard.json"
+    assert result.exit_code == 0
+    assert "[ok] Evaluation dashboard artifact written." in result.output
+    assert dashboard_path.exists()
+    assert "widgets" in json.loads(dashboard_path.read_text(encoding="utf-8"))

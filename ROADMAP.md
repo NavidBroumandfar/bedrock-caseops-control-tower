@@ -1,8 +1,10 @@
 # Roadmap
 
-Last updated: 2026-06-01
+Last updated: 2026-06-07
 
 ## Audit Baseline
+
+This section is the historical starting audit, not the current project state.
 
 The repository is a strong custom multi-agent RAG pipeline using AWS Bedrock services, but it is not yet a fully deployed AWS-native Bedrock Agents system.
 
@@ -12,7 +14,7 @@ Verified during audit:
 - `python3 -m pytest -q` passes with `2119 passed, 3 skipped`.
 - No `.env` file is present in this workspace.
 - `BEDROCK_KB_ID`, `BEDROCK_MODEL_ID`, `AWS_REGION`, and `AWS_PROFILE` are not currently exported.
-- No Lambda handler, IaC, CI workflow, or native Bedrock Agent assets were found.
+- At audit time, Lambda handler, IaC, CI workflow, and native Bedrock Agent assets had not been added.
 
 ## Roadmap Principles
 
@@ -84,6 +86,8 @@ Exit criteria:
 
 Goal: prove the pipeline works against real Bedrock and a real Knowledge Base.
 
+Status: completed for runtime connectivity on 2026-06-06. A source-type metadata filter follow-up was also completed on 2026-06-06 to prevent mixed-domain FDA/CISA retrieval in the sample Knowledge Base. See `docs/live-validation.md` for the exact runs, model, Knowledge Base, citation counts, latency, and caveats.
+
 Steps:
 
 1. Create a narrow live smoke test script that is skipped unless explicitly enabled.
@@ -107,6 +111,9 @@ Exit criteria:
 
 Goal: make the "every claim is cited" claim true at the schema level.
 
+Status: completed offline on 2026-06-06. Claim-level contracts and validation
+are implemented and covered by tests; live re-validation is still recommended.
+
 Steps:
 
 1. Extend `AnalysisOutput` with structured findings or claim objects.
@@ -123,6 +130,10 @@ Exit criteria:
 ## Phase 5: Runtime Safety and Guardrails
 
 Goal: turn safety modules into enforced runtime gates.
+
+Status: completed offline on 2026-06-06. Runtime safety gates are wired into
+the CLI before final output persistence; live Guardrails validation against a
+real Bedrock Guardrail is still recommended.
 
 Steps:
 
@@ -145,6 +156,10 @@ Exit criteria:
 
 Goal: make evaluation easy to run outside tests.
 
+Status: completed offline on 2026-06-06. Evaluation CLI commands write local
+artifacts under `outputs/` and optionally publish metrics when
+`CASEOPS_ENABLE_EVALUATION_METRICS=true`.
+
 Steps:
 
 1. Add CLI commands for evaluation:
@@ -163,6 +178,11 @@ Exit criteria:
 ## Phase 7: Deployment Foundation
 
 Goal: make the system deployable.
+
+Status: completed offline on 2026-06-06. A Lambda-compatible handler, AWS SAM
+template, narrow IAM policy definitions, dev/staging deployment docs, sample
+Lambda events, and pull-request test CI are implemented. Live SAM deployment
+validation is still recommended in a target AWS account.
 
 Steps:
 
@@ -189,6 +209,12 @@ Exit criteria:
 
 Goal: decide whether to migrate from custom orchestration to native Bedrock Agents.
 
+Status: completed on 2026-06-06. The accepted decision is to keep custom
+Bedrock-powered Python orchestration as the mainline architecture and defer
+native Bedrock Agents to a future proof of concept only if a concrete product
+or portfolio requirement calls for it. See
+`docs/adr/0001-keep-custom-bedrock-orchestration.md`.
+
 Option A: keep custom orchestration.
 
 - Best if you value debuggability, clear tests, and Python control flow.
@@ -212,6 +238,139 @@ Exit criteria:
 
 - The repository has an explicit architecture decision record explaining why it uses custom orchestration or native Bedrock Agents.
 
+## Phase 9: Live Deployment Validation and Operational Hardening
+
+Goal: validate the SAM/Lambda deployment foundation in a real AWS account and
+turn deployment into a repeatable operator workflow.
+
+Status: completed on 2026-06-07. SAM CLI was installed locally, deployment
+preflight passed without `--skip-sam`, `sam build` succeeded, the dev stack was
+created in `us-east-2`, one Lambda invocation returned application status `ok`,
+and the final `CaseOutput` was archived to S3. See
+`docs/live-validation.md` for the exact validation evidence.
+
+Steps:
+
+1. Add a deployment preflight command for local/SAM/AWS prerequisites.
+2. Validate CloudFormation template syntax against AWS.
+3. Install or provide SAM CLI in the deployment environment.
+4. Run `sam build`.
+5. Deploy a dev stack.
+6. Invoke the deployed Lambda with `events/lambda-inline-example.json`.
+7. Confirm final output archive in S3 and logs in CloudWatch.
+8. Record the exact deployment validation result.
+
+Exit criteria:
+
+- A dev stack is deployed and one Lambda invocation succeeds end-to-end.
+- Deployment validation commands and results are documented.
+
+## Phase 10: Production Readiness and Operationalization
+
+Goal: turn the validated dev deployment into an operator-ready release path
+with separate environments, live safety validation, observability, and explicit
+release gates.
+
+Status: completed on 2026-06-07. Dev and staging deployments are repeatable,
+staging uses a separate Knowledge Base/vector index and stack resources,
+Guardrails allow/block behavior was validated live from Lambda, CloudWatch
+metric filters and alarms cover operational signals, and
+`docs/production-readiness.md` defines the release gate plus rollback/cleanup
+commands.
+
+Steps:
+
+1. Mark Phase 9 complete in the roadmap and deployment validation records.
+2. Add a repeatable deploy helper for dev/staging stack deployments.
+3. Deploy and invoke a staging stack with a separate Knowledge Base and buckets.
+4. Validate runtime Guardrails live with a real Bedrock Guardrail.
+5. Add CloudWatch operational checks for Lambda errors, throttles, duration,
+   safety blocks, failed archives, and structured pipeline logs.
+6. Define a release gate that runs tests, preflight, deployment, Lambda invoke,
+   S3 archive verification, log verification, safety artifact verification, and
+   an evaluation workflow.
+7. Document rollback and cleanup commands for deployed stacks and generated
+   S3 artifacts.
+
+Exit criteria:
+
+- Dev and staging stack deployment commands are documented and repeatable.
+- Guardrails allow/block/escalate behavior is validated live from Lambda.
+- Operators can inspect health, logs, output archives, and failure modes without
+  reading code.
+- A production readiness checklist defines the minimum release evidence.
+
+## Phases 11-15: Production Environment Buildout and Cutover Preparation
+
+Goal: prepare isolated production AWS resources and a cutover readiness record
+without launching real production traffic.
+
+Status: completed on 2026-06-06 before the Phase 16 canary.
+
+Completed production resources:
+
+- Production Knowledge Base, status `ACTIVE`.
+- Production data source, status `AVAILABLE`.
+- Production vector index.
+- Production source bucket.
+- Production stack `bedrock-caseops-control-tower-production`, status `CREATE_COMPLETE`.
+- Production Lambda `caseops-pipeline-production`.
+- Production output bucket generated by SAM.
+- Production Guardrail, versioned and ready.
+- Production cutover readiness manifest was prepared outside the currently tracked workspace path.
+
+Public note: account-specific IDs, ARNs, generated bucket names, Guardrail IDs,
+Knowledge Base IDs, log stream names, document IDs, and session IDs are not
+published in the repository.
+
+Exit criteria:
+
+- Production resources exist separately from dev and staging.
+- Production remains in a no-traffic state until an explicit launch decision.
+
+## Phase 16: Production Synthetic Canary
+
+Goal: run exactly one synthetic production canary and record the evidence while
+keeping production traffic disabled.
+
+Status: completed on 2026-06-07. See `docs/live-validation.md`.
+
+Result:
+
+- Exactly one direct Lambda invocation was run against `caseops-pipeline-production`.
+- The committed sample event `events/lambda-inline-example.json` was used.
+- Lambda returned AWS status `200` and application status `ok`.
+- The final `CaseOutput` was archived to production S3.
+- Lambda service logs and structured pipeline logs were verified.
+- Runtime safety returned `safety_status=allow` with `safety_issue_count=0`.
+- `production_traffic_launched=false` was preserved.
+
+Exit criteria:
+
+- Production synthetic canary evidence is recorded in `docs/live-validation.md`.
+- No real production traffic is launched.
+
+## Phase 17: Final Handoff and Project Freeze
+
+Goal: close the project as a completed, live-validated portfolio/control-tower
+system and avoid adding more scope by default.
+
+Status: completed on 2026-06-07.
+
+Steps:
+
+1. Update project status docs to include the production synthetic canary.
+2. Record that real production traffic launch is intentionally out of scope.
+3. Add a final closeout summary for future readers.
+4. Leave native Bedrock Agents deferred by ADR 0001.
+
+Exit criteria:
+
+- A new reader can tell what was built, what was live-validated, and what was
+  intentionally not launched.
+- Further work requires a new explicit product goal rather than another default
+  roadmap phase.
+
 ## Suggested Priority Order
 
 1. Phase 0: Documentation Alignment
@@ -223,6 +382,11 @@ Exit criteria:
 7. Phase 6: Evaluation as an Operator Workflow
 8. Phase 7: Deployment Foundation
 9. Phase 8: Native Bedrock Agents Decision
+10. Phase 9: Live Deployment Validation and Operational Hardening
+11. Phase 10: Production Readiness and Operationalization
+12. Phases 11-15: Production Environment Buildout and Cutover Preparation
+13. Phase 16: Production Synthetic Canary
+14. Phase 17: Final Handoff and Project Freeze
 
 ## Near-Term Checklist
 
@@ -232,8 +396,24 @@ Exit criteria:
 - [x] Make retry count configurable.
 - [x] Add `doctor` or `check-config` CLI command.
 - [x] Update README AWS service claims.
-- [ ] Add live Bedrock smoke test script.
-- [ ] Capture one successful live KB retrieval result.
-- [ ] Add claim-level citation fields.
-- [ ] Wire runtime safety assessment before output persistence.
-- [ ] Add CI.
+- [x] Add live Bedrock smoke test script.
+- [x] Capture one successful live KB retrieval result.
+- [x] Add claim-level citation fields.
+- [x] Wire runtime safety assessment before output persistence.
+- [x] Add evaluation CLI operator workflow.
+- [x] Add CI.
+- [x] Add native Bedrock Agents architecture decision record.
+- [x] Add deployment preflight workflow.
+- [x] Install SAM CLI or run validation in a SAM-enabled environment.
+- [x] Deploy dev SAM stack.
+- [x] Invoke deployed Lambda and record result.
+- [x] Add repeatable deployment helper.
+- [x] Add operational validation helper.
+- [x] Deploy staging SAM stack.
+- [x] Validate live Guardrails from Lambda.
+- [x] Add operational monitoring checks.
+- [x] Define production release gate.
+- [x] Prepare isolated production resources.
+- [x] Run exactly one production synthetic canary.
+- [x] Keep `production_traffic_launched=false`.
+- [x] Add final handoff and project freeze documentation.

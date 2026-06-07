@@ -28,7 +28,7 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.analysis_models import AnalysisOutput, SeverityLevel
+from app.schemas.analysis_models import AnalysisOutput, GroundedClaim
 
 
 # ── fixtures ───────────────────────────────────────────────────────────────────
@@ -44,6 +44,20 @@ def valid_output() -> AnalysisOutput:
         recommendations=[
             "Initiate CAPA for cleaning validation gaps.",
             "Escalate to compliance team within 48 hours.",
+        ],
+        grounded_claims=[
+            GroundedClaim(
+                claim_id="finding-1",
+                claim_type="finding",
+                text="Facility failed to establish written procedures for equipment cleaning.",
+                supporting_chunk_ids=["chunk-001"],
+            ),
+            GroundedClaim(
+                claim_id="recommendation-1",
+                claim_type="recommendation",
+                text="Initiate CAPA for cleaning validation gaps.",
+                supporting_chunk_ids=["chunk-001"],
+            ),
         ],
     )
 
@@ -66,6 +80,7 @@ def test_analysis_output_all_required_fields_present(valid_output: AnalysisOutpu
     assert hasattr(valid_output, "category")
     assert hasattr(valid_output, "summary")
     assert hasattr(valid_output, "recommendations")
+    assert hasattr(valid_output, "grounded_claims")
 
 
 def test_analysis_output_empty_recommendations_is_valid() -> None:
@@ -78,6 +93,77 @@ def test_analysis_output_empty_recommendations_is_valid() -> None:
         recommendations=[],
     )
     assert output.recommendations == []
+
+
+def test_grounded_claim_valid_construction() -> None:
+    claim = GroundedClaim(
+        claim_id="finding-1",
+        claim_type="finding",
+        text="Facility failed to establish cleaning procedures.",
+        supporting_chunk_ids=["chunk-001"],
+    )
+    assert claim.claim_id == "finding-1"
+    assert claim.claim_type == "finding"
+    assert claim.supporting_chunk_ids == ["chunk-001"]
+
+
+def test_grounded_claim_requires_supporting_chunk_ids() -> None:
+    with pytest.raises(ValidationError, match="supporting_chunk_ids"):
+        GroundedClaim(
+            claim_id="finding-1",
+            claim_type="finding",
+            text="Facility failed to establish cleaning procedures.",
+            supporting_chunk_ids=[],
+        )
+
+
+def test_grounded_claim_rejects_blank_chunk_id() -> None:
+    with pytest.raises(ValidationError, match="supporting_chunk_ids"):
+        GroundedClaim(
+            claim_id="finding-1",
+            claim_type="finding",
+            text="Facility failed to establish cleaning procedures.",
+            supporting_chunk_ids=["chunk-001", " "],
+        )
+
+
+def test_grounded_claim_rejects_empty_text() -> None:
+    with pytest.raises(ValidationError, match="text"):
+        GroundedClaim(
+            claim_id="finding-1",
+            claim_type="finding",
+            text=" ",
+            supporting_chunk_ids=["chunk-001"],
+        )
+
+
+def test_grounded_claims_default_to_empty_list() -> None:
+    output = AnalysisOutput(
+        document_id="doc-20260404-a1b2c3d4",
+        severity="Low",
+        category="Informational",
+        summary="No immediate action required based on retrieved evidence.",
+        recommendations=[],
+    )
+    assert output.grounded_claims == []
+
+
+def test_duplicate_grounded_claim_ids_rejected() -> None:
+    claim = {
+        "claim_id": "finding-1",
+        "claim_type": "finding",
+        "text": "Facility failed to establish cleaning procedures.",
+        "supporting_chunk_ids": ["chunk-001"],
+    }
+    with pytest.raises(ValidationError, match="duplicate claim_id"):
+        AnalysisOutput(
+            document_id="doc-20260404-a1b2c3d4",
+            severity="High",
+            category="Test",
+            summary="Valid summary.",
+            recommendations=[],
+            grounded_claims=[claim, claim],
+        )
 
 
 # ── SeverityLevel: accepted values ────────────────────────────────────────────
@@ -255,7 +341,14 @@ def test_analysis_output_model_dump_returns_dict(valid_output: AnalysisOutput) -
 
 def test_analysis_output_model_dump_expected_keys(valid_output: AnalysisOutput) -> None:
     data = valid_output.model_dump()
-    expected_keys = {"document_id", "severity", "category", "summary", "recommendations"}
+    expected_keys = {
+        "document_id",
+        "severity",
+        "category",
+        "summary",
+        "recommendations",
+        "grounded_claims",
+    }
     assert expected_keys == set(data.keys())
 
 
@@ -266,6 +359,9 @@ def test_analysis_output_model_dump_values_match(valid_output: AnalysisOutput) -
     assert data["category"] == valid_output.category
     assert data["summary"] == valid_output.summary
     assert data["recommendations"] == valid_output.recommendations
+    assert data["grounded_claims"] == [
+        claim.model_dump() for claim in valid_output.grounded_claims
+    ]
 
 
 def test_analysis_output_model_dump_json_round_trips(valid_output: AnalysisOutput) -> None:
@@ -275,6 +371,7 @@ def test_analysis_output_model_dump_json_round_trips(valid_output: AnalysisOutpu
     assert parsed["severity"] == valid_output.severity
     assert parsed["summary"] == valid_output.summary
     assert isinstance(parsed["recommendations"], list)
+    assert isinstance(parsed["grounded_claims"], list)
 
 
 def test_analysis_output_json_serializes_empty_recommendations() -> None:
@@ -313,7 +410,7 @@ def test_analysis_output_fields_are_subset_of_case_output_shape(
 
     CaseOutput shape (from ARCHITECTURE.md §10):
       document_id, source_filename, source_type, severity, category, summary,
-      recommendations, citations, confidence_score, unsupported_claims,
+      recommendations, grounded_claims, citations, confidence_score, unsupported_claims,
       escalation_required, escalation_reason, validated_by, session_id, timestamp
     """
     case_output_field_names = {
@@ -324,6 +421,7 @@ def test_analysis_output_fields_are_subset_of_case_output_shape(
         "category",
         "summary",
         "recommendations",
+        "grounded_claims",
         "citations",
         "confidence_score",
         "unsupported_claims",

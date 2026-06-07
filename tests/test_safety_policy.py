@@ -960,7 +960,6 @@ class TestDeterminism:
 
 class TestArchitectureSeparation:
     def test_safety_policy_does_not_import_boto3(self):
-        import app.evaluation.safety_policy as sp
         source = importlib.import_module("app.evaluation.safety_policy")
         spec = source.__spec__
         assert spec is not None

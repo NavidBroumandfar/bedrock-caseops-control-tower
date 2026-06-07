@@ -18,10 +18,12 @@ EvaluationMetricDatum    — J-0 typed contract for a single CloudWatch Metrics 
 """
 
 import math
-from datetime import datetime, timezone
-from typing import Any, Literal
+from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, field_validator, model_validator
+
+from app.schemas.analysis_models import SeverityLevel
 
 # Valid CloudWatch metric unit strings accepted by put_metric_data.
 _CW_UNIT = Literal[
@@ -35,8 +37,6 @@ _CW_UNIT = Literal[
     "Gigabits/Second", "Terabits/Second",
     "Count/Second", "None",
 ]
-
-from app.schemas.analysis_models import SeverityLevel
 
 
 # ── ComparisonVerdict ──────────────────────────────────────────────────────────

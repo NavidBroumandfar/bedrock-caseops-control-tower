@@ -22,7 +22,7 @@ Separation constraints:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from app.schemas.checkpoint_models import (
@@ -52,8 +52,8 @@ class CheckpointInputs:
 
     completed_phases      — ordered list of completed phase/subphase labels.
     total_tests_offline   — total passing tests without live AWS.
-    external_blockers     — list of known external (non-code) blockers.
-    live_aws_validated    — True only when live end-to-end validation has passed.
+    external_blockers     — list of known external (non-code) blockers, if any.
+    live_aws_validated    — True when live end-to-end validation has passed.
     notes                 — optional free-text observations.
     """
 
@@ -66,13 +66,13 @@ class CheckpointInputs:
     completed_phases: tuple[str, ...] = (
         "F", "G", "H", "I", "J-0", "J-1", "J-2",
     )
-    total_tests_offline: int = 0
-    external_blockers: tuple[str, ...] = (
-        "Live AWS Bedrock runtime validation blocked by AWS-side "
-        "Titan Text Embeddings V2 throttling in the target account",
+    total_tests_offline: int = 2238
+    external_blockers: tuple[str, ...] = ()
+    live_aws_validated: bool = True
+    notes: str = (
+        "Live AWS validation completed with sanitized public evidence. "
+        "Real production traffic was intentionally not launched."
     )
-    live_aws_validated: bool = False
-    notes: str = ""
 
 
 # ── Layer metadata ───────────────────────────────────────────────────────────
@@ -152,7 +152,7 @@ def build_checkpoint(
     ----------
     inputs
         Optional CheckpointInputs; defaults to CheckpointInputs() which reflects the
-        completed v2 engineering scope (all layers ready, live AWS still blocked).
+        completed v2 engineering scope (all layers ready, live AWS validated).
     checkpoint_id
         Stable identifier for this checkpoint run; generated if not provided.
 

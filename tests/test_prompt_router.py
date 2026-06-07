@@ -17,7 +17,6 @@ Coverage:
 
 from unittest.mock import MagicMock
 
-import pytest
 
 from app.services.prompt_router import resolve_model_id
 from app.utils.config import PromptRoutingConfig

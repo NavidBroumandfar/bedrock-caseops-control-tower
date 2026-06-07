@@ -5,6 +5,7 @@ Responsible for serialising a completed CaseOutput to the local filesystem.
 
 Public surface:
   write_case_output(output, output_dir) → Path   — write JSON and return path
+  write_safety_assessment(assessment, output_dir) → Path
   OutputWriteError                               — raised on filesystem errors
 
 Design:
@@ -22,6 +23,7 @@ from pathlib import Path
 from typing import Union
 
 from app.schemas.output_models import CaseOutput
+from app.schemas.safety_models import SafetyAssessment
 
 # Default output base directory; override via the output_dir parameter or
 # the OUTPUT_DIR environment variable (read by the CLI, not here).
@@ -63,6 +65,40 @@ def write_case_output(
     except OSError as exc:
         raise OutputWriteError(
             f"Cannot write output file {str(dest)!r}: {exc}"
+        ) from exc
+
+    return dest.resolve()
+
+
+def write_safety_assessment(
+    assessment: SafetyAssessment,
+    output_dir: Union[str, Path] = _DEFAULT_OUTPUT_DIR,
+) -> Path:
+    """
+    Write a SafetyAssessment as {output_dir}/{document_id}.safety.json.
+
+    Runtime safety gates run before the final CaseOutput is persisted, so this
+    writer is separate from write_case_output and can record blocked decisions.
+    """
+    base = Path(output_dir)
+
+    try:
+        base.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise OutputWriteError(
+            f"Cannot create output directory {str(base)!r}: {exc}"
+        ) from exc
+
+    dest = base / f"{assessment.document_id}.safety.json"
+
+    try:
+        dest.write_text(
+            assessment.model_dump_json(indent=2),
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        raise OutputWriteError(
+            f"Cannot write safety assessment file {str(dest)!r}: {exc}"
         ) from exc
 
     return dest.resolve()

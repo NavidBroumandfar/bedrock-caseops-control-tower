@@ -24,3 +24,4 @@ python-dateutil>=2.8.2,<3.0.0
 pytest>=8.0.0,<9.0.0
 pytest-mock>=3.12.0,<4.0.0
 moto[s3,bedrock]>=5.0.0,<6.0.0      # AWS mock library for unit tests
+ruff>=0.11.0,<1.0.0                  # fast linting for CI and local checks

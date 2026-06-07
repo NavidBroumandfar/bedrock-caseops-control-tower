@@ -40,11 +40,10 @@ Separation rules:
 from __future__ import annotations
 
 from app.evaluation.citation_scorer import (
-    CITATION_PASS_THRESHOLD,
     CitationScoringResult,
     score_citations,
 )
-from app.evaluation.scorer import PASS_THRESHOLD, ScoringResult, score_case
+from app.evaluation.scorer import ScoringResult, score_case
 from app.schemas.evaluation_models import (
     CitationExpectation,
     DimensionScore,

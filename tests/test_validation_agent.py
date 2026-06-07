@@ -75,11 +75,11 @@ from unittest.mock import MagicMock
 import pytest
 from botocore.exceptions import BotoCoreError, ClientError
 
-from app.agents.validation_agent import ValidationAgent, ValidationAgentError
-from app.schemas.analysis_models import AnalysisOutput
+from app.agents.validation_agent import ValidationAgent
+from app.schemas.analysis_models import AnalysisOutput, GroundedClaim
 from app.schemas.retrieval_models import EvidenceChunk
 from app.schemas.validation_contract import ValidationProvider
-from app.schemas.validation_models import ValidationOutput
+from app.schemas.validation_models import ClaimValidation, ValidationOutput
 from app.services.bedrock_service import (
     BedrockServiceError,
     BedrockValidationService,
@@ -112,12 +112,27 @@ def _valid_json_response(
     confidence_score: float = 0.87,
     unsupported_claims: list[str] | None = None,
     validation_status: str = "pass",
+    claim_validations: list[dict] | None = None,
     warning: str | None = None,
 ) -> str:
     payload: dict = {
         "confidence_score": confidence_score,
         "unsupported_claims": unsupported_claims if unsupported_claims is not None else [],
         "validation_status": validation_status,
+        "claim_validations": claim_validations if claim_validations is not None else [
+            {
+                "claim_id": "finding-1",
+                "supported": True,
+                "supporting_chunk_ids": ["chunk-001"],
+                "unsupported_reason": None,
+            },
+            {
+                "claim_id": "recommendation-1",
+                "supported": True,
+                "supporting_chunk_ids": ["chunk-001"],
+                "unsupported_reason": None,
+            },
+        ],
     }
     if warning is not None:
         payload["warning"] = warning
@@ -133,6 +148,20 @@ def _make_analysis_output(document_id: str = "doc-20260404-a1b2c3d4") -> Analysi
         recommendations=[
             "Initiate CAPA for cleaning validation gaps.",
             "Notify compliance team within 48 hours.",
+        ],
+        grounded_claims=[
+            GroundedClaim(
+                claim_id="finding-1",
+                claim_type="finding",
+                text="Facility failed to establish adequate written procedures for equipment cleaning.",
+                supporting_chunk_ids=["chunk-001"],
+            ),
+            GroundedClaim(
+                claim_id="recommendation-1",
+                claim_type="recommendation",
+                text="Initiate CAPA for cleaning validation gaps.",
+                supporting_chunk_ids=["chunk-001"],
+            ),
         ],
     )
 
@@ -285,6 +314,14 @@ def test_empty_evidence_result_has_unsupported_claims(agent: ValidationAgent) ->
     assert len(result.unsupported_claims) > 0
 
 
+def test_empty_evidence_result_marks_grounded_claims_unsupported(
+    agent: ValidationAgent,
+) -> None:
+    result = agent.run(_DOC_ID, _SAMPLE_ANALYSIS, [])
+    assert len(result.claim_validations) == len(_SAMPLE_ANALYSIS.grounded_claims)
+    assert all(not claim.supported for claim in result.claim_validations)
+
+
 def test_empty_evidence_result_has_warning(agent: ValidationAgent) -> None:
     result = agent.run(_DOC_ID, _SAMPLE_ANALYSIS, [])
     assert result.warning is not None
@@ -350,6 +387,14 @@ def test_agent_accepts_any_validation_provider_compatible_object() -> None:
                 confidence_score=0.9,
                 unsupported_claims=[],
                 validation_status="pass",
+                claim_validations=[
+                    ClaimValidation(
+                        claim_id=analysis_output.grounded_claims[0].claim_id,
+                        supported=True,
+                        supporting_chunk_ids=["chunk-001"],
+                        unsupported_reason=None,
+                    )
+                ],
             )
 
     agent = ValidationAgent(provider=InlineProvider())
@@ -427,6 +472,78 @@ def test_validate_non_empty_unsupported_claims_preserved() -> None:
     svc = BedrockValidationService(model_id="test", client=client)
     result = svc.validate(_DOC_ID, _SAMPLE_ANALYSIS, _SAMPLE_CHUNKS)
     assert result.unsupported_claims == claims
+
+
+def test_validate_claim_validations_mapped(service: BedrockValidationService) -> None:
+    result = service.validate(_DOC_ID, _SAMPLE_ANALYSIS, _SAMPLE_CHUNKS)
+    assert len(result.claim_validations) == 2
+    assert result.claim_validations[0].claim_id == "finding-1"
+
+
+def test_validate_unknown_claim_validation_claim_id_raises() -> None:
+    client = _make_mock_client(
+        _valid_json_response(
+            claim_validations=[
+                {
+                    "claim_id": "unknown-claim",
+                    "supported": True,
+                    "supporting_chunk_ids": ["chunk-001"],
+                    "unsupported_reason": None,
+                },
+                {
+                    "claim_id": "recommendation-1",
+                    "supported": True,
+                    "supporting_chunk_ids": ["chunk-001"],
+                    "unsupported_reason": None,
+                },
+            ]
+        )
+    )
+    svc = BedrockValidationService(model_id="test", client=client)
+    with pytest.raises(BedrockServiceError, match="unknown claim IDs"):
+        svc.validate(_DOC_ID, _SAMPLE_ANALYSIS, _SAMPLE_CHUNKS)
+
+
+def test_validate_missing_claim_validation_claim_id_raises() -> None:
+    client = _make_mock_client(
+        _valid_json_response(
+            claim_validations=[
+                {
+                    "claim_id": "finding-1",
+                    "supported": True,
+                    "supporting_chunk_ids": ["chunk-001"],
+                    "unsupported_reason": None,
+                }
+            ]
+        )
+    )
+    svc = BedrockValidationService(model_id="test", client=client)
+    with pytest.raises(BedrockServiceError, match="missing required claim IDs"):
+        svc.validate(_DOC_ID, _SAMPLE_ANALYSIS, _SAMPLE_CHUNKS)
+
+
+def test_validate_unknown_claim_validation_chunk_id_raises() -> None:
+    client = _make_mock_client(
+        _valid_json_response(
+            claim_validations=[
+                {
+                    "claim_id": "finding-1",
+                    "supported": True,
+                    "supporting_chunk_ids": ["chunk-missing"],
+                    "unsupported_reason": None,
+                },
+                {
+                    "claim_id": "recommendation-1",
+                    "supported": True,
+                    "supporting_chunk_ids": ["chunk-001"],
+                    "unsupported_reason": None,
+                },
+            ]
+        )
+    )
+    svc = BedrockValidationService(model_id="test", client=client)
+    with pytest.raises(BedrockServiceError, match="unknown evidence chunk IDs"):
+        svc.validate(_DOC_ID, _SAMPLE_ANALYSIS, _SAMPLE_CHUNKS)
 
 
 def test_validate_warning_preserved_when_present() -> None:
@@ -566,6 +683,20 @@ def test_invalid_confidence_score_raises_bedrock_service_error() -> None:
         "confidence_score": 1.5,
         "unsupported_claims": [],
         "validation_status": "pass",
+        "claim_validations": [
+            {
+                "claim_id": "finding-1",
+                "supported": True,
+                "supporting_chunk_ids": ["chunk-001"],
+                "unsupported_reason": None,
+            },
+            {
+                "claim_id": "recommendation-1",
+                "supported": True,
+                "supporting_chunk_ids": ["chunk-001"],
+                "unsupported_reason": None,
+            },
+        ],
     })
     client = _make_mock_client(invalid)
     svc = BedrockValidationService(model_id="test", client=client)
@@ -579,6 +710,20 @@ def test_invalid_validation_status_raises_bedrock_service_error() -> None:
         "confidence_score": 0.7,
         "unsupported_claims": [],
         "validation_status": "unknown",
+        "claim_validations": [
+            {
+                "claim_id": "finding-1",
+                "supported": True,
+                "supporting_chunk_ids": ["chunk-001"],
+                "unsupported_reason": None,
+            },
+            {
+                "claim_id": "recommendation-1",
+                "supported": True,
+                "supporting_chunk_ids": ["chunk-001"],
+                "unsupported_reason": None,
+            },
+        ],
     })
     client = _make_mock_client(invalid)
     svc = BedrockValidationService(model_id="test", client=client)
@@ -639,6 +784,12 @@ def test_validation_system_prompt_names_validation_status_key() -> None:
     assert "validation_status" in prompt
 
 
+def test_validation_system_prompt_names_claim_validations_key() -> None:
+    prompt = _build_validation_system_prompt()
+    assert "claim_validations" in prompt
+    assert "supporting_chunk_ids" in prompt
+
+
 # ── Prompt: user message content ───────────────────────────────────────────────
 
 
@@ -675,6 +826,19 @@ def test_validation_user_message_contains_source_labels() -> None:
         assert chunk.source_label in msg
 
 
+def test_validation_user_message_contains_chunk_ids() -> None:
+    msg = _build_validation_user_message(_DOC_ID, _SAMPLE_ANALYSIS, _SAMPLE_CHUNKS)
+    for chunk in _SAMPLE_CHUNKS:
+        assert chunk.chunk_id in msg
+
+
+def test_validation_user_message_contains_grounded_claims() -> None:
+    msg = _build_validation_user_message(_DOC_ID, _SAMPLE_ANALYSIS, _SAMPLE_CHUNKS)
+    for claim in _SAMPLE_ANALYSIS.grounded_claims:
+        assert claim.claim_id in msg
+        assert claim.text in msg
+
+
 # ── _parse_validation_output unit tests ────────────────────────────────────────
 
 
@@ -705,6 +869,7 @@ def test_parse_out_of_bounds_confidence_raises_bedrock_service_error() -> None:
         "confidence_score": -0.5,
         "unsupported_claims": [],
         "validation_status": "fail",
+        "claim_validations": [],
     })
     with pytest.raises(BedrockServiceError, match="ValidationOutput validation"):
         _parse_validation_output(_DOC_ID, bad)
@@ -721,3 +886,4 @@ def test_validation_output_round_trips_json(service: BedrockValidationService) -
     assert parsed["confidence_score"] == pytest.approx(0.87)
     assert isinstance(parsed["unsupported_claims"], list)
     assert parsed["validation_status"] == "pass"
+    assert isinstance(parsed["claim_validations"], list)

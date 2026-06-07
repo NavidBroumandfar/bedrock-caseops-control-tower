@@ -38,7 +38,6 @@ from __future__ import annotations
 import json
 
 from app.evaluation.metrics_translator import (
-    METRIC_CMP_AVG_SCORE_DELTA,
     METRIC_CMP_BASELINE_PASS_COUNT,
     METRIC_CMP_IMPROVED_COUNT,
     METRIC_CMP_OPTIMIZED_PASS_COUNT,

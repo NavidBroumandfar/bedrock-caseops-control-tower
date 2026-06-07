@@ -75,14 +75,12 @@ Coverage:
 No AWS credentials or live calls required.
 """
 
-import importlib
 import json
 from pathlib import Path
 
 import pytest
 
 from app.evaluation.output_quality_scorer import (
-    OUTPUT_QUALITY_PASS_THRESHOLD,
     DIM_RECS_WHEN_EXPECTED,
     DIM_SUMMARY_NONEMPTY,
     DIM_UNSUPPORTED_CLAIMS_CLEAN,

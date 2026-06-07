@@ -376,7 +376,6 @@ class TestCrossFixtureConsistency:
         This reflects the pipeline escalation rule: severity == 'Critical' always triggers.
         """
         for case_path in _case_fixtures():
-            case_data = _load_json(case_path)
             expected_path = _EXPECTED_DIR / case_path.name
             if not expected_path.exists():
                 continue
@@ -402,6 +401,6 @@ class TestCrossFixtureConsistency:
                     f"{case_path.name} → {source_filename} (not found at {doc_path})"
                 )
         assert not missing_docs, (
-            f"The following cases reference missing source documents:\n"
+            "The following cases reference missing source documents:\n"
             + "\n".join(f"  {m}" for m in missing_docs)
         )

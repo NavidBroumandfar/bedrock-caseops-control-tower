@@ -16,9 +16,10 @@ provides a session context.
 
 import math
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
-from app.schemas.analysis_models import SeverityLevel
+from app.schemas.analysis_models import GroundedClaim, SeverityLevel
+from app.schemas.validation_models import ClaimValidation
 
 
 class Citation(BaseModel):
@@ -27,8 +28,12 @@ class Citation(BaseModel):
 
     Fields map directly from EvidenceChunk — no invention, no rewriting.
     relevance_score is preserved from the KB retrieval response as-is.
+
+    chunk_id defaults to None for backward compatibility with older fixtures;
+    the Tool Executor populates it from EvidenceChunk.chunk_id on the runtime path.
     """
 
+    chunk_id: str | None = None
     source_id: str
     source_label: str
     excerpt: str
@@ -59,6 +64,9 @@ class CaseOutput(BaseModel):
     escalation_reason is None only when escalation_required is False.
     citations may be empty on the empty-retrieval path; on the success path they are
     populated one-to-one from the RetrievalResult evidence chunks.
+    grounded_claims and claim_validations default to [] for backward compatibility
+    with existing outputs; Phase 4 runtime analysis should populate both on the
+    success path.
     """
 
     document_id: str
@@ -68,9 +76,11 @@ class CaseOutput(BaseModel):
     category: str
     summary: str
     recommendations: list[str]
+    grounded_claims: list[GroundedClaim] = Field(default_factory=list)
     citations: list[Citation]
     confidence_score: float
     unsupported_claims: list[str]
+    claim_validations: list[ClaimValidation] = Field(default_factory=list)
     escalation_required: bool
     escalation_reason: str | None
     validated_by: str

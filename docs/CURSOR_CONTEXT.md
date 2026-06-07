@@ -2,11 +2,12 @@
 
 > **Orientation file only.**
 > This is a quick-start reference for new Cursor sessions.
-> It is NOT the source of truth. For authoritative decisions:
-> - Scope and roadmap → `PROJECT_SPEC.md`
-> - Technical design → `ARCHITECTURE.md`
-> - Public project summary → `README.md`
-> - This file → quick orientation, current phase, repo map
+> It is NOT the source of truth. For authoritative current status:
+> - Public project summary -> `README.md`
+> - Current roadmap -> `ROADMAP.md`
+> - Final closeout -> `docs/project-closeout.md`
+> - Live validation evidence -> `docs/live-validation.md`
+> - Architecture decision -> `docs/adr/0001-keep-custom-bedrock-orchestration.md`
 
 ---
 
@@ -19,7 +20,9 @@ At the beginning of any major implementation session, read these four files in o
 3. `ARCHITECTURE.md` — confirm the technical design before touching any code
 4. `docs/CURSOR_CONTEXT.md` (this file) — orient quickly on current state
 
-If there is any conflict between files, `PROJECT_SPEC.md` and `ARCHITECTURE.md` take precedence over this file.
+If there is any conflict between files, prefer `README.md`, `ROADMAP.md`,
+`docs/project-closeout.md`, `docs/live-validation.md`, and the ADR over this
+older orientation file.
 
 ---
 
@@ -38,7 +41,7 @@ This is a GitHub portfolio project. It should feel production-style but remain n
 | Amazon S3 | Document storage and output archiving |
 | Amazon Bedrock | Foundation model inference (Converse API) |
 | Amazon Bedrock Knowledge Bases | Managed vector store and retrieval |
-| Amazon Bedrock Agents | Agent orchestration and tool use |
+| Custom Python agents on Bedrock services | Application-side orchestration and validation |
 | AWS Lambda | Serverless execution |
 | Amazon CloudWatch | Logging and observability |
 
@@ -122,11 +125,16 @@ These are design contracts followed across all implementation work. They apply t
 
 ## Current Implementation Phase
 
-**Phase 1 — v1 MVP COMPLETE | Phase 2 — v2 COMPLETE (F, G, H, I, J-0, J-1, J-2 all complete)**
+**Phase 17 - Final Handoff and Project Freeze complete.**
 
-> **Live Bedrock validation is pending:** Live AWS Knowledge Base sync is currently blocked by AWS-side Titan Text Embeddings V2 throttling/runtime issues in the target account. All code is implemented correctly; all 2119 unit and evaluation tests pass without live AWS calls. This is an external AWS-side blocker, not a code issue. All Phase F, G, H, I, J-0, J-1, and J-2 layers are fully independent of this blocker.
+Live AWS validation is no longer pending. The project has completed live
+Bedrock Knowledge Base validation, dev/staging Lambda validation, live
+Guardrails validation, production infrastructure setup, and exactly one
+production synthetic canary. Real production traffic has not been launched, and
+`production_traffic_launched=false` is the final recorded state.
 
-The repository is portfolio-ready, test-complete, and demo-friendly for the full MVP and Phase 2 evaluation scope.
+For the authoritative final state, read `docs/project-closeout.md` and
+`docs/live-validation.md`.
 
 ### Completed
 - **A-0** — repo foundation, source-of-truth docs, project scaffold
@@ -262,16 +270,16 @@ The repository is portfolio-ready, test-complete, and demo-friendly for the full
   - `tests/test_artifact_writer.py` — 40 tests: directory creation, JSON file presence and content, generate_report flag, error handling, serialization correctness, no live AWS
   - 2005 total tests pass
 - **J-2** — v2 hardening + optimization checkpoint:
-  - `app/schemas/checkpoint_models.py` — `Phase2CheckpointStatus` Literal type, `Phase2ReadinessBlock` per-layer readiness model (frozen Pydantic), `Phase2CheckpointResult` root checkpoint contract; model-level consistency guard prevents misrepresenting external blocker as "complete"
+  - `app/schemas/checkpoint_models.py` — `Phase2CheckpointStatus` Literal type, `Phase2ReadinessBlock` per-layer readiness model (frozen Pydantic), `Phase2CheckpointResult` root checkpoint contract; model-level consistency guard prevents misrepresenting validation posture
   - `app/evaluation/checkpoint_runner.py` — `CheckpointInputs` frozen dataclass; `build_checkpoint()` runner that assembles layer readiness flags into a typed checkpoint; per-layer subphase metadata; status derivation (complete / complete_blocked / incomplete)
   - `app/evaluation/checkpoint_writer.py` — `generate_checkpoint_report()` pure markdown generator; `write_checkpoint()` artifact writer; `CheckpointWriteError` for filesystem failures; output: `{output_root}/checkpoints/{checkpoint_id}/checkpoint.json` + `report.md`
   - `app/schemas/artifact_models.py` — `ArtifactKind` extended with `"checkpoint"` (J-2 hardening fix)
   - `tests/test_checkpoint_models.py` — 57 tests: contract validation, field validators, consistency guard, immutability, serialization, ArtifactKind extension
   - `tests/test_checkpoint_runner.py` — 57 tests: CheckpointInputs defaults/custom, build_checkpoint defaults/custom/determinism, report content, writer path/content/error handling, no live AWS
-  - 2119 total tests pass
+  - 2238 total tests pass in the final public-release workspace
 
 ### Next step
-- **Phase 2 is complete.** Phase 3 (v3: optional customization experiments — Bedrock Flows, model customization, prompt versioning) remains future optional work. See `PROJECT_SPEC.md §13`.
+- **Phase 17 is complete.** The project is in public-release freeze. Further work should start only from a concrete new goal; see `docs/project-closeout.md`.
 
 ### Phase 2 roadmap
 
@@ -288,8 +296,9 @@ Phase 2 follows the same lettered-subphase naming convention as Phase 1 (A–E):
 See `PROJECT_SPEC.md §13` for the full Phase 2 subphase breakdown.
 
 ### Not yet implemented
-- Live Bedrock validation (blocked by AWS-side throttling — not a code issue)
-- Phase 3 (v3): optional customization experiments — Bedrock Flows, model customization, prompt versioning (future work)
+- Real production traffic launch.
+- Native Amazon Bedrock Agents, aliases, action groups, and `invoke_agent`.
+- Phase 3 (v3): optional customization experiments — Bedrock Flows, model customization, prompt versioning.
 
 Reference: `ARCHITECTURE.md §5–9` for component flows. `PROJECT_SPEC.md §13` for the full subphase roadmap.
 

@@ -52,9 +52,7 @@ Coverage:
 
 from __future__ import annotations
 
-import sys
 
-import pytest
 
 from app.evaluation.comparison_runner import (
     ComparisonCaseResult,
@@ -546,7 +544,6 @@ class TestReportGeneratorStructural:
         import app.evaluation.report_generator as mod
         assert "boto3" not in (mod.__dict__.get("__builtins__") or "")
         # Confirm boto3 is not in the module's direct imports.
-        import sys
         imported_names = set(vars(mod).keys())
         assert "boto3" not in imported_names
 

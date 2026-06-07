@@ -82,6 +82,7 @@ def _valid_json_response(
     category: str = "Regulatory / Manufacturing Deficiency",
     summary: str = "Facility failed to establish adequate procedures for equipment cleaning.",
     recommendations: list[str] | None = None,
+    grounded_claims: list[dict] | None = None,
 ) -> str:
     return json.dumps({
         "severity": severity,
@@ -90,6 +91,20 @@ def _valid_json_response(
         "recommendations": recommendations if recommendations is not None else [
             "Initiate CAPA for cleaning validation gaps.",
             "Notify compliance team within 48 hours.",
+        ],
+        "grounded_claims": grounded_claims if grounded_claims is not None else [
+            {
+                "claim_id": "finding-1",
+                "claim_type": "finding",
+                "text": "Facility failed to establish adequate procedures for equipment cleaning.",
+                "supporting_chunk_ids": ["chunk-001"],
+            },
+            {
+                "claim_id": "recommendation-1",
+                "claim_type": "recommendation",
+                "text": "Initiate CAPA for cleaning validation gaps.",
+                "supporting_chunk_ids": ["chunk-001"],
+            },
         ],
     })
 
@@ -189,6 +204,12 @@ def test_analyze_recommendations_mapped(service: BedrockAnalysisService) -> None
     assert len(result.recommendations) == 2
 
 
+def test_analyze_grounded_claims_mapped(service: BedrockAnalysisService) -> None:
+    result = service.analyze(_DOC_ID, _SAMPLE_CHUNKS)
+    assert len(result.grounded_claims) == 2
+    assert result.grounded_claims[0].supporting_chunk_ids == ["chunk-001"]
+
+
 @pytest.mark.parametrize("severity", ["Critical", "High", "Medium", "Low"])
 def test_analyze_all_severity_levels_accepted(severity: str) -> None:
     client = _make_mock_client(_valid_json_response(severity=severity))
@@ -210,6 +231,24 @@ def test_analyze_multiple_recommendations_preserved_in_order() -> None:
     svc = BedrockAnalysisService(model_id="test", client=client)
     result = svc.analyze(_DOC_ID, _SAMPLE_CHUNKS)
     assert result.recommendations == recs
+
+
+def test_analyze_unknown_grounded_claim_chunk_id_raises() -> None:
+    client = _make_mock_client(
+        _valid_json_response(
+            grounded_claims=[
+                {
+                    "claim_id": "finding-1",
+                    "claim_type": "finding",
+                    "text": "Unsupported reference to a missing chunk.",
+                    "supporting_chunk_ids": ["chunk-missing"],
+                }
+            ]
+        )
+    )
+    svc = BedrockAnalysisService(model_id="test", client=client)
+    with pytest.raises(BedrockServiceError, match="unknown evidence chunk IDs"):
+        svc.analyze(_DOC_ID, _SAMPLE_CHUNKS)
 
 
 # ── converse call forwarding ────────────────────────────────────────────────────
@@ -322,6 +361,7 @@ def test_invalid_severity_raises_bedrock_service_error() -> None:
         "category": "Test",
         "summary": "A valid summary.",
         "recommendations": [],
+        "grounded_claims": [],
     })
     client = _make_mock_client(invalid)
     svc = BedrockAnalysisService(model_id="test", client=client)
@@ -336,6 +376,7 @@ def test_empty_summary_raises_bedrock_service_error() -> None:
         "category": "Test",
         "summary": "",
         "recommendations": [],
+        "grounded_claims": [],
     })
     client = _make_mock_client(invalid)
     svc = BedrockAnalysisService(model_id="test", client=client)
@@ -382,6 +423,12 @@ def test_user_message_contains_source_labels() -> None:
         assert chunk.source_label in msg
 
 
+def test_user_message_contains_chunk_ids() -> None:
+    msg = _build_user_message(_DOC_ID, _SAMPLE_CHUNKS)
+    for chunk in _SAMPLE_CHUNKS:
+        assert chunk.chunk_id in msg
+
+
 def test_system_prompt_contains_evidence_only_constraint() -> None:
     prompt = _build_system_prompt()
     assert "ONLY" in prompt
@@ -395,8 +442,14 @@ def test_system_prompt_names_all_severity_values() -> None:
 
 def test_system_prompt_names_all_required_keys() -> None:
     prompt = _build_system_prompt()
-    for key in ("severity", "category", "summary", "recommendations"):
+    for key in ("severity", "category", "summary", "recommendations", "grounded_claims"):
         assert key in prompt
+
+
+def test_system_prompt_requires_supporting_chunk_ids() -> None:
+    prompt = _build_system_prompt()
+    assert "supporting_chunk_ids" in prompt
+    assert "chunk_id" in prompt
 
 
 # ── _extract_json unit tests ────────────────────────────────────────────────────

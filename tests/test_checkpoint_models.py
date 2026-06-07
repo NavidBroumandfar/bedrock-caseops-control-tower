@@ -13,7 +13,7 @@ Coverage:
     - model is immutable
 
   Phase2CheckpointResult — valid construction:
-    - valid model with complete_blocked status constructs without error
+    - valid model with complete status constructs without error
     - checkpoint_id is required and non-empty
     - phase_version is required and non-empty
     - created_at accepts both offset-aware and Z-suffix ISO 8601
@@ -57,7 +57,6 @@ import pytest
 
 from app.schemas.checkpoint_models import (
     Phase2CheckpointResult,
-    Phase2CheckpointStatus,
     Phase2ReadinessBlock,
 )
 
@@ -85,10 +84,10 @@ def _valid_result(**overrides) -> Phase2CheckpointResult:
         "completed_phases": ["F", "G", "H", "I", "J-0", "J-1", "J-2"],
         "total_tests_offline": 2100,
         "readiness": [_valid_readiness_block()],
-        "external_blockers": ["Titan Embeddings V2 throttling"],
+        "external_blockers": [],
         "engineering_complete": True,
-        "live_aws_validated": False,
-        "status": "complete_blocked",
+        "live_aws_validated": True,
+        "status": "complete",
         "notes": "",
     }
     defaults.update(overrides)
@@ -155,8 +154,18 @@ class TestPhase2ReadinessBlockImmutability:
 
 
 class TestPhase2CheckpointResultValid:
-    def test_valid_complete_blocked_constructs(self):
+    def test_valid_complete_constructs(self):
         result = _valid_result()
+        assert result.status == "complete"
+        assert result.engineering_complete is True
+        assert result.live_aws_validated is True
+
+    def test_valid_complete_blocked_constructs(self):
+        result = _valid_result(
+            external_blockers=["External service blocker"],
+            live_aws_validated=False,
+            status="complete_blocked",
+        )
         assert result.status == "complete_blocked"
         assert result.engineering_complete is True
         assert result.live_aws_validated is False
@@ -316,7 +325,7 @@ class TestPhase2CheckpointResultSerialization:
         result = _valid_result()
         data = result.model_dump(mode="json")
         assert isinstance(data["status"], str)
-        assert data["status"] == "complete_blocked"
+        assert data["status"] == "complete"
 
     def test_engineering_complete_serialized_as_bool(self):
         result = _valid_result()
@@ -327,7 +336,7 @@ class TestPhase2CheckpointResultSerialization:
         result = _valid_result()
         data = result.model_dump(mode="json")
         assert isinstance(data["live_aws_validated"], bool)
-        assert data["live_aws_validated"] is False
+        assert data["live_aws_validated"] is True
 
     def test_readiness_serialized_as_list_of_dicts(self):
         result = _valid_result()

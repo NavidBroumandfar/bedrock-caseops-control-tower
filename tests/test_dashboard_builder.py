@@ -19,7 +19,6 @@ Covers:
 
 import json
 
-import pytest
 
 from app.evaluation.dashboard_builder import (
     build_evaluation_dashboard,

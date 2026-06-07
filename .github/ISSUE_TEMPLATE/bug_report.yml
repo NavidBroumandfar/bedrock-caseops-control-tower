@@ -1,0 +1,52 @@
+name: Bug report
+description: Report a reproducible defect in the CaseOps runtime, tests, docs, or deployment assets.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include AWS credentials, account IDs, ARNs, request IDs, private logs, or generated output payloads.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is broken?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction Steps
+      description: Commands or steps needed to reproduce the issue.
+      placeholder: |
+        1. Run ...
+        2. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python Version
+      placeholder: "3.12.x"
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation Run
+      description: Paste sanitized output from tests or diagnostics.
+      placeholder: |
+        make lint
+        make test
+        python3 -m app.cli doctor

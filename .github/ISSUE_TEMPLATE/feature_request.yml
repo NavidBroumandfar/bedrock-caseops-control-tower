@@ -1,0 +1,43 @@
+name: Feature request
+description: Propose a scoped enhancement to the CaseOps runtime, docs, evaluation, or deployment flow.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user, operator, or reviewer problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Change
+      description: Describe the smallest useful version of the change.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Agent orchestration
+        - Bedrock service integration
+        - Retrieval / grounding
+        - Validation / safety
+        - Evaluation / reporting
+        - Lambda / SAM deployment
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: architecture
+    attributes:
+      label: Architecture Fit
+      options:
+        - label: This preserves the current custom Python orchestration mainline.
+          required: true
+        - label: This does not require committing private AWS identifiers or generated artifacts.
+          required: true

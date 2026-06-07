@@ -4,18 +4,18 @@ J-2 unit tests — checkpoint runner, checkpoint writer, and report generator.
 Coverage:
 
   CheckpointInputs (dataclass):
-    - constructs with default values (all layers ready, live AWS not validated)
+    - constructs with default values (all layers ready, live AWS validated)
     - completed_phases default includes all expected Phase 2 labels
-    - external_blockers default is non-empty (reflects Titan throttling)
-    - total_tests_offline defaults to 0
-    - live_aws_validated defaults to False
+    - external_blockers defaults to empty
+    - total_tests_offline defaults to current public test count
+    - live_aws_validated defaults to True
     - custom values are preserved
 
   build_checkpoint() — default inputs:
     - returns a Phase2CheckpointResult
-    - status is 'complete_blocked' by default
+    - status is 'complete' by default
     - engineering_complete is True by default
-    - live_aws_validated is False by default
+    - live_aws_validated is True by default
     - phase_version is 'phase2-v2'
     - completed_phases includes all J-2 labels
     - readiness has 4 blocks (evaluation, safety, optimization, observability_reporting)
@@ -39,7 +39,7 @@ Coverage:
     - contains checkpoint_id
     - contains phase_version
     - contains status string
-    - contains 'complete_blocked' text when status is complete_blocked
+    - contains 'complete' text when status is complete
     - contains 'External Blockers' section
     - contains 'What was hardened in J-2' section
     - contains 'Readiness by Layer' section
@@ -77,7 +77,7 @@ from app.evaluation.checkpoint_writer import (
     generate_checkpoint_report,
     write_checkpoint,
 )
-from app.schemas.checkpoint_models import Phase2CheckpointResult, Phase2ReadinessBlock
+from app.schemas.checkpoint_models import Phase2CheckpointResult
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -102,18 +102,17 @@ class TestCheckpointInputsDefaults:
         assert inputs.observability_ready is True
         assert inputs.checkpoint_ready is True
 
-    def test_default_live_aws_false(self):
+    def test_default_live_aws_true(self):
         inputs = CheckpointInputs()
-        assert inputs.live_aws_validated is False
+        assert inputs.live_aws_validated is True
 
-    def test_default_total_tests_zero(self):
+    def test_default_total_tests_current_count(self):
         inputs = CheckpointInputs()
-        assert inputs.total_tests_offline == 0
+        assert inputs.total_tests_offline == 2238
 
-    def test_default_external_blockers_non_empty(self):
+    def test_default_external_blockers_empty(self):
         inputs = CheckpointInputs()
-        assert len(inputs.external_blockers) > 0
-        assert any("Titan" in b for b in inputs.external_blockers)
+        assert inputs.external_blockers == ()
 
     def test_default_completed_phases_contains_all(self):
         inputs = CheckpointInputs()
@@ -142,17 +141,17 @@ class TestBuildCheckpointDefaults:
         result = build_checkpoint()
         assert isinstance(result, Phase2CheckpointResult)
 
-    def test_default_status_is_complete_blocked(self):
+    def test_default_status_is_complete(self):
         result = build_checkpoint()
-        assert result.status == "complete_blocked"
+        assert result.status == "complete"
 
     def test_default_engineering_complete_true(self):
         result = build_checkpoint()
         assert result.engineering_complete is True
 
-    def test_default_live_aws_validated_false(self):
+    def test_default_live_aws_validated_true(self):
         result = build_checkpoint()
-        assert result.live_aws_validated is False
+        assert result.live_aws_validated is True
 
     def test_phase_version_is_phase2_v2(self):
         result = build_checkpoint()
@@ -193,13 +192,13 @@ class TestBuildCheckpointDefaults:
         result = build_checkpoint()
         assert result.created_at.strip() != ""
 
-    def test_external_blockers_non_empty(self):
+    def test_external_blockers_empty_by_default(self):
         result = build_checkpoint()
-        assert len(result.external_blockers) > 0
+        assert result.external_blockers == []
 
-    def test_total_tests_offline_zero_default(self):
+    def test_total_tests_offline_current_count_default(self):
         result = build_checkpoint()
-        assert result.total_tests_offline == 0
+        assert result.total_tests_offline == 2238
 
     def test_total_tests_offline_passed_through(self):
         inputs = CheckpointInputs(total_tests_offline=2100)
@@ -247,9 +246,13 @@ class TestBuildCheckpointCustomInputs:
         assert result.live_aws_validated is True
 
     def test_custom_external_blockers_propagated(self):
-        inputs = CheckpointInputs(external_blockers=("custom-blocker",))
+        inputs = CheckpointInputs(
+            live_aws_validated=False,
+            external_blockers=("custom-blocker",),
+        )
         result = build_checkpoint(inputs)
         assert "custom-blocker" in result.external_blockers
+        assert result.status == "complete_blocked"
 
     def test_empty_external_blockers_propagated(self):
         inputs = CheckpointInputs(
@@ -313,7 +316,7 @@ class TestGenerateCheckpointReport:
     def test_contains_status(self):
         result = self._get_result()
         report = generate_checkpoint_report(result)
-        assert "complete_blocked" in report
+        assert "complete" in report
 
     def test_contains_external_blockers_section(self):
         result = self._get_result()
@@ -346,10 +349,10 @@ class TestGenerateCheckpointReport:
         report = generate_checkpoint_report(result)
         assert "complete" in report.lower()
 
-    def test_incomplete_status_not_in_complete_blocked_report(self):
+    def test_complete_status_report_does_not_claim_blocked(self):
         result = self._get_result()
         report = generate_checkpoint_report(result)
-        assert "incomplete" not in report.lower() or "not yet complete" not in report
+        assert "externally blocked" not in report.lower()
 
     def test_deterministic_same_id_same_report(self):
         r1 = build_checkpoint(checkpoint_id="det-001")
@@ -423,7 +426,7 @@ class TestWriteCheckpoint:
         result = build_checkpoint(checkpoint_id="wrt-008")
         json_path, _ = write_checkpoint(result, tmp_path)
         data = json.loads(json_path.read_text())
-        assert data["status"] == "complete_blocked"
+        assert data["status"] == "complete"
 
     def test_json_contains_engineering_complete_flag(self, tmp_path: Path):
         result = build_checkpoint(checkpoint_id="wrt-009")
@@ -431,11 +434,11 @@ class TestWriteCheckpoint:
         data = json.loads(json_path.read_text())
         assert data["engineering_complete"] is True
 
-    def test_json_contains_live_aws_validated_false(self, tmp_path: Path):
+    def test_json_contains_live_aws_validated_true(self, tmp_path: Path):
         result = build_checkpoint(checkpoint_id="wrt-010")
         json_path, _ = write_checkpoint(result, tmp_path)
         data = json.loads(json_path.read_text())
-        assert data["live_aws_validated"] is False
+        assert data["live_aws_validated"] is True
 
     def test_report_content_contains_checkpoint_id(self, tmp_path: Path):
         result = build_checkpoint(checkpoint_id="wrt-011")

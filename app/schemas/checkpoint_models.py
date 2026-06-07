@@ -3,7 +3,7 @@ J-2 typed contract for the final Phase 2 v2 hardening checkpoint.
 
 This module defines the minimal typed model representing the outcome of the J-2
 checkpoint: a single honest summary of Phase 2 completeness, readiness indicators,
-known external blockers, and the overall checkpoint verdict.
+live-validation posture, known external blockers, and the overall checkpoint verdict.
 
 It is a metadata contract, not a scoring contract.  All evaluation and scoring
 logic lives in app/evaluation/.
@@ -24,7 +24,7 @@ from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 # Possible overall checkpoint verdicts.
 Phase2CheckpointStatus = Literal[
     "complete",          # all layers engineering-complete, no blocking issues
-    "complete_blocked",  # engineering-complete but externally blocked (live AWS)
+    "complete_blocked",  # engineering-complete but externally blocked
     "incomplete",        # one or more layers not yet engineering-complete
 ]
 
@@ -63,7 +63,7 @@ class Phase2CheckpointResult(BaseModel):
       - which Phase 2 subphases are complete
       - readiness status per evaluation layer
       - total offline test count
-      - known external blockers (live AWS throttling)
+      - known external blockers, if any
       - overall checkpoint verdict
 
     checkpoint_id     — stable run identifier.
@@ -73,10 +73,9 @@ class Phase2CheckpointResult(BaseModel):
     total_tests_offline — total passing tests without live AWS at checkpoint time.
     readiness         — per-layer readiness blocks (evaluation, safety, optimization,
                         observability_reporting).
-    external_blockers — list of known external (non-code) blockers.
+    external_blockers — list of known external (non-code) blockers, if any.
     engineering_complete — True when all Phase 2 engineering scope is done.
-    live_aws_validated   — True only when live AWS end-to-end validation has passed;
-                           False while the Titan Embeddings throttling blocker remains.
+    live_aws_validated   — True when live AWS end-to-end validation has passed.
     status            — overall checkpoint verdict.
     notes             — optional free-text observations or warnings.
     """

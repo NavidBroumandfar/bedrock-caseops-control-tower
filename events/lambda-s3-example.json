@@ -1,0 +1,10 @@
+{
+  "source_type": "CISA",
+  "document_date": "2026-03-30",
+  "submitter_note": "Critical ICS vulnerability review",
+  "s3": {
+    "bucket": "replace-with-document-bucket",
+    "key": "incoming/advisory.txt"
+  },
+  "include_output": true
+}

@@ -33,6 +33,9 @@ _DEFAULT_MAX_RESULTS = 5
 # Character limit for the citation-safe excerpt derived from chunk text.
 _EXCERPT_MAX_CHARS = 200
 
+_TRUE_ENV_VALUES = {"1", "true", "yes", "on"}
+_FALSE_ENV_VALUES = {"0", "false", "no", "off"}
+
 
 class RetrievalServiceError(Exception):
     """Raised when the Bedrock KB Retrieve call cannot be completed."""
@@ -72,6 +75,45 @@ def _resolve_max_results(constructor_value: int | None, env_raw: str | None) -> 
     return _DEFAULT_MAX_RESULTS
 
 
+def _read_bool_env(name: str, *, default: bool) -> bool:
+    """Read a strict boolean environment variable for retrieval service flags."""
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+
+    normalized = raw.strip().lower()
+    if normalized in _TRUE_ENV_VALUES:
+        return True
+    if normalized in _FALSE_ENV_VALUES:
+        return False
+    raise RetrievalServiceError(
+        f"{name} must be a boolean value "
+        f"({', '.join(sorted(_TRUE_ENV_VALUES | _FALSE_ENV_VALUES))}), got: {raw!r}"
+    )
+
+
+def _build_source_type_filter(
+    source_type: str,
+    *,
+    enabled: bool,
+) -> dict[str, dict[str, str]] | None:
+    """
+    Build a Bedrock Knowledge Base metadata filter for source-type isolation.
+
+    The filter expects S3 source documents to have sidecar metadata files with a
+    `source_type` string attribute. When disabled, requests remain byte-for-byte
+    compatible with the pre-filter retrieval configuration.
+    """
+    if not enabled:
+        return None
+    return {
+        "equals": {
+            "key": "source_type",
+            "value": source_type,
+        }
+    }
+
+
 class BedrockKBService:
     """
     Retrieval service backed by Amazon Bedrock Knowledge Bases.
@@ -83,10 +125,15 @@ class BedrockKBService:
     Explicit constructor overrides are accepted so the service remains
     testable without live AWS credentials.
 
-    Required configuration:
+Required configuration:
       BEDROCK_KB_ID           — Bedrock Knowledge Base identifier
       AWS_REGION              — AWS region (default: us-east-1)
       RETRIEVAL_MAX_RESULTS   — maximum chunks to fetch (default: 5)
+
+    Optional configuration:
+      CASEOPS_ENABLE_SOURCE_TYPE_FILTER — when true, include a Bedrock metadata
+                                          filter requiring source_type to match
+                                          RetrievalRequest.source_type.
     """
 
     def __init__(
@@ -95,6 +142,7 @@ class BedrockKBService:
         kb_id: str | None = None,
         region: str | None = None,
         max_results: int | None = None,
+        enable_source_type_filter: bool | None = None,
         client: Any = None,
     ) -> None:
         resolved_kb_id = kb_id or os.getenv("BEDROCK_KB_ID", "")
@@ -107,6 +155,11 @@ class BedrockKBService:
         self._max_results = _resolve_max_results(
             max_results,
             os.getenv("RETRIEVAL_MAX_RESULTS"),
+        )
+        self._enable_source_type_filter = (
+            enable_source_type_filter
+            if enable_source_type_filter is not None
+            else _read_bool_env("CASEOPS_ENABLE_SOURCE_TYPE_FILTER", default=False)
         )
         self._client = client or boto3.client(
             "bedrock-agent-runtime",
@@ -124,7 +177,7 @@ class BedrockKBService:
         Raises RetrievalServiceError on any provider-side failure.
         """
         query = self._build_query(request)
-        raw_results = self._call_kb(query)
+        raw_results = self._call_kb(query, source_type=request.source_type)
         try:
             chunks = [
                 _map_result_to_chunk(item, idx)
@@ -136,12 +189,17 @@ class BedrockKBService:
             ) from exc
 
         if not chunks:
+            warning = "Bedrock KB returned no results for this query."
+            if self._enable_source_type_filter:
+                warning = (
+                    "Bedrock KB returned no results for this source_type-filtered query."
+                )
             return RetrievalResult(
                 document_id=request.document_id,
                 evidence_chunks=[],
                 retrieval_status="empty",
                 retrieved_count=0,
-                warning="Bedrock KB returned no results for this query.",
+                warning=warning,
             )
 
         return RetrievalResult(
@@ -165,21 +223,29 @@ class BedrockKBService:
             return request.query_text
         return f"{request.source_type} document: {request.source_filename}"
 
-    def _call_kb(self, query: str) -> list[dict]:
+    def _call_kb(self, query: str, *, source_type: str) -> list[dict]:
         """
         Invoke the Bedrock Knowledge Base Retrieve API and return raw items.
 
         Raises RetrievalServiceError on any SDK-level failure so boto3
         exceptions never propagate to callers.
         """
+        vector_search_config: dict[str, Any] = {
+            "numberOfResults": self._max_results,
+        }
+        source_type_filter = _build_source_type_filter(
+            source_type,
+            enabled=self._enable_source_type_filter,
+        )
+        if source_type_filter is not None:
+            vector_search_config["filter"] = source_type_filter
+
         try:
             response = self._client.retrieve(
                 knowledgeBaseId=self._kb_id,
                 retrievalQuery={"text": query},
                 retrievalConfiguration={
-                    "vectorSearchConfiguration": {
-                        "numberOfResults": self._max_results,
-                    }
+                    "vectorSearchConfiguration": vector_search_config,
                 },
             )
             return response.get("retrievalResults", [])

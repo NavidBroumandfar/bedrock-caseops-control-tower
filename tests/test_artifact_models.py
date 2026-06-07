@@ -38,11 +38,10 @@ Coverage:
 
 from __future__ import annotations
 
-import sys
 
 import pytest
 
-from app.schemas.artifact_models import ArtifactMetadata, ArtifactKind, ReportBundle
+from app.schemas.artifact_models import ArtifactMetadata, ReportBundle
 
 # ── Shared helpers ─────────────────────────────────────────────────────────────
 

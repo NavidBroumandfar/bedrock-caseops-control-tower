@@ -81,6 +81,15 @@ class ValidationAgent:
                     "No evidence chunks provided — all claims are unverifiable."
                 ],
                 validation_status="fail",
+                claim_validations=[
+                    {
+                        "claim_id": claim.claim_id,
+                        "supported": False,
+                        "supporting_chunk_ids": [],
+                        "unsupported_reason": "No evidence chunks were provided.",
+                    }
+                    for claim in analysis_output.grounded_claims
+                ],
                 warning=(
                     "Validation skipped model call: no evidence chunks were available. "
                     "All analysis claims are treated as unsupported."

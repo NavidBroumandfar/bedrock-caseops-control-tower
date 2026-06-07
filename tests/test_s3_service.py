@@ -194,6 +194,28 @@ def test_upload_case_output_metadata_attached(
     assert meta["document_id"] == DOCUMENT_ID
 
 
+def test_download_object_writes_expected_content(
+    service: S3Service,
+    txt_file: Path,
+    tmp_path: Path,
+) -> None:
+    key = service.upload_source_document(txt_file, DOCUMENT_ID, "FDA")
+    destination = tmp_path / "downloads" / "advisory.txt"
+
+    result = service.download_object(key, destination)
+
+    assert result == destination
+    assert destination.read_text(encoding="utf-8") == "FDA advisory content."
+
+
+def test_download_object_empty_key_raises_storage_error(
+    service: S3Service,
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(StorageError, match="S3 key must not be empty"):
+        service.download_object("", tmp_path / "advisory.txt")
+
+
 def test_upload_case_output_raises_storage_error_on_bad_bucket(
     fake_aws_credentials: None, output_file: Path
 ) -> None:

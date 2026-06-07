@@ -34,7 +34,9 @@ import math
 import pytest
 from pydantic import ValidationError
 
+from app.schemas.analysis_models import GroundedClaim
 from app.schemas.output_models import CaseOutput, Citation
+from app.schemas.validation_models import ClaimValidation
 
 
 # ── shared builders ───────────────────────────────────────────────────────────
@@ -42,12 +44,33 @@ from app.schemas.output_models import CaseOutput, Citation
 
 def _make_citation(**overrides) -> Citation:
     defaults = {
+        "chunk_id": "chunk-001",
         "source_id": "s3://caseops-kb/fda/doc.txt::chunk-001",
         "source_label": "FDA Warning Letter 2024-WL-0032",
         "excerpt": "...no written procedures for equipment cleaning...",
         "relevance_score": 0.91,
     }
     return Citation(**(defaults | overrides))
+
+
+def _make_grounded_claim(**overrides) -> GroundedClaim:
+    defaults = {
+        "claim_id": "finding-1",
+        "claim_type": "finding",
+        "text": "Facility failed to maintain written procedures for equipment cleaning.",
+        "supporting_chunk_ids": ["chunk-001"],
+    }
+    return GroundedClaim(**(defaults | overrides))
+
+
+def _make_claim_validation(**overrides) -> ClaimValidation:
+    defaults = {
+        "claim_id": "finding-1",
+        "supported": True,
+        "supporting_chunk_ids": ["chunk-001"],
+        "unsupported_reason": None,
+    }
+    return ClaimValidation(**(defaults | overrides))
 
 
 def _make_case_output(**overrides) -> CaseOutput:
@@ -62,9 +85,11 @@ def _make_case_output(**overrides) -> CaseOutput:
             "Initiate CAPA for cleaning validation gaps.",
             "Notify compliance team within 48 hours.",
         ],
+        "grounded_claims": [_make_grounded_claim()],
         "citations": [_make_citation()],
         "confidence_score": 0.87,
         "unsupported_claims": [],
+        "claim_validations": [_make_claim_validation()],
         "escalation_required": False,
         "escalation_reason": None,
         "validated_by": "tool-executor-agent-v1",
@@ -83,6 +108,7 @@ def test_citation_valid_construction() -> None:
 
 def test_citation_fields_preserved() -> None:
     citation = _make_citation()
+    assert citation.chunk_id == "chunk-001"
     assert citation.source_id == "s3://caseops-kb/fda/doc.txt::chunk-001"
     assert citation.source_label == "FDA Warning Letter 2024-WL-0032"
     assert citation.excerpt == "...no written procedures for equipment cleaning..."
@@ -116,9 +142,11 @@ def test_case_output_all_required_fields_present() -> None:
     assert output.category == "Regulatory / Manufacturing Deficiency"
     assert isinstance(output.summary, str)
     assert isinstance(output.recommendations, list)
+    assert isinstance(output.grounded_claims, list)
     assert isinstance(output.citations, list)
     assert isinstance(output.confidence_score, float)
     assert isinstance(output.unsupported_claims, list)
+    assert isinstance(output.claim_validations, list)
     assert isinstance(output.escalation_required, bool)
     assert isinstance(output.validated_by, str)
     assert isinstance(output.timestamp, str)
@@ -189,6 +217,30 @@ def test_case_output_citations_are_typed() -> None:
     assert isinstance(output.citations[0], Citation)
 
 
+def test_case_output_grounded_claims_default_to_empty() -> None:
+    output = _make_case_output(grounded_claims=[])
+    assert output.grounded_claims == []
+
+
+def test_case_output_grounded_claims_are_typed() -> None:
+    claim = _make_grounded_claim()
+    output = _make_case_output(grounded_claims=[claim])
+    assert len(output.grounded_claims) == 1
+    assert isinstance(output.grounded_claims[0], GroundedClaim)
+
+
+def test_case_output_claim_validations_default_to_empty() -> None:
+    output = _make_case_output(claim_validations=[])
+    assert output.claim_validations == []
+
+
+def test_case_output_claim_validations_are_typed() -> None:
+    claim_validation = _make_claim_validation()
+    output = _make_case_output(claim_validations=[claim_validation])
+    assert len(output.claim_validations) == 1
+    assert isinstance(output.claim_validations[0], ClaimValidation)
+
+
 # ── CaseOutput: JSON serialization ───────────────────────────────────────────
 
 
@@ -211,9 +263,11 @@ def test_case_output_serialized_json_has_expected_keys() -> None:
         "category",
         "summary",
         "recommendations",
+        "grounded_claims",
         "citations",
         "confidence_score",
         "unsupported_claims",
+        "claim_validations",
         "escalation_required",
         "escalation_reason",
         "validated_by",
@@ -234,7 +288,10 @@ def test_case_output_round_trips_through_json() -> None:
     assert parsed["severity"] == original.severity
     assert parsed["escalation_required"] is True
     assert parsed["escalation_reason"] == "severity is Critical"
+    assert parsed["grounded_claims"][0]["supporting_chunk_ids"] == ["chunk-001"]
+    assert parsed["claim_validations"][0]["claim_id"] == "finding-1"
     assert len(parsed["citations"]) == 1
+    assert parsed["citations"][0]["chunk_id"] == citation.chunk_id
     assert parsed["citations"][0]["source_id"] == citation.source_id
 
 

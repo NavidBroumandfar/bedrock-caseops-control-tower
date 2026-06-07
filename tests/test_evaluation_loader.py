@@ -29,7 +29,6 @@ No AWS credentials or live calls required.
 """
 
 import json
-import shutil
 from pathlib import Path
 
 import pytest

@@ -1,0 +1,10 @@
+{
+  "source_type": "FDA",
+  "document_date": "2026-03-30",
+  "submitter_note": "FDA warning letter - quality system deficiencies",
+  "document": {
+    "filename": "advisory.txt",
+    "text": "Sample advisory text for a deployed Lambda smoke invocation."
+  },
+  "include_output": true
+}

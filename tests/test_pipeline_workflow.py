@@ -41,7 +41,7 @@ All AWS interaction is replaced by injected fakes or MagicMock objects.
 """
 
 import re
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -51,15 +51,12 @@ from app.agents.validation_agent import ValidationAgent
 from app.schemas.analysis_models import AnalysisOutput
 from app.schemas.intake_models import IntakeRecord, IntakeResult
 from app.schemas.output_models import CaseOutput, Citation
-from app.schemas.retrieval_models import EvidenceChunk, RetrievalResult
-from app.schemas.supervisor_models import SupervisorResult
 from app.schemas.validation_models import ValidationOutput
 from app.workflows.pipeline_workflow import (
     PipelineWorkflowError,
     _generate_session_id,
     run_pipeline,
 )
-from app.workflows.supervisor_workflow import SupervisorWorkflowError
 from tests.fakes.fake_retrieval import FakeRetrievalProvider
 
 

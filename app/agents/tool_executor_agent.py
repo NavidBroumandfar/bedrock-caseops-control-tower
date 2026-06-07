@@ -114,9 +114,11 @@ class ToolExecutorAgent:
             unsupported_claims = [
                 "Validation output was not produced despite evidence being available."
             ]
+            claim_validations = []
         else:
             confidence_score = validation.confidence_score
             unsupported_claims = validation.unsupported_claims
+            claim_validations = validation.claim_validations
 
         citations = _map_chunks_to_citations(result.retrieval.evidence_chunks)
 
@@ -136,9 +138,11 @@ class ToolExecutorAgent:
             category=analysis.category,
             summary=analysis.summary,
             recommendations=analysis.recommendations,
+            grounded_claims=analysis.grounded_claims,
             citations=citations,
             confidence_score=confidence_score,
             unsupported_claims=unsupported_claims,
+            claim_validations=claim_validations,
             escalation_required=escalation_required,
             escalation_reason=escalation_reason,
             validated_by=_VALIDATED_BY,
@@ -164,9 +168,11 @@ class ToolExecutorAgent:
             category=_EMPTY_PATH_CATEGORY,
             summary=_EMPTY_PATH_SUMMARY,
             recommendations=[],
+            grounded_claims=[],
             citations=[],
             confidence_score=0.0,
             unsupported_claims=unsupported_claims,
+            claim_validations=[],
             escalation_required=True,
             escalation_reason=escalation_reason,
             validated_by=_VALIDATED_BY,
@@ -186,6 +192,7 @@ def _map_chunks_to_citations(chunks: list[EvidenceChunk]) -> list[Citation]:
     """
     return [
         Citation(
+            chunk_id=chunk.chunk_id,
             source_id=chunk.source_id,
             source_label=chunk.source_label,
             excerpt=chunk.excerpt,

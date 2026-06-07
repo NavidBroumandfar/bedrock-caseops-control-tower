@@ -82,6 +82,7 @@ import pytest
 
 from app.evaluation.citation_scorer import (
     CITATION_PASS_THRESHOLD,
+    DIM_CLAIM_COVERAGE,
     DIM_EXCERPT_TERMS,
     DIM_NONEMPTY,
     DIM_PRESENCE,
@@ -91,6 +92,7 @@ from app.evaluation.citation_scorer import (
 )
 from app.evaluation.loader import load_citation_expectations
 from app.schemas.evaluation_models import CitationExpectation
+from app.schemas.analysis_models import GroundedClaim
 from app.schemas.output_models import CaseOutput, Citation
 
 # ---------------------------------------------------------------------------
@@ -105,8 +107,10 @@ def _make_citation(
     excerpt: str = "Some relevant excerpt text.",
     source_id: str = "kb-src-001",
     relevance_score: float = 0.85,
+    chunk_id: str | None = None,
 ) -> Citation:
     return Citation(
+        chunk_id=chunk_id,
         source_id=source_id,
         source_label=source_label,
         excerpt=excerpt,
@@ -114,7 +118,22 @@ def _make_citation(
     )
 
 
-def _make_output(citations: list[Citation] | None = None) -> CaseOutput:
+def _make_claim(
+    claim_id: str = "finding-1",
+    supporting_chunk_ids: list[str] | None = None,
+) -> GroundedClaim:
+    return GroundedClaim(
+        claim_id=claim_id,
+        claim_type="finding",
+        text="The quality system was found inadequate.",
+        supporting_chunk_ids=supporting_chunk_ids or ["chunk-001"],
+    )
+
+
+def _make_output(
+    citations: list[Citation] | None = None,
+    grounded_claims: list[GroundedClaim] | None = None,
+) -> CaseOutput:
     return CaseOutput(
         document_id="doc-test-001",
         source_filename="test.md",
@@ -123,6 +142,7 @@ def _make_output(citations: list[Citation] | None = None) -> CaseOutput:
         category="Regulatory",
         summary="The quality system was found inadequate.",
         recommendations=["Initiate CAPA."],
+        grounded_claims=grounded_claims or [],
         citations=citations or [],
         confidence_score=0.85,
         unsupported_claims=[],
@@ -404,6 +424,59 @@ class TestExcerptNonempty:
         dim = result.get(DIM_NONEMPTY)
         assert dim.score == 1.0
         assert dim.passed is True
+
+
+# ---------------------------------------------------------------------------
+# claim_level_citation_coverage
+# ---------------------------------------------------------------------------
+
+
+class TestClaimLevelCitationCoverage:
+    def test_omitted_for_legacy_outputs_without_grounded_claims(self):
+        output = _make_output([_make_citation(chunk_id="chunk-001")])
+        exp = _make_expectation()
+        result = score_citations(output, exp)
+        assert result.get(DIM_CLAIM_COVERAGE) is None
+
+    def test_all_grounded_claims_have_matching_citation_chunk_ids(self):
+        output = _make_output(
+            citations=[_make_citation(chunk_id="chunk-001")],
+            grounded_claims=[_make_claim(supporting_chunk_ids=["chunk-001"])],
+        )
+        exp = _make_expectation()
+        result = score_citations(output, exp)
+        dim = result.get(DIM_CLAIM_COVERAGE)
+        assert dim is not None
+        assert dim.score == pytest.approx(1.0)
+        assert dim.passed is True
+
+    def test_missing_citation_chunk_id_fails_claim_coverage(self):
+        output = _make_output(
+            citations=[_make_citation(chunk_id="chunk-002")],
+            grounded_claims=[_make_claim(supporting_chunk_ids=["chunk-001"])],
+        )
+        exp = _make_expectation()
+        result = score_citations(output, exp)
+        dim = result.get(DIM_CLAIM_COVERAGE)
+        assert dim is not None
+        assert dim.score == pytest.approx(0.0)
+        assert dim.passed is False
+        assert result.pass_fail is False
+
+    def test_partial_claim_coverage_scores_fraction(self):
+        output = _make_output(
+            citations=[_make_citation(chunk_id="chunk-001")],
+            grounded_claims=[
+                _make_claim("finding-1", ["chunk-001"]),
+                _make_claim("finding-2", ["chunk-002"]),
+            ],
+        )
+        exp = _make_expectation()
+        result = score_citations(output, exp)
+        dim = result.get(DIM_CLAIM_COVERAGE)
+        assert dim is not None
+        assert dim.score == pytest.approx(0.5)
+        assert "1/2" in dim.rationale
 
 
 # ---------------------------------------------------------------------------

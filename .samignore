@@ -1,0 +1,15 @@
+.git/
+.github/
+.pytest_cache/
+.venv/
+__pycache__/
+*.pyc
+.env
+.DS_Store
+outputs/
+tests/
+docs/
+events/
+data/
+notebooks/
+*.md

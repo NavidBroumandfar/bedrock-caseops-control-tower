@@ -42,12 +42,13 @@ from app.schemas.retrieval_models import RetrievalRequest, RetrievalResult
 from app.services.kb_service import (
     BedrockKBService,
     RetrievalServiceError,
+    _build_source_type_filter,
     _derive_source_label,
     _extract_source_id,
     _make_chunk_id,
     _make_excerpt,
     _map_result_to_chunk,
-    _resolve_max_results,
+    _read_bool_env,
 )
 
 # ── shared fixtures ────────────────────────────────────────────────────────────
@@ -186,6 +187,62 @@ def test_resolve_max_results_constructor_takes_precedence(monkeypatch) -> None:
     monkeypatch.setenv("RETRIEVAL_MAX_RESULTS", "10")
     svc = BedrockKBService(kb_id="kb-test", max_results=3, client=MagicMock())
     assert svc._max_results == 3
+
+
+# ── config hardening — source-type filter ─────────────────────────────────────
+
+
+def test_source_type_filter_disabled_by_default(monkeypatch) -> None:
+    monkeypatch.delenv("CASEOPS_ENABLE_SOURCE_TYPE_FILTER", raising=False)
+    svc = BedrockKBService(kb_id="kb-test", client=MagicMock())
+    assert svc._enable_source_type_filter is False
+
+
+def test_source_type_filter_enabled_from_env(monkeypatch) -> None:
+    monkeypatch.setenv("CASEOPS_ENABLE_SOURCE_TYPE_FILTER", "true")
+    svc = BedrockKBService(kb_id="kb-test", client=MagicMock())
+    assert svc._enable_source_type_filter is True
+
+
+def test_source_type_filter_constructor_overrides_env(monkeypatch) -> None:
+    monkeypatch.setenv("CASEOPS_ENABLE_SOURCE_TYPE_FILTER", "false")
+    svc = BedrockKBService(
+        kb_id="kb-test",
+        enable_source_type_filter=True,
+        client=MagicMock(),
+    )
+    assert svc._enable_source_type_filter is True
+
+
+def test_invalid_source_type_filter_env_raises(monkeypatch) -> None:
+    monkeypatch.setenv("CASEOPS_ENABLE_SOURCE_TYPE_FILTER", "sometimes")
+    with pytest.raises(RetrievalServiceError, match="CASEOPS_ENABLE_SOURCE_TYPE_FILTER"):
+        BedrockKBService(kb_id="kb-test", client=MagicMock())
+
+
+@pytest.mark.parametrize("raw", ["1", "true", "TRUE", "yes", "on"])
+def test_read_bool_env_true_values(monkeypatch, raw: str) -> None:
+    monkeypatch.setenv("CASEOPS_ENABLE_SOURCE_TYPE_FILTER", raw)
+    assert _read_bool_env("CASEOPS_ENABLE_SOURCE_TYPE_FILTER", default=False) is True
+
+
+@pytest.mark.parametrize("raw", ["0", "false", "FALSE", "no", "off"])
+def test_read_bool_env_false_values(monkeypatch, raw: str) -> None:
+    monkeypatch.setenv("CASEOPS_ENABLE_SOURCE_TYPE_FILTER", raw)
+    assert _read_bool_env("CASEOPS_ENABLE_SOURCE_TYPE_FILTER", default=True) is False
+
+
+def test_build_source_type_filter_disabled_returns_none() -> None:
+    assert _build_source_type_filter("FDA", enabled=False) is None
+
+
+def test_build_source_type_filter_enabled_returns_bedrock_equals_filter() -> None:
+    assert _build_source_type_filter("FDA", enabled=True) == {
+        "equals": {
+            "key": "source_type",
+            "value": "FDA",
+        }
+    }
 
 
 # ── response mapping hardening ─────────────────────────────────────────────────
@@ -420,6 +477,69 @@ def test_max_results_forwarded_in_config() -> None:
     svc.retrieve(req)
     config = mock_client.retrieve.call_args.kwargs["retrievalConfiguration"]
     assert config["vectorSearchConfiguration"]["numberOfResults"] == 7
+
+
+def test_source_type_filter_omitted_by_default(
+    fda_request: RetrievalRequest,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("CASEOPS_ENABLE_SOURCE_TYPE_FILTER", raising=False)
+    mock_client = _make_mock_client(_SAMPLE_RESULTS)
+    svc = BedrockKBService(kb_id="kb-test", client=mock_client)
+    svc.retrieve(fda_request)
+    config = mock_client.retrieve.call_args.kwargs["retrievalConfiguration"]
+    assert "filter" not in config["vectorSearchConfiguration"]
+
+
+def test_source_type_filter_forwarded_when_enabled(
+    fda_request: RetrievalRequest,
+) -> None:
+    mock_client = _make_mock_client(_SAMPLE_RESULTS)
+    svc = BedrockKBService(
+        kb_id="kb-test",
+        enable_source_type_filter=True,
+        client=mock_client,
+    )
+    svc.retrieve(fda_request)
+    config = mock_client.retrieve.call_args.kwargs["retrievalConfiguration"]
+    assert config["vectorSearchConfiguration"]["filter"] == {
+        "equals": {
+            "key": "source_type",
+            "value": "FDA",
+        }
+    }
+
+
+def test_source_type_filter_uses_request_source_type() -> None:
+    mock_client = _make_mock_client([])
+    svc = BedrockKBService(
+        kb_id="kb-test",
+        enable_source_type_filter=True,
+        client=mock_client,
+    )
+    req = RetrievalRequest(
+        document_id="doc-cisa",
+        source_type="CISA",
+        source_filename="cisa_advisory.txt",
+    )
+    svc.retrieve(req)
+    config = mock_client.retrieve.call_args.kwargs["retrievalConfiguration"]
+    assert config["vectorSearchConfiguration"]["filter"]["equals"]["value"] == "CISA"
+
+
+def test_empty_source_type_filtered_retrieval_warning(
+    fda_request: RetrievalRequest,
+) -> None:
+    mock_client = _make_mock_client([])
+    svc = BedrockKBService(
+        kb_id="kb-test",
+        enable_source_type_filter=True,
+        client=mock_client,
+    )
+    result = svc.retrieve(fda_request)
+    assert result.retrieval_status == "empty"
+    assert result.warning is not None
+    assert "source_type-filtered" in result.warning
 
 
 # ── evidence chunk mapping ─────────────────────────────────────────────────────

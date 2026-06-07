@@ -126,7 +126,7 @@ def _make_logger(
 
 def _parse_last_line(buf: io.StringIO) -> dict:
     """Return the last non-empty line from the buffer as a parsed JSON dict."""
-    lines = [l for l in buf.getvalue().splitlines() if l.strip()]
+    lines = [line for line in buf.getvalue().splitlines() if line.strip()]
     assert lines, "No log output was written to the buffer"
     return json.loads(lines[-1])
 
@@ -403,7 +403,7 @@ def test_logger_log_file_contains_valid_json(tmp_path: Path) -> None:
     logger.info(agent="a", event="json_check", document_id="doc-x")
 
     log_file = tmp_path / "logs" / f"{session_id}.log"
-    lines = [l for l in log_file.read_text().splitlines() if l.strip()]
+    lines = [line for line in log_file.read_text().splitlines() if line.strip()]
     assert len(lines) >= 1
     entry = json.loads(lines[-1])
     assert entry["event"] == "json_check"
@@ -436,8 +436,8 @@ def test_logger_multiple_calls_append_to_file(tmp_path: Path) -> None:
     logger.info(agent="a", event="third", document_id="d")
 
     log_file = tmp_path / "logs" / f"{session_id}.log"
-    lines = [l for l in log_file.read_text().splitlines() if l.strip()]
-    events = [json.loads(l)["event"] for l in lines]
+    lines = [line for line in log_file.read_text().splitlines() if line.strip()]
+    events = [json.loads(line)["event"] for line in lines]
     assert "first" in events
     assert "second" in events
     assert "third" in events

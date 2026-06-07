@@ -71,7 +71,6 @@ from pathlib import Path
 import pytest
 
 from app.evaluation.retrieval_scorer import (
-    RETRIEVAL_PASS_THRESHOLD,
     DIM_CHUNKS,
     DIM_EVIDENCE_TERMS,
     DIM_SOURCE_LABELS,

@@ -114,6 +114,35 @@ class S3Service:
         )
         return s3_key
 
+    def download_object(
+        self,
+        s3_key: str,
+        destination: Path,
+    ) -> Path:
+        """
+        Download an object from this service's bucket to a local destination.
+
+        Used by the Lambda handler to materialise S3-backed invocation events
+        into /tmp before passing the document through the existing intake path.
+        """
+        if not s3_key or not s3_key.strip():
+            raise StorageError("S3 key must not be empty.")
+
+        try:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            self._client.download_file(
+                Bucket=self._bucket,
+                Key=s3_key,
+                Filename=str(destination),
+            )
+        except (BotoCoreError, ClientError, OSError) as exc:
+            raise StorageError(
+                f"Failed to download s3://{self._bucket}/{s3_key} "
+                f"to {destination}: {exc}"
+            ) from exc
+
+        return destination
+
     # ── private helpers ───────────────────────────────────────────────────────
 
     def _upload_file(

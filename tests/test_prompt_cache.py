@@ -61,7 +61,6 @@ from __future__ import annotations
 from typing import Any
 from unittest.mock import MagicMock
 
-import pytest
 
 from app.services.prompt_cache import _CACHE_POINT_BLOCK, apply_prompt_caching
 from app.utils.config import PromptCachingConfig
@@ -93,7 +92,13 @@ def _enabled_config() -> PromptCachingConfig:
     return _make_config(enabled=True)
 
 
-def _make_mock_client(response_text: str = '{"severity":"High","category":"Test","summary":"s","recommendations":["r"]}') -> MagicMock:
+def _make_mock_client(
+    response_text: str = (
+        '{"severity":"High","category":"Test","summary":"s","recommendations":["r"],'
+        '"grounded_claims":[{"claim_id":"finding-1","claim_type":"finding",'
+        '"text":"s","supporting_chunk_ids":["c1"]}]}'
+    ),
+) -> MagicMock:
     """Return a mock boto3 client whose converse() returns a minimal valid response."""
     client = MagicMock()
     client.converse.return_value = {
@@ -113,7 +118,8 @@ def _make_validation_mock_client() -> MagicMock:
             "message": {
                 "content": [
                     {
-                        "text": '{"confidence_score":0.9,"unsupported_claims":[],"validation_status":"pass"}'
+                        "text": '{"confidence_score":0.9,"unsupported_claims":[],'
+                        '"validation_status":"pass","claim_validations":[]}'
                     }
                 ]
             }
@@ -447,7 +453,10 @@ class TestBedrockServicesWithEnabledCachingConfig:
         from app.schemas.analysis_models import AnalysisOutput
 
         mock_client = _make_mock_client(
-            '{"severity":"Critical","category":"Security","summary":"Critical finding.","recommendations":["Patch immediately."]}'
+            '{"severity":"Critical","category":"Security","summary":"Critical finding.",'
+            '"recommendations":["Patch immediately."],'
+            '"grounded_claims":[{"claim_id":"finding-1","claim_type":"finding",'
+            '"text":"Critical finding.","supporting_chunk_ids":["c1"]}]}'
         )
         svc = BedrockAnalysisService(client=mock_client, caching_config=_enabled_config())
         chunk = __import__(

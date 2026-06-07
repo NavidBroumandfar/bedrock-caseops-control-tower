@@ -58,10 +58,8 @@ Coverage:
 No AWS credentials or live calls required.
 """
 
-import pytest
 
 from app.evaluation.scorer import (
-    PASS_THRESHOLD,
     DIM_CATEGORY,
     DIM_ESCALATION,
     DIM_FORBIDDEN,

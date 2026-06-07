@@ -23,16 +23,12 @@ All tests use the dedicated comparison fixtures at:
 
 from __future__ import annotations
 
-import json
 import shutil
-import tempfile
 from pathlib import Path
 
-import pytest
 
 from app.evaluation.comparison_runner import (
     COMPARISON_DELTA_EPSILON,
-    ComparisonAlignmentError,
     ComparisonCaseResult,
     ComparisonRunResult,
     ComparisonSummary,
