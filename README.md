@@ -302,6 +302,14 @@ python3 -m app.cli intake path/to/advisory.txt \
     --document-date 2026-03-30
 ```
 
+### Register a Databricks Gold export payload without running the pipeline
+
+```bash
+python3 -m app.cli intake-gold tests/fixtures/databricks_gold/sample_gold_payload.json
+```
+
+This validates one local, schema-versioned Gold export record and converts it into the same `IntakeResult` handoff used by the normal Bedrock intake path. It does not call Databricks, Delta Share, Bedrock, Knowledge Bases, S3, or the agent pipeline.
+
 ### Show available commands
 
 ```bash

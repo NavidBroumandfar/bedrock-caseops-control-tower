@@ -21,6 +21,23 @@ The adapter reads a local JSON payload, validates the schema, selects one Gold r
 
 It does not call Databricks, Delta Share, S3, Bedrock, or any network service.
 
+## CLI Intake
+
+Use `intake-gold` to validate and register one local Gold export record without running retrieval or agents:
+
+```bash
+python3 -m app.cli intake-gold tests/fixtures/databricks_gold/sample_gold_payload.json
+```
+
+For multi-record payloads, select a specific record:
+
+```bash
+python3 -m app.cli intake-gold path/to/gold_payload.json \
+    --gold-record-id gold-fda-20260608-001
+```
+
+The command prints the same registration summary as normal file intake and writes local artifacts under `outputs/databricks_gold/{document_id}/` by default.
+
 ## Payload Contract
 
 The current schema version is:

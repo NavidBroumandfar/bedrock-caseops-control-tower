@@ -3,6 +3,9 @@ CaseOps CLI entry point.
 
 Commands:
   intake   Validate and register a local document (intake only; no pipeline run).
+  intake-gold
+           Validate a local Databricks Gold export payload and register one
+           record as the existing IntakeResult handoff.
   run      Run the full end-to-end pipeline: intake → retrieval → analysis →
            validation → output packaging.
 
@@ -45,6 +48,10 @@ from pydantic import ValidationError
 
 from app.schemas.intake_models import IntakeMetadata
 from app.schemas.safety_models import FailurePolicy, SafetyStatus
+from app.services.databricks_gold_adapter import (
+    DatabricksGoldAdapterError,
+    consume_databricks_gold_payload_file,
+)
 from app.services.intake_service import IntakeError, run_intake
 from app.services.s3_service import S3Service, StorageError
 from app.utils.id_utils import generate_session_id
@@ -126,6 +133,51 @@ def intake(
         )
     except IntakeError as exc:
         click.echo(f"[error] Intake failed: {exc}", err=True)
+        sys.exit(1)
+
+    _print_registration_summary(result)
+
+
+# ── Databricks Gold intake command ─────────────────────────────────────────────
+
+
+@cli.command("intake-gold")
+@click.argument(
+    "payload_path",
+    metavar="PAYLOAD",
+    type=click.Path(dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--gold-record-id",
+    default=None,
+    help="Gold record ID to consume when the payload contains multiple records.",
+)
+@click.option(
+    "--output-dir",
+    default=None,
+    type=click.Path(file_okay=False, path_type=Path),
+    help="Optional local artifact root. Defaults to outputs/databricks_gold.",
+)
+def intake_gold(
+    payload_path: Path,
+    gold_record_id: str | None,
+    output_dir: Path | None,
+) -> None:
+    """
+    Validate and register a Databricks Gold export payload record.
+
+    This is an intake-only local adapter path. It preserves the existing
+    IntakeResult boundary and does not call Databricks, Delta Share, Bedrock,
+    Knowledge Bases, S3, or the agent pipeline.
+    """
+    try:
+        result = consume_databricks_gold_payload_file(
+            payload_path,
+            gold_record_id=gold_record_id,
+            output_dir=output_dir,
+        )
+    except DatabricksGoldAdapterError as exc:
+        click.echo(f"[error] Databricks Gold intake failed: {exc}", err=True)
         sys.exit(1)
 
     _print_registration_summary(result)

@@ -161,6 +161,7 @@ _PATCH_WRITE_OUTPUT = "app.cli.write_case_output"
 _PATCH_BUILD_DEPS = "app.cli._build_pipeline_deps"
 _PATCH_BUILD_LOGGER = "app.cli._build_logger"
 _PATCH_BUILD_S3 = "app.cli._build_s3_service"
+_PATCH_CONSUME_GOLD_PAYLOAD = "app.cli.consume_databricks_gold_payload_file"
 _PATCH_RUN_CASE_OUTPUT_SAFETY = "app.cli._run_case_output_safety_check"
 _PATCH_RUN_OPERATOR_INPUT_SAFETY = "app.cli._run_operator_input_safety_check"
 
@@ -783,6 +784,93 @@ def test_intake_success_prints_registration(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert "[ok] Registration complete." in result.output
     assert _DOC_ID in result.output
+
+
+# ── Databricks Gold intake command — local adapter wiring ─────────────────────
+
+
+def test_intake_gold_help_exits_zero() -> None:
+    runner = _make_runner()
+    result = runner.invoke(cli, ["intake-gold", "--help"])
+
+    assert result.exit_code == 0
+    assert "PAYLOAD" in result.output
+    assert "--gold-record-id" in result.output
+
+
+def test_intake_gold_success_prints_registration(tmp_path: Path) -> None:
+    runner = _make_runner()
+    payload = tmp_path / "gold_payload.json"
+    payload.write_text("{}", encoding="utf-8")
+    output_dir = tmp_path / "gold_intake"
+    mock_result = _make_intake_result()
+
+    with patch(_PATCH_CONSUME_GOLD_PAYLOAD, return_value=mock_result) as mock_consume:
+        result = runner.invoke(
+            cli,
+            [
+                "intake-gold",
+                str(payload),
+                "--output-dir",
+                str(output_dir),
+            ],
+            catch_exceptions=False,
+        )
+
+    assert result.exit_code == 0
+    assert "[ok] Registration complete." in result.output
+    assert _DOC_ID in result.output
+    mock_consume.assert_called_once_with(
+        payload,
+        gold_record_id=None,
+        output_dir=output_dir,
+    )
+
+
+def test_intake_gold_forwards_gold_record_id(tmp_path: Path) -> None:
+    runner = _make_runner()
+    payload = tmp_path / "gold_payload.json"
+    payload.write_text("{}", encoding="utf-8")
+    output_dir = tmp_path / "gold_intake"
+
+    with patch(_PATCH_CONSUME_GOLD_PAYLOAD, return_value=_make_intake_result()) as mock_consume:
+        result = runner.invoke(
+            cli,
+            [
+                "intake-gold",
+                str(payload),
+                "--gold-record-id",
+                "gold-fda-20260608-001",
+                "--output-dir",
+                str(output_dir),
+            ],
+            catch_exceptions=False,
+        )
+
+    assert result.exit_code == 0
+    mock_consume.assert_called_once_with(
+        payload,
+        gold_record_id="gold-fda-20260608-001",
+        output_dir=output_dir,
+    )
+
+
+def test_intake_gold_adapter_error_exits_nonzero(tmp_path: Path) -> None:
+    from app.services.databricks_gold_adapter import DatabricksGoldAdapterError
+
+    runner = _make_runner()
+    payload = tmp_path / "bad_payload.json"
+    payload.write_text("{}", encoding="utf-8")
+
+    with patch(
+        _PATCH_CONSUME_GOLD_PAYLOAD,
+        side_effect=DatabricksGoldAdapterError("schema validation failed"),
+    ):
+        result = runner.invoke(cli, ["intake-gold", str(payload)])
+
+    assert result.exit_code != 0
+    assert "Databricks Gold intake failed" in result.output
+    assert "schema validation failed" in result.output
 
 
 # ── doctor / check-config commands ────────────────────────────────────────────
