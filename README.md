@@ -310,6 +310,8 @@ python3 -m app.cli intake-gold tests/fixtures/databricks_gold/sample_gold_payloa
 
 This validates one local, schema-versioned Gold export record and converts it into the same `IntakeResult` handoff used by the normal Bedrock intake path. It does not call Databricks, Delta Share, Bedrock, Knowledge Bases, S3, or the agent pipeline.
 
+The first local downstream workflow after intake creates a deterministic case work item from `IntakeResult`; see [docs/case-work-item-workflow.md](docs/case-work-item-workflow.md).
+
 ### Show available commands
 
 ```bash

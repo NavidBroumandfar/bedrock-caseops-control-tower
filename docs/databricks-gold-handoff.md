@@ -39,6 +39,8 @@ python3 -m app.cli intake-gold path/to/gold_payload.json \
 
 The command prints the same registration summary as normal file intake and writes local artifacts under `outputs/databricks_gold/{document_id}/` by default.
 
+The next local downstream step is the case work item workflow documented in `docs/case-work-item-workflow.md`. That workflow starts from `IntakeResult`, not from raw Gold payloads.
+
 ## Payload Contract
 
 The current schema version is:
