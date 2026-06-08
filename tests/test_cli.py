@@ -162,6 +162,8 @@ _PATCH_BUILD_DEPS = "app.cli._build_pipeline_deps"
 _PATCH_BUILD_LOGGER = "app.cli._build_logger"
 _PATCH_BUILD_S3 = "app.cli._build_s3_service"
 _PATCH_CONSUME_GOLD_PAYLOAD = "app.cli.consume_databricks_gold_payload_file"
+_PATCH_RUN_CASE_CONTEXT = "app.cli.run_case_context_workflow"
+_PATCH_RUN_CASE_BRIEF = "app.cli.run_supervisor_case_brief_workflow"
 _PATCH_RUN_CASE_OUTPUT_SAFETY = "app.cli._run_case_output_safety_check"
 _PATCH_RUN_OPERATOR_INPUT_SAFETY = "app.cli._run_operator_input_safety_check"
 
@@ -871,6 +873,212 @@ def test_intake_gold_adapter_error_exits_nonzero(tmp_path: Path) -> None:
     assert result.exit_code != 0
     assert "Databricks Gold intake failed" in result.output
     assert "schema validation failed" in result.output
+
+
+# ── Databricks Gold brief command — local packet wiring ───────────────────────
+
+
+def test_brief_gold_help_exits_zero() -> None:
+    runner = _make_runner()
+    result = runner.invoke(cli, ["brief-gold", "--help"])
+
+    assert result.exit_code == 0
+    assert "PAYLOAD" in result.output
+    assert "--gold-record-id" in result.output
+    assert "--output-root" in result.output
+
+
+def test_brief_gold_success_prints_case_brief_summary(tmp_path: Path) -> None:
+    from app.schemas.case_context_models import CaseWorkItem, SupervisorCaseBrief
+
+    runner = _make_runner()
+    payload = tmp_path / "gold_payload.json"
+    payload.write_text("{}", encoding="utf-8")
+    output_root = tmp_path / "outputs"
+    mock_intake = _make_intake_result()
+    mock_work_item = CaseWorkItem(
+        work_item_id=f"work-{_DOC_ID}",
+        document_id=_DOC_ID,
+        source_filename="advisory.txt",
+        source_type="FDA",
+        document_date="2026-03-30",
+        intake_artifact_path=mock_intake.artifact_path,
+        source_artifact_path=mock_intake.record.absolute_path,
+        storage_mode="local",
+        retrieval_query=None,
+        retrieval_query_source="provider_fallback",
+        routing_lane="regulatory_review",
+        priority_hint="standard",
+        readiness_status="ready_for_grounded_retrieval",
+        next_step="run_supervisor_pipeline",
+        created_at=mock_intake.record.intake_timestamp,
+    )
+    mock_brief = SupervisorCaseBrief(
+        case_brief_id=f"brief-work-{_DOC_ID}",
+        work_item_id=mock_work_item.work_item_id,
+        document_id=_DOC_ID,
+        title="regulatory_review: advisory.txt",
+        source_type="FDA",
+        source_filename="advisory.txt",
+        document_date="2026-03-30",
+        routing_lane="regulatory_review",
+        priority_hint="standard",
+        readiness_status="ready_for_supervisor_review",
+        next_step="run_supervisor_pipeline",
+        retrieval_query_source="provider_fallback",
+        expected_retrieval_request={
+            "document_id": _DOC_ID,
+            "source_type": "FDA",
+            "source_filename": "advisory.txt",
+            "query_text": None,
+        },
+        source_artifacts=[
+            {"kind": "intake_artifact", "path_or_key": mock_intake.artifact_path},
+            {
+                "kind": "source_artifact",
+                "path_or_key": mock_intake.record.absolute_path,
+            },
+        ],
+        live_runtime_requirements=[
+            {
+                "name": "BEDROCK_KB_ID",
+                "required_for": "grounded retrieval",
+                "status": "operator_supplied_at_live_runtime",
+            }
+        ],
+        operator_notes=["local-only"],
+        created_at=mock_intake.record.intake_timestamp,
+    )
+
+    with (
+        patch(_PATCH_CONSUME_GOLD_PAYLOAD, return_value=mock_intake) as mock_consume,
+        patch(
+            _PATCH_RUN_CASE_CONTEXT,
+            return_value=SimpleNamespace(
+                work_item=mock_work_item,
+                artifact_path=str(output_root / "case_work_items" / _DOC_ID / "work_item.json"),
+            ),
+        ) as mock_context,
+        patch(
+            _PATCH_RUN_CASE_BRIEF,
+            return_value=SimpleNamespace(
+                case_brief=mock_brief,
+                artifact_path=str(output_root / "case_briefs" / _DOC_ID / "case_brief.json"),
+            ),
+        ) as mock_brief_workflow,
+    ):
+        result = runner.invoke(
+            cli,
+            [
+                "brief-gold",
+                str(payload),
+                "--output-root",
+                str(output_root),
+            ],
+            catch_exceptions=False,
+        )
+
+    assert result.exit_code == 0
+    assert "[ok] Local case brief ready." in result.output
+    assert _DOC_ID in result.output
+    assert "regulatory_review" in result.output
+    assert "case_brief" in result.output
+    mock_consume.assert_called_once_with(
+        payload,
+        gold_record_id=None,
+        output_dir=output_root / "databricks_gold",
+    )
+    mock_context.assert_called_once_with(
+        mock_intake,
+        output_dir=output_root / "case_work_items",
+    )
+    mock_brief_workflow.assert_called_once_with(
+        mock_work_item,
+        output_dir=output_root / "case_briefs",
+    )
+
+
+def test_brief_gold_forwards_gold_record_id(tmp_path: Path) -> None:
+    runner = _make_runner()
+    payload = tmp_path / "gold_payload.json"
+    payload.write_text("{}", encoding="utf-8")
+    output_root = tmp_path / "outputs"
+
+    with (
+        patch(_PATCH_CONSUME_GOLD_PAYLOAD, return_value=_make_intake_result()) as mock_consume,
+        patch(_PATCH_RUN_CASE_CONTEXT) as mock_context,
+        patch(_PATCH_RUN_CASE_BRIEF) as mock_brief,
+    ):
+        mock_context.return_value = SimpleNamespace(
+            work_item=object(),
+            artifact_path=str(output_root / "case_work_items" / _DOC_ID / "work_item.json"),
+        )
+        mock_brief.return_value = SimpleNamespace(
+            case_brief=SimpleNamespace(
+                document_id=_DOC_ID,
+                routing_lane="regulatory_review",
+                priority_hint="standard",
+            ),
+            artifact_path=str(output_root / "case_briefs" / _DOC_ID / "case_brief.json"),
+        )
+        result = runner.invoke(
+            cli,
+            [
+                "brief-gold",
+                str(payload),
+                "--gold-record-id",
+                "gold-fda-20260608-001",
+                "--output-root",
+                str(output_root),
+            ],
+            catch_exceptions=False,
+        )
+
+    assert result.exit_code == 0
+    mock_consume.assert_called_once_with(
+        payload,
+        gold_record_id="gold-fda-20260608-001",
+        output_dir=output_root / "databricks_gold",
+    )
+
+
+def test_brief_gold_adapter_error_exits_nonzero(tmp_path: Path) -> None:
+    from app.services.databricks_gold_adapter import DatabricksGoldAdapterError
+
+    runner = _make_runner()
+    payload = tmp_path / "bad_payload.json"
+    payload.write_text("{}", encoding="utf-8")
+
+    with patch(
+        _PATCH_CONSUME_GOLD_PAYLOAD,
+        side_effect=DatabricksGoldAdapterError("schema validation failed"),
+    ):
+        result = runner.invoke(cli, ["brief-gold", str(payload)])
+
+    assert result.exit_code != 0
+    assert "Databricks Gold intake failed" in result.output
+    assert "schema validation failed" in result.output
+
+
+def test_brief_gold_case_context_error_exits_nonzero(tmp_path: Path) -> None:
+    from app.workflows.case_context_workflow import CaseContextWorkflowError
+
+    runner = _make_runner()
+    payload = tmp_path / "gold_payload.json"
+    payload.write_text("{}", encoding="utf-8")
+
+    with (
+        patch(_PATCH_CONSUME_GOLD_PAYLOAD, return_value=_make_intake_result()),
+        patch(
+            _PATCH_RUN_CASE_CONTEXT,
+            side_effect=CaseContextWorkflowError("unsupported source_type"),
+        ),
+    ):
+        result = runner.invoke(cli, ["brief-gold", str(payload)])
+
+    assert result.exit_code != 0
+    assert "Case brief preparation failed" in result.output
+    assert "unsupported source_type" in result.output
 
 
 # ── doctor / check-config commands ────────────────────────────────────────────

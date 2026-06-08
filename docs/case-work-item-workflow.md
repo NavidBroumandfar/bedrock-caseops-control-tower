@@ -41,6 +41,9 @@ The work item includes:
 - readiness status
 - next local runtime step
 
+The next local packet-building step is the supervisor case brief workflow
+documented in `docs/case-brief-workflow.md`.
+
 ## Non-Goals
 
 This workflow does not call Databricks, Delta Share, S3, AWS SDKs, Bedrock,
@@ -58,6 +61,7 @@ Databricks Gold payload
   -> local Gold adapter
   -> IntakeResult
   -> CaseWorkItem
+  -> SupervisorCaseBrief
 ```
 
 This keeps the public story honest: Databricks produces sanitized, structured

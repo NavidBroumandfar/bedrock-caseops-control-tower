@@ -6,6 +6,9 @@ Commands:
   intake-gold
            Validate a local Databricks Gold export payload and register one
            record as the existing IntakeResult handoff.
+  brief-gold
+           Validate a local Databricks Gold export payload and build the local
+           case work item plus supervisor-ready case brief.
   run      Run the full end-to-end pipeline: intake → retrieval → analysis →
            validation → output packaging.
 
@@ -57,6 +60,14 @@ from app.services.s3_service import S3Service, StorageError
 from app.utils.id_utils import generate_session_id
 from app.utils.logging_utils import LoggingConfig, PipelineLogger
 from app.utils.output_writer import OutputWriteError, write_case_output
+from app.workflows.case_brief_workflow import (
+    CaseBriefWorkflowError,
+    run_supervisor_case_brief_workflow,
+)
+from app.workflows.case_context_workflow import (
+    CaseContextWorkflowError,
+    run_case_context_workflow,
+)
 from app.workflows.pipeline_workflow import PipelineWorkflowError, run_pipeline
 
 _LIVE_RUN_REQUIRED_ENV = ("BEDROCK_KB_ID", "BEDROCK_MODEL_ID", "AWS_REGION")
@@ -181,6 +192,73 @@ def intake_gold(
         sys.exit(1)
 
     _print_registration_summary(result)
+
+
+# ── Databricks Gold local case brief command ──────────────────────────────────
+
+
+@cli.command("brief-gold")
+@click.argument(
+    "payload_path",
+    metavar="PAYLOAD",
+    type=click.Path(dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--gold-record-id",
+    default=None,
+    help="Gold record ID to consume when the payload contains multiple records.",
+)
+@click.option(
+    "--output-root",
+    default=None,
+    type=click.Path(file_okay=False, path_type=Path),
+    help="Optional local artifact root. Defaults to OUTPUT_DIR or outputs.",
+)
+def brief_gold(
+    payload_path: Path,
+    gold_record_id: str | None,
+    output_root: Path | None,
+) -> None:
+    """
+    Build a local supervisor case brief from a Databricks Gold payload.
+
+    This command performs only local deterministic preparation:
+
+      Databricks Gold payload -> IntakeResult -> CaseWorkItem -> SupervisorCaseBrief
+
+    It does not call Databricks, Delta Share, Bedrock, Knowledge Bases, S3,
+    retrieval providers, vector search, or agents.
+    """
+    artifact_root = _resolve_output_root(output_root)
+    try:
+        intake_result = consume_databricks_gold_payload_file(
+            payload_path,
+            gold_record_id=gold_record_id,
+            output_dir=artifact_root / "databricks_gold",
+        )
+        work_item_result = run_case_context_workflow(
+            intake_result,
+            output_dir=artifact_root / "case_work_items",
+        )
+        brief_result = run_supervisor_case_brief_workflow(
+            work_item_result.work_item,
+            output_dir=artifact_root / "case_briefs",
+        )
+    except DatabricksGoldAdapterError as exc:
+        click.echo(f"[error] Databricks Gold intake failed: {exc}", err=True)
+        sys.exit(1)
+    except (CaseContextWorkflowError, CaseBriefWorkflowError) as exc:
+        click.echo(f"[error] Case brief preparation failed: {exc}", err=True)
+        sys.exit(1)
+
+    _print_case_brief_summary(
+        intake_artifact_path=intake_result.artifact_path,
+        work_item_artifact_path=work_item_result.artifact_path,
+        case_brief_artifact_path=brief_result.artifact_path,
+        document_id=brief_result.case_brief.document_id,
+        routing_lane=brief_result.case_brief.routing_lane,
+        priority_hint=brief_result.case_brief.priority_hint,
+    )
 
 
 # ── run command ────────────────────────────────────────────────────────────────
@@ -983,6 +1061,25 @@ def _print_registration_summary(result) -> None:  # type: ignore[no-untyped-def]
         click.echo(f"     artifact key : {result.storage.intake_artifact_key}")
     else:
         click.echo("     storage      : local only")
+
+
+def _print_case_brief_summary(  # type: ignore[no-untyped-def]
+    *,
+    intake_artifact_path: str,
+    work_item_artifact_path: str,
+    case_brief_artifact_path: str,
+    document_id: str,
+    routing_lane: str,
+    priority_hint: str,
+) -> None:
+    """Print a concise local case brief summary to stdout."""
+    click.echo("[ok] Local case brief ready.")
+    click.echo(f"     document_id  : {document_id}")
+    click.echo(f"     routing_lane : {routing_lane}")
+    click.echo(f"     priority     : {priority_hint}")
+    click.echo(f"     intake       : {intake_artifact_path}")
+    click.echo(f"     work_item    : {work_item_artifact_path}")
+    click.echo(f"     case_brief   : {case_brief_artifact_path}")
 
 
 def _print_pipeline_summary(  # type: ignore[no-untyped-def]

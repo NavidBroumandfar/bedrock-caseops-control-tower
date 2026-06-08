@@ -39,7 +39,17 @@ python3 -m app.cli intake-gold path/to/gold_payload.json \
 
 The command prints the same registration summary as normal file intake and writes local artifacts under `outputs/databricks_gold/{document_id}/` by default.
 
-The next local downstream step is the case work item workflow documented in `docs/case-work-item-workflow.md`. That workflow starts from `IntakeResult`, not from raw Gold payloads.
+The next local downstream steps are the case work item workflow documented in
+`docs/case-work-item-workflow.md` and the supervisor case brief workflow
+documented in `docs/case-brief-workflow.md`. Both start from normalized local
+handoff objects, not from raw Gold payloads.
+
+Use `brief-gold` to build the full local packet chain without running live
+retrieval or agents:
+
+```bash
+python3 -m app.cli brief-gold tests/fixtures/databricks_gold/sample_gold_payload.json
+```
 
 ## Payload Contract
 
