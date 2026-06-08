@@ -1,0 +1,34 @@
+{
+  "schema_version": "databricks-gold-export.v1",
+  "producer": "databricks-caseops-lakehouse",
+  "exported_at": "2026-06-08T09:30:00Z",
+  "records": [
+    {
+      "gold_record_id": "gold-fda-20260608-001",
+      "source_document_id": "src-fda-warning-001",
+      "source_filename": "fda_warning_letter_gold.txt",
+      "source_type": "FDA",
+      "document_date": "2026-06-08",
+      "retrieval_query": "FDA warning letter quality system deficiencies, equipment cleaning, CAPA response, and escalation review.",
+      "document_summary": "Upstream Gold record for a sanitized FDA warning letter review case.",
+      "classification": "Regulatory / Manufacturing Deficiency",
+      "priority": "High",
+      "evidence_terms": [
+        "equipment cleaning",
+        "CAPA",
+        "quality system"
+      ],
+      "lineage": {
+        "gold_record_id": "gold-fda-20260608-001",
+        "source_document_id": "src-fda-warning-001",
+        "bronze_record_id": "bronze-fda-001",
+        "silver_record_id": "silver-fda-001",
+        "transform_version": "phase4-smoke-contract"
+      },
+      "custom_metadata": {
+        "export_scope": "personal-dev-workspace-smoke",
+        "payload_fixture": "local-safe"
+      }
+    }
+  ]
+}
