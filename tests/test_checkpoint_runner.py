@@ -108,7 +108,7 @@ class TestCheckpointInputsDefaults:
 
     def test_default_total_tests_current_count(self):
         inputs = CheckpointInputs()
-        assert inputs.total_tests_offline == 2238
+        assert inputs.total_tests_offline == 2305
 
     def test_default_external_blockers_empty(self):
         inputs = CheckpointInputs()
@@ -198,7 +198,7 @@ class TestBuildCheckpointDefaults:
 
     def test_total_tests_offline_current_count_default(self):
         result = build_checkpoint()
-        assert result.total_tests_offline == 2238
+        assert result.total_tests_offline == 2305
 
     def test_total_tests_offline_passed_through(self):
         inputs = CheckpointInputs(total_tests_offline=2100)

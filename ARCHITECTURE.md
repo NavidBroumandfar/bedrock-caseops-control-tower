@@ -5,7 +5,7 @@
 
 > **Current status:** The custom Bedrock-powered Python orchestration runtime is
 > implemented, offline-tested, and live-validated. The local suite passes with
-> 2,238 tests and 3 skips. Live validation includes one Bedrock Knowledge Base
+> 2,305 tests and 3 skips. Live validation includes one Bedrock Knowledge Base
 > CLI run, dev and staging Lambda validation, live Guardrails allow/block checks,
 > production infrastructure verification, and exactly one production synthetic
 > canary. Real production traffic was intentionally not launched.

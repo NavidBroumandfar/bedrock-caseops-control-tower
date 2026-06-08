@@ -66,7 +66,7 @@ class CheckpointInputs:
     completed_phases: tuple[str, ...] = (
         "F", "G", "H", "I", "J-0", "J-1", "J-2",
     )
-    total_tests_offline: int = 2238
+    total_tests_offline: int = 2305
     external_blockers: tuple[str, ...] = ()
     live_aws_validated: bool = True
     notes: str = (

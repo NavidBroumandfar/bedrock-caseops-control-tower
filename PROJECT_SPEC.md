@@ -187,7 +187,7 @@ The following remain excluded from the public portfolio release:
 The MVP engineering scope is complete. Success criteria are tracked in two categories:
 
 **Engineering / repo completion (complete):**
-- [x] The codebase passes unit tests for intake, schema validation, and escalation logic without live AWS calls — 2,238 tests pass
+- [x] The codebase passes unit tests for intake, schema validation, and escalation logic without live AWS calls — 2,305 tests pass
 - [x] Escalation is triggered correctly for a document meeting the escalation criteria — covered by unit tests
 - [x] The Validation Agent detects at least one unsupported claim in a synthetic adversarial test case — covered by unit tests
 - [x] All agent steps are logged with document and session IDs — structured logging implemented (E-0) and tested

@@ -276,7 +276,7 @@ For the authoritative final state, read `docs/project-closeout.md` and
   - `app/schemas/artifact_models.py` — `ArtifactKind` extended with `"checkpoint"` (J-2 hardening fix)
   - `tests/test_checkpoint_models.py` — 57 tests: contract validation, field validators, consistency guard, immutability, serialization, ArtifactKind extension
   - `tests/test_checkpoint_runner.py` — 57 tests: CheckpointInputs defaults/custom, build_checkpoint defaults/custom/determinism, report content, writer path/content/error handling, no live AWS
-  - 2238 total tests pass in the final public-release workspace
+  - 2305 total tests pass after Databricks Gold intake and local case-brief hardening
 
 ### Next step
 - **Phase 17 is complete.** The project is in public-release freeze. Further work should start only from a concrete new goal; see `docs/project-closeout.md`.

@@ -3,7 +3,7 @@
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![AWS Bedrock](https://img.shields.io/badge/Platform-AWS%20Bedrock-FF9900?style=flat-square&logo=amazonaws&logoColor=white)](https://aws.amazon.com/bedrock/)
 [![Architecture](https://img.shields.io/badge/Architecture-Multi--Agent%20RAG-6B7FD7?style=flat-square)]()
-[![Tests](https://img.shields.io/badge/Tests-2%2C238%20passing-2EA043?style=flat-square)](./tests/)
+[![Tests](https://img.shields.io/badge/Tests-2%2C305%20passing-2EA043?style=flat-square)](./tests/)
 [![CI](https://github.com/NavidBroumandfar/bedrock-caseops-control-tower/actions/workflows/tests.yml/badge.svg)](https://github.com/NavidBroumandfar/bedrock-caseops-control-tower/actions/workflows/tests.yml)
 [![License](https://img.shields.io/badge/License-MIT-2EA043?style=flat-square)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Portfolio%20%2F%20Non--Production-E67E22?style=flat-square)]()

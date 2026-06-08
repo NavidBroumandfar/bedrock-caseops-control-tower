@@ -71,7 +71,7 @@ The current implementation keeps orchestration in the application. That is the a
 - Agents use typed Pydantic contracts instead of passing unstructured dictionaries.
 - Workflow layers do not instantiate AWS clients directly; service dependencies are injected.
 - Empty retrieval is handled conservatively and escalated.
-- Offline test coverage is strong: 2,238 passing tests were verified during public release hardening.
+- Offline test coverage is strong: 2,305 passing tests were verified after Databricks Gold intake and local case-brief hardening.
 - Evaluation, safety, prompt routing, prompt caching, and reporting layers exist as testable modules.
 - Prompt routing, prompt caching, retry count, and escalation threshold are wired into the CLI runtime path.
 - Lambda/SAM deployment assets exist for the custom orchestration runtime.
