@@ -16,6 +16,7 @@ The first Bedrock-side implementation is local and offline-safe:
 - Consumer adapter: `app/services/databricks_gold_adapter.py`
 - Fixture: `tests/fixtures/databricks_gold/sample_gold_payload.json`
 - Tests: `tests/test_databricks_gold_adapter.py`
+- Contract regression tests: `tests/test_databricks_gold_contract.py`
 
 The adapter reads a local JSON payload, validates the schema, selects one Gold record, writes a normalized local snapshot, and returns the existing `IntakeResult` handoff used by the supervisor pipeline.
 
@@ -70,6 +71,13 @@ The adapter maps `retrieval_query` into `IntakeRecord.submitter_note`, which the
 Local fixtures and payloads must not contain Databricks workspace URLs, account IDs, tokens, PATs, activation links, credentials, or customer data.
 
 The current model rejects secret-like `custom_metadata` keys such as `workspace_url`, `account_id`, `token`, `pat`, `activation_link`, `credential`, and `secret`.
+
+## Fixture Refresh
+
+Sanitized payload fixtures live under `tests/fixtures/databricks_gold/`.
+Refresh rules are documented in `tests/fixtures/databricks_gold/README.md`.
+
+Contract fixtures should remain synthetic and local-only. They should prove the Bedrock repo can keep accepting the upstream Gold export shape without adding private workspace evidence or any live service integration.
 
 ## Current Caveat
 
