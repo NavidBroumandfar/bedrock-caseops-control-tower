@@ -14,6 +14,12 @@
 
 **At a glance:** the project accepts a document through the CLI or Lambda, retrieves grounded evidence from a Bedrock Knowledge Base, runs analysis and validation through Bedrock Converse, applies deterministic safety and escalation gates, and emits structured `CaseOutput` JSON with citations.
 
+**Public proof record:** this repository is also summarized on
+[navidbr.me/work/bedrock-caseops-control-tower](https://navidbr.me/work/bedrock-caseops-control-tower)
+as part of Navid's public NAVIDBR Applied AI Systems work record. The site
+keeps the same boundary: grounded review and escalation proof, not client work
+or a real production traffic launch.
+
 ---
 
 ## What This Project Does
